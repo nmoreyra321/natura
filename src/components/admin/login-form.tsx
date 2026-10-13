@@ -12,8 +12,18 @@ export function LoginForm() {
   const fields = state && !state.ok ? state.fields : undefined;
   return (
     <form action={action} className="mt-6 flex flex-col gap-4" noValidate>
-      <Field label="Correo electrónico" htmlFor="email" error={fields?.email}>
-        <Input id="email" name="email" type="email" autoComplete="username" required aria-invalid={Boolean(fields?.email)} />
+      <Field label="Usuario o correo" htmlFor="email" error={fields?.email}>
+        <Input
+          id="email"
+          name="email"
+          type="text"
+          autoComplete="username"
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
+          required
+          aria-invalid={Boolean(fields?.email)}
+        />
       </Field>
       <Field label="Contraseña" htmlFor="password" error={fields?.password}>
         <Input

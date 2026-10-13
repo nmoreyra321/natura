@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { isValidProductImagePath, validateImageFile } from "@/lib/images";
 import { slugify } from "@/lib/slug";
-import { parseMoney, productSchema } from "@/lib/validation";
+import { loginIdentifierToEmail, parseMoney, productSchema } from "@/lib/validation";
 
 const base = {
   name: "Crema corporal",
@@ -73,5 +73,20 @@ describe("imágenes", () => {
     expect(isValidProductImagePath(`products/${pid}/${file}.webp`, pid)).toBe(true);
     expect(isValidProductImagePath(`products/${other}/${file}.webp`, pid)).toBe(false);
     expect(isValidProductImagePath(`products/${pid}/../x.webp`, pid)).toBe(false);
+  });
+});
+
+describe("login con usuario o correo", () => {
+  it("convierte un nombre de usuario en el correo interno", () => {
+    expect(loginIdentifierToEmail(" NatuMariel2026 ")).toBe("natumariel2026@natumariel.vercel.app");
+  });
+  it("acepta correos reales tal cual", () => {
+    expect(loginIdentifierToEmail("Mariel@Gmail.com")).toBe("mariel@gmail.com");
+  });
+  it("rechaza valores inválidos", () => {
+    expect(loginIdentifierToEmail("")).toBeNull();
+    expect(loginIdentifierToEmail("ab")).toBeNull();
+    expect(loginIdentifierToEmail("con espacio")).toBeNull();
+    expect(loginIdentifierToEmail("mal@")).toBeNull();
   });
 });

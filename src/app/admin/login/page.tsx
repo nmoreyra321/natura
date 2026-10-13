@@ -29,7 +29,7 @@ export default async function LoginPage() {
           </p>
         </div>
         <h1 className="mt-6 font-display text-3xl font-semibold">Panel de administración</h1>
-        <p className="mt-1 text-muted">Ingresá con tu correo y contraseña.</p>
+        <p className="mt-1 text-muted">Ingresá con tu usuario y contraseña.</p>
         <LoginForm />
       </div>
     </main>

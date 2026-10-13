@@ -8,7 +8,7 @@ const img = (f: string) => path.join(__dirname, f);
 
 async function login(page: Page, who: { email: string; password: string }) {
   await page.goto("/admin/login");
-  await page.getByLabel("Correo electrónico").fill(who.email);
+  await page.getByLabel("Usuario o correo").fill(who.email);
   await page.getByLabel("Contraseña").fill(who.password);
   await page.getByRole("button", { name: "Ingresar" }).click();
 }

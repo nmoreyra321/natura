@@ -113,8 +113,34 @@ export const categorySchema = z.object({
 
 export type CategoryInput = z.input<typeof categorySchema>;
 
+/**
+ * Dominio interno para cuentas creadas con nombre de usuario (sin correo real).
+ * "natumariel2026" se guarda en Supabase Auth como "natumariel2026@natumariel.vercel.app".
+ * No se envían correos a esa dirección.
+ */
+export const USERNAME_EMAIL_DOMAIN = "natumariel.vercel.app";
+
+/** Convierte "usuario" o "correo@dominio" en el correo con el que se autentica. */
+export function loginIdentifierToEmail(raw: string): string | null {
+  const value = raw.trim().toLowerCase();
+  if (value.includes("@")) {
+    return z.email().max(254).safeParse(value).success ? value : null;
+  }
+  return /^[a-z0-9][a-z0-9._-]{2,39}$/.test(value) ? `${value}@${USERNAME_EMAIL_DOMAIN}` : null;
+}
+
 export const loginSchema = z.object({
-  email: z.email("Ingresá un correo válido.").trim().toLowerCase().max(254),
+  email: z
+    .string()
+    .max(254)
+    .transform((v, ctx) => {
+      const email = loginIdentifierToEmail(v);
+      if (!email) {
+        ctx.addIssue({ code: "custom", message: "Ingresá tu usuario o correo." });
+        return z.NEVER;
+      }
+      return email;
+    }),
   password: z.string().min(1, "Ingresá tu contraseña.").max(200),
 });
 

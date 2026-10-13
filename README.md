@@ -105,7 +105,9 @@ npm run admin:create -- mariel@sucorreo.com
 
 ### Entrar al panel
 
-Abrí `/admin` e ingresá con el correo y la contraseña de la cuenta administradora.
+Abrí `/admin` e ingresá con tu **usuario** (por ejemplo `natumariel2026`) o tu correo, y la contraseña.
+
+> Las cuentas con nombre de usuario se guardan en Supabase como `usuario@natumariel.vercel.app`, una dirección interna que no recibe correos. Cuando quieras usar un correo real, cambialo en Supabase → Authentication → Users.
 
 ### Cargar el primer producto
 
