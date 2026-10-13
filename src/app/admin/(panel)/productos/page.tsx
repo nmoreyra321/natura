@@ -13,8 +13,24 @@ import { getPriceInfo } from "@/lib/pricing";
 
 export const metadata = { title: "Productos" };
 
+const PAGE_SIZE = 50;
+/** Valor del filtro de categoría para ver los productos sin categoría. */
+const NO_CATEGORY = "ninguna";
+
 type Search = Record<string, string | string[] | undefined>;
 const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? "";
+
+/** Arma el enlace a otra página conservando los filtros actuales. */
+function pageHref(sp: Search, page: number) {
+  const params = new URLSearchParams();
+  for (const key of ["q", "estado", "stock", "categoria", "oferta"]) {
+    const value = one(sp[key]);
+    if (value) params.set(key, value);
+  }
+  if (page > 1) params.set("pagina", String(page));
+  const qs = params.toString();
+  return qs ? `/admin/productos?${qs}` : "/admin/productos";
+}
 
 export default async function AdminProductsPage({ searchParams }: { searchParams: Promise<Search> }) {
   const { supabase } = await requireAdmin();
@@ -24,25 +40,37 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
   const stock = one(sp.stock);
   const oferta = one(sp.oferta) === "1";
   const categoria = one(sp.categoria);
+  const pageRaw = Number(one(sp.pagina) || "1");
+  const page = Number.isInteger(pageRaw) && pageRaw >= 1 && pageRaw <= 10000 ? pageRaw : 1;
+  const from = (page - 1) * PAGE_SIZE;
 
   let query = supabase
     .from("products")
     .select(
       "id, name, slug, size, magazine_price, sale_price, stock, status, is_featured, is_offer, updated_at, category:categories(name), images:product_images(storage_path, position)",
+      { count: "exact" },
     )
     .order("updated_at", { ascending: false })
-    .limit(500);
+    // Desempate estable: sin esto, productos con la misma fecha podrían repetirse o saltearse entre páginas.
+    .order("id");
   if (q) query = query.ilike("name", `%${q.replace(/[\\%_]/g, (m) => `\\${m}`)}%`);
   if (estado === "published" || estado === "draft") query = query.eq("status", estado);
   if (stock === "sin") query = query.eq("stock", 0);
   if (stock === "bajo") query = query.gt("stock", 0).lte("stock", LOW_STOCK_THRESHOLD);
   if (oferta) query = query.eq("is_offer", true);
-  if (/^[0-9a-f-]{36}$/.test(categoria)) query = query.eq("category_id", categoria);
+  if (categoria === NO_CATEGORY) query = query.is("category_id", null);
+  else if (/^[0-9a-f-]{36}$/.test(categoria)) query = query.eq("category_id", categoria);
 
-  const [{ data: products, error }, { data: categories }] = await Promise.all([
-    query,
+  const [{ data, count, error: queryError }, { data: categories }] = await Promise.all([
+    query.range(from, from + PAGE_SIZE - 1),
     supabase.from("categories").select("id, name").order("position"),
   ]);
+  // Una página fuera de rango (por ejemplo, después de borrar productos) no es un error: se muestra vacía.
+  const outOfRange = queryError?.code === "PGRST103";
+  const error = outOfRange ? null : queryError;
+  const products = outOfRange ? [] : data;
+  const total = count ?? 0;
+  const pageCount = Math.ceil(total / PAGE_SIZE);
   const filtered = Boolean(q || estado || stock || oferta || categoria);
 
   return (
@@ -50,7 +78,11 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="font-display text-3xl font-bold">Productos</h1>
-          <p className="text-muted">{products ? `${products.length} ${products.length === 1 ? "producto" : "productos"}` : ""}</p>
+          <p className="text-muted tabular">
+            {error ? "" : products && products.length > 0
+              ? `Mostrando ${from + 1}–${from + products.length} de ${total} ${total === 1 ? "producto" : "productos"}`
+              : `${total} ${total === 1 ? "producto" : "productos"}`}
+          </p>
         </div>
         <LinkButton href="/admin/productos/nuevo">
           <Plus className="size-5" aria-hidden="true" /> Nuevo producto
@@ -82,6 +114,7 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
           <label htmlFor="ac" className="sr-only">Categoría</label>
           <select id="ac" name="categoria" defaultValue={categoria} className={`${inputClasses} h-11`}>
             <option value="">Categoría: todas</option>
+            <option value={NO_CATEGORY}>Sin categoría</option>
             {(categories ?? []).map((c) => (
               <option key={c.id} value={c.id}>{c.name}</option>
             ))}
@@ -108,9 +141,16 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
       ) : !products || products.length === 0 ? (
         <div className="mt-6 rounded-3xl border border-dashed border-line bg-warm-white p-10 text-center">
           <p className="font-display text-xl font-bold">
-            {filtered ? "No hay productos con esos filtros." : "Todavía no hay productos."}
+            {page > 1
+              ? "Esta página no tiene productos."
+              : filtered ? "No hay productos con esos filtros." : "Todavía no hay productos."}
           </p>
-          {!filtered ? (
+          {page > 1 ? (
+            <Link href={pageHref(sp, 1)} className="mt-3 inline-block font-semibold text-coral-deep hover:underline">
+              Ir a la primera página
+            </Link>
+          ) : null}
+          {!filtered && page === 1 ? (
             <LinkButton href="/admin/productos/nuevo" className="mt-4">
               <Plus className="size-5" aria-hidden="true" /> Crear el primero
             </LinkButton>
@@ -166,6 +206,24 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
           })}
         </ul>
       )}
+
+      {pageCount > 1 && products && products.length > 0 ? (
+        <nav aria-label="Paginación" className="mt-8 flex items-center justify-center gap-3">
+          {page > 1 ? (
+            <Link href={pageHref(sp, page - 1)} className={buttonClasses("outline")}>
+              Anterior
+            </Link>
+          ) : null}
+          <span className="text-sm text-muted tabular">
+            Página {page} de {pageCount}
+          </span>
+          {page < pageCount ? (
+            <Link href={pageHref(sp, page + 1)} className={buttonClasses("outline")}>
+              Siguiente
+            </Link>
+          ) : null}
+        </nav>
+      ) : null}
     </div>
   );
 }
