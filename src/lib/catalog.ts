@@ -1,0 +1,308 @@
+import "server-only";
+
+import { cache } from "react";
+
+import { createPublicClient } from "@/lib/supabase/server";
+import type { CategoryRow, ProductImageRow, ProductRow } from "@/lib/supabase/types";
+
+/** Producto tal como lo ve la tienda pública. */
+export type PublicProduct = Pick<
+  ProductRow,
+  | "id"
+  | "name"
+  | "slug"
+  | "description"
+  | "size"
+  | "magazine_price"
+  | "sale_price"
+  | "stock"
+  | "is_featured"
+  | "is_offer"
+  | "discount_percent"
+  | "updated_at"
+> & {
+  category: Pick<CategoryRow, "id" | "name" | "slug"> | null;
+  images: Pick<ProductImageRow, "id" | "storage_path" | "alt" | "position">[];
+};
+
+export type PublicCategory = Pick<CategoryRow, "id" | "name" | "slug" | "description"> & {
+  productCount: number;
+};
+
+const PRODUCT_SELECT =
+  "id, name, slug, description, size, magazine_price, sale_price, stock, is_featured, is_offer, discount_percent, updated_at, category:categories(id, name, slug), images:product_images(id, storage_path, alt, position)";
+
+export const SORT_OPTIONS = {
+  destacados: "Destacados",
+  "precio-asc": "Menor precio",
+  "precio-desc": "Mayor precio",
+  descuento: "Mayor descuento",
+  nuevos: "Más nuevos",
+} as const;
+
+export type SortOption = keyof typeof SORT_OPTIONS;
+
+export type CatalogFilters = {
+  q?: string;
+  category?: string;
+  min?: number;
+  max?: number;
+  offers?: boolean;
+  sort?: SortOption;
+  page?: number;
+};
+
+export const PAGE_SIZE = 24;
+
+export type CatalogResult = {
+  products: PublicProduct[];
+  total: number;
+  page: number;
+  pageCount: number;
+  /** false si la base no está configurada o no respondió. */
+  available: boolean;
+};
+
+function sortImages<T extends { images: { position: number }[] }>(p: T): T {
+  return { ...p, images: [...p.images].sort((a, b) => a.position - b.position) };
+}
+
+function escapeLike(value: string): string {
+  return value.replace(/[\\%_]/g, (m) => `\\${m}`);
+}
+
+/** Lee parámetros de la URL de forma tolerante. */
+export function parseCatalogFilters(
+  params: Record<string, string | string[] | undefined>,
+): CatalogFilters {
+  const first = (key: string) => {
+    const v = params[key];
+    return Array.isArray(v) ? v[0] : v;
+  };
+  const num = (key: string) => {
+    const raw = first(key);
+    if (!raw) return undefined;
+    const n = Number(raw.replace(",", "."));
+    return Number.isFinite(n) && n >= 0 ? n : undefined;
+  };
+  const sortRaw = first("orden");
+  const pageRaw = Number(first("pagina") ?? "1");
+  return {
+    q: first("q")?.trim().slice(0, 80) || undefined,
+    category: first("categoria")?.trim().slice(0, 80) || undefined,
+    min: num("min"),
+    max: num("max"),
+    offers: first("ofertas") === "1",
+    sort: sortRaw && sortRaw in SORT_OPTIONS ? (sortRaw as SortOption) : "destacados",
+    page: Number.isInteger(pageRaw) && pageRaw > 0 ? Math.min(pageRaw, 1000) : 1,
+  };
+}
+
+export async function getCatalog(filters: CatalogFilters): Promise<CatalogResult> {
+  const supabase = createPublicClient();
+  const page = filters.page ?? 1;
+  if (!supabase) return { products: [], total: 0, page, pageCount: 0, available: false };
+
+  let categoryId: string | null = null;
+  if (filters.category) {
+    const category = await getCategoryBySlug(filters.category);
+    if (!category) return { products: [], total: 0, page, pageCount: 0, available: true };
+    categoryId = category.id;
+  }
+
+  let query = supabase
+    .from("products")
+    .select(PRODUCT_SELECT, { count: "exact" })
+    .eq("status", "published");
+
+  if (filters.q) query = query.ilike("name", `%${escapeLike(filters.q)}%`);
+  if (categoryId) query = query.eq("category_id", categoryId);
+  if (filters.min !== undefined) query = query.gte("sale_price", filters.min);
+  if (filters.max !== undefined) query = query.lte("sale_price", filters.max);
+  if (filters.offers) query = query.eq("is_offer", true).gt("discount_percent", 0);
+
+  switch (filters.sort) {
+    case "precio-asc":
+      query = query.order("sale_price", { ascending: true });
+      break;
+    case "precio-desc":
+      query = query.order("sale_price", { ascending: false });
+      break;
+    case "descuento":
+      query = query.order("discount_percent", { ascending: false });
+      break;
+    case "nuevos":
+      query = query.order("created_at", { ascending: false });
+      break;
+    default:
+      query = query.order("is_featured", { ascending: false }).order("created_at", {
+        ascending: false,
+      });
+  }
+  query = query.order("id");
+
+  const from = (page - 1) * PAGE_SIZE;
+  const { data, count, error } = await query.range(from, from + PAGE_SIZE - 1);
+
+  if (error) {
+    // Un rango fuera de límites (página inexistente) no es un error de disponibilidad.
+    if (error.code === "PGRST103") {
+      return { products: [], total: count ?? 0, page, pageCount: 0, available: true };
+    }
+    console.error("[catalog] Error al leer productos:", error.message);
+    return { products: [], total: 0, page, pageCount: 0, available: false };
+  }
+
+  const total = count ?? 0;
+  return {
+    products: (data as unknown as PublicProduct[]).map(sortImages),
+    total,
+    page,
+    pageCount: Math.ceil(total / PAGE_SIZE),
+    available: true,
+  };
+}
+
+/** Cantidad total de productos publicados (null si la base no está disponible). */
+export const getPublishedCount = cache(async (): Promise<number | null> => {
+  const supabase = createPublicClient();
+  if (!supabase) return null;
+  const { count, error } = await supabase
+    .from("products")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "published");
+  if (error) {
+    console.error("[catalog] Error al contar productos:", error.message);
+    return null;
+  }
+  return count ?? 0;
+});
+
+export async function getHighlights(limit = 8) {
+  const supabase = createPublicClient();
+  if (!supabase) return { featured: [], offers: [], latest: [] };
+
+  const base = () =>
+    supabase.from("products").select(PRODUCT_SELECT).eq("status", "published");
+
+  const [featured, offers, latest] = await Promise.all([
+    base().eq("is_featured", true).order("updated_at", { ascending: false }).limit(limit),
+    base()
+      .eq("is_offer", true)
+      .gt("discount_percent", 0)
+      .order("discount_percent", { ascending: false })
+      .limit(limit),
+    base().order("created_at", { ascending: false }).limit(limit),
+  ]);
+
+  const rows = (r: { data: unknown }) => ((r.data ?? []) as PublicProduct[]).map(sortImages);
+  return { featured: rows(featured), offers: rows(offers), latest: rows(latest) };
+}
+
+export const getProductBySlug = cache(async (slug: string): Promise<PublicProduct | null> => {
+  const supabase = createPublicClient();
+  if (!supabase) return null;
+  const { data, error } = await supabase
+    .from("products")
+    .select(PRODUCT_SELECT)
+    .eq("status", "published")
+    .eq("slug", slug)
+    .maybeSingle();
+  if (error) {
+    console.error("[catalog] Error al leer producto:", error.message);
+    return null;
+  }
+  return data ? sortImages(data as unknown as PublicProduct) : null;
+});
+
+export async function getRelatedProducts(product: PublicProduct, limit = 4) {
+  const supabase = createPublicClient();
+  if (!supabase || !product.category) return [];
+  const { data } = await supabase
+    .from("products")
+    .select(PRODUCT_SELECT)
+    .eq("status", "published")
+    .eq("category_id", product.category.id)
+    .neq("id", product.id)
+    .order("is_featured", { ascending: false })
+    .limit(limit);
+  return ((data ?? []) as unknown as PublicProduct[]).map(sortImages);
+}
+
+/** Categorías visibles que tienen al menos un producto publicado. */
+export const getActiveCategories = cache(async (): Promise<PublicCategory[]> => {
+  const supabase = createPublicClient();
+  if (!supabase) return [];
+  const [{ data: categories, error }, { data: products }] = await Promise.all([
+    supabase
+      .from("categories")
+      .select("id, name, slug, description, position")
+      .eq("is_visible", true)
+      .order("position"),
+    supabase.from("products").select("category_id").eq("status", "published"),
+  ]);
+  if (error || !categories) return [];
+
+  const counts = new Map<string, number>();
+  for (const p of products ?? []) {
+    if (p.category_id) counts.set(p.category_id, (counts.get(p.category_id) ?? 0) + 1);
+  }
+  return categories
+    .map((c) => ({
+      id: c.id,
+      name: c.name,
+      slug: c.slug,
+      description: c.description,
+      productCount: counts.get(c.id) ?? 0,
+    }))
+    .filter((c) => c.productCount > 0);
+});
+
+export const getCategoryBySlug = cache(async (slug: string) => {
+  const supabase = createPublicClient();
+  if (!supabase) return null;
+  const { data } = await supabase
+    .from("categories")
+    .select("id, name, slug, description")
+    .eq("is_visible", true)
+    .eq("slug", slug)
+    .maybeSingle();
+  return data;
+});
+
+export type CartProductSnapshot = Pick<
+  ProductRow,
+  "id" | "name" | "slug" | "size" | "magazine_price" | "sale_price" | "stock"
+> & { image: string | null };
+
+/** Datos actuales (precio y stock) para validar un carrito. Siempre desde la base, sin caché. */
+export async function getProductsForCart(ids: string[]): Promise<CartProductSnapshot[] | null> {
+  const supabase = createPublicClient({ cached: false });
+  if (!supabase) return null;
+  if (ids.length === 0) return [];
+  const { data, error } = await supabase
+    .from("products")
+    .select(
+      "id, name, slug, size, magazine_price, sale_price, stock, images:product_images(storage_path, position)",
+    )
+    .eq("status", "published")
+    .in("id", ids)
+    .abortSignal(AbortSignal.timeout(10_000));
+  if (error) {
+    console.error("[cart] Error al validar carrito:", error.message);
+    return null;
+  }
+  return (data ?? []).map((row) => {
+    const images = [...(row.images ?? [])].sort((a, b) => a.position - b.position);
+    return {
+      id: row.id,
+      name: row.name,
+      slug: row.slug,
+      size: row.size,
+      magazine_price: row.magazine_price,
+      sale_price: row.sale_price,
+      stock: row.stock,
+      image: images[0]?.storage_path ?? null,
+    };
+  });
+}

@@ -1,0 +1,113 @@
+@import "tailwindcss";
+
+/* ---------------------------------------------------------------
+   Natu Mariel — sistema visual
+   Verde botánico · rosa pastel · coral · crema · blanco cálido
+   Contrastes verificados (WCAG AA) para texto sobre fondos de marca.
+---------------------------------------------------------------- */
+
+:root {
+  --cream: #fbf6ee;
+  --warm-white: #fffcf8;
+  --forest: #1f3a2c; /* texto principal: 11.5:1 sobre crema */
+  --muted: #5b6b61; /* texto secundario: 5.2:1 sobre crema */
+  --botanical: #3e7c59;
+  --botanical-deep: #2f6b4a; /* blanco encima: 6.3:1 */
+  --sage: #e4efe7;
+  --pink: #f8d7dd;
+  --blush: #fcebee;
+  --coral: #f0766a; /* decorativo */
+  --coral-deep: #c2453a; /* botones de compra y precio: blanco encima 5:1 */
+  --coral-soft: #fde6e1;
+  --line: #eadfd3;
+}
+
+@theme inline {
+  --color-cream: var(--cream);
+  --color-warm-white: var(--warm-white);
+  --color-forest: var(--forest);
+  --color-muted: var(--muted);
+  --color-botanical: var(--botanical);
+  --color-botanical-deep: var(--botanical-deep);
+  --color-sage: var(--sage);
+  --color-pink: var(--pink);
+  --color-blush: var(--blush);
+  --color-coral: var(--coral);
+  --color-coral-deep: var(--coral-deep);
+  --color-coral-soft: var(--coral-soft);
+  --color-line: var(--line);
+  --font-display: var(--font-fraunces), Georgia, "Times New Roman", serif;
+  --font-sans: var(--font-nunito), system-ui, -apple-system, "Segoe UI", sans-serif;
+  --shadow-soft: 0 1px 2px rgb(31 58 44 / 0.04), 0 8px 24px -12px rgb(31 58 44 / 0.18);
+  --shadow-lift: 0 2px 4px rgb(31 58 44 / 0.05), 0 18px 40px -18px rgb(31 58 44 / 0.28);
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--cream);
+  color: var(--forest);
+  font-family: var(--font-sans);
+  font-feature-settings: "kern";
+}
+
+::selection {
+  background: var(--pink);
+  color: var(--forest);
+}
+
+/* Foco visible y consistente para navegación por teclado */
+:focus-visible {
+  outline: 3px solid var(--botanical);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.animate-rise {
+  animation: rise-in 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+@keyframes float-soft {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0);
+  }
+  50% {
+    transform: translateY(-6px) rotate(1.5deg);
+  }
+}
+
+.animate-float {
+  animation: float-soft 7s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
