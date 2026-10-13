@@ -185,6 +185,16 @@ NEXT_PUBLIC_WHATSAPP_NUMBER=5491100000000 npx next dev -p 3001
 E2E_WHATSAPP=1 E2E_PRODUCT_SLUG=<slug-publicado> BASE_URL=http://localhost:3001 npx playwright test whatsapp
 ```
 
+## Catálogo importado de Natura
+
+El catálogo se cargó desde naturacosmeticos.com.ar con los scripts de `scripts/importar-natura/`:
+
+- `crawl2.py` recorre las fichas de producto (semillas del sitemap y de las páginas de categoría, más los productos relacionados) y guarda lo que lee.
+- `build.py` arma las filas: nombre, descripción, tamaño, categoría, precio de revista y fotos. Los productos con tonos entran como uno solo, con los tonos en la descripción.
+- `datos/` tiene los lotes que se importaron.
+
+Todos los productos entraron como **borrador**, con **stock 0** y **precio especial igual al de revista**. No se duplican productos cuyo nombre ya existía. Los que no encajan en tus categorías quedaron sin categoría para que la asignes desde el panel.
+
 ## Notas
 
 - La ilustración del inicio es un SVG propio, sin texto. Si más adelante querés usar una foto, se reemplaza en `src/components/store/hero-art.tsx`.
