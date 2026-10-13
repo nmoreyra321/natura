@@ -2,7 +2,7 @@
 
 import { Loader2, Plus, Save, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useActionState, useEffect, useState, useTransition } from "react";
+import { useActionState, useEffect, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { deleteCategory, saveCategory, type ActionResult } from "@/app/admin/actions";
@@ -28,19 +28,21 @@ export function CategoryEditor({ category, counts }: { category: Category | null
   const [confirm, setConfirm] = useState(false);
   const [deleting, startDelete] = useTransition();
   const p = category?.id ?? "nueva";
+  const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
     if (!state) return;
     if (state.ok) {
       toast.success(state.message ?? "Guardado.");
+      if (!category) formRef.current?.reset();
       router.refresh();
     } else toast.error(state.error);
-  }, [state, router]);
+  }, [state, router, category]);
 
   const fields = state && !state.ok ? state.fields : undefined;
 
   return (
-    <form action={action} className="grid gap-3 rounded-3xl bg-warm-white p-4 shadow-soft sm:grid-cols-[2fr_1.5fr_90px] sm:items-start">
+    <form ref={formRef} action={action} className="grid gap-3 rounded-3xl bg-warm-white p-4 shadow-soft sm:grid-cols-[2fr_1.5fr_90px] sm:items-start">
       {!category ? <h2 className="font-display text-lg font-semibold sm:col-span-3">Nueva categoría</h2> : null}
       <Field label="Nombre" htmlFor={`n-${p}`} error={fields?.name}>
         <Input id={`n-${p}`} name="name" defaultValue={category?.name} required />

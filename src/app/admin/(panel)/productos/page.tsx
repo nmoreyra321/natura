@@ -57,7 +57,7 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
         </LinkButton>
       </div>
 
-      <form method="get" className="mt-6 grid grid-cols-2 gap-3 rounded-3xl bg-warm-white p-4 shadow-soft md:grid-cols-[2fr_1fr_1fr_1fr_auto]">
+      <form method="get" className="mt-6 grid grid-cols-2 gap-3 rounded-3xl bg-warm-white p-4 shadow-soft md:grid-cols-[1.4fr_1fr_1fr_1.1fr_auto]">
         <div className="col-span-2 md:col-span-1">
           <label htmlFor="aq" className="sr-only">Buscar por nombre</label>
           <input id="aq" name="q" type="search" defaultValue={q} placeholder="Buscar por nombre" className={`${inputClasses} h-11`} />
@@ -65,7 +65,7 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
         <div>
           <label htmlFor="ae" className="sr-only">Estado</label>
           <select id="ae" name="estado" defaultValue={estado} className={`${inputClasses} h-11`}>
-            <option value="">Todos los estados</option>
+            <option value="">Estado: todos</option>
             <option value="published">Publicados</option>
             <option value="draft">Borradores</option>
           </select>
@@ -73,7 +73,7 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
         <div>
           <label htmlFor="as" className="sr-only">Stock</label>
           <select id="as" name="stock" defaultValue={stock} className={`${inputClasses} h-11`}>
-            <option value="">Todo el stock</option>
+            <option value="">Stock: todo</option>
             <option value="sin">Sin stock</option>
             <option value="bajo">Stock bajo</option>
           </select>
@@ -81,13 +81,13 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
         <div>
           <label htmlFor="ac" className="sr-only">Categoría</label>
           <select id="ac" name="categoria" defaultValue={categoria} className={`${inputClasses} h-11`}>
-            <option value="">Todas las categorías</option>
+            <option value="">Categoría: todas</option>
             {(categories ?? []).map((c) => (
               <option key={c.id} value={c.id}>{c.name}</option>
             ))}
           </select>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="col-span-2 flex flex-wrap items-center justify-between gap-3 md:col-span-1 md:justify-start">
           <label className="flex items-center gap-2 text-sm font-semibold">
             <input type="checkbox" name="oferta" value="1" defaultChecked={oferta} className="size-5 accent-[var(--coral-deep)]" />
             Ofertas

@@ -46,9 +46,25 @@ async function optimize(file: File): Promise<File> {
   }
 }
 
+/** Comprueba que el archivo realmente sea una imagen que el navegador puede mostrar. */
+async function isDecodable(file: File): Promise<boolean> {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = new Image();
+    img.src = url;
+    await img.decode();
+    return img.naturalWidth > 0 && img.naturalHeight > 0;
+  } catch {
+    return false;
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
 async function upload(productId: string, original: File): Promise<string> {
   const problem = validateImageFile(original);
   if (problem) throw new Error(problem);
+  if (!(await isDecodable(original))) throw new Error("El archivo no es una imagen válida o está dañado.");
   const file = await optimize(original);
   const supabase = getBrowserClient();
   if (!supabase) throw new Error("Falta configurar Supabase.");
