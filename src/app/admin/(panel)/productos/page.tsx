@@ -49,7 +49,7 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
     <div className="mx-auto max-w-6xl">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="font-display text-3xl font-semibold">Productos</h1>
+          <h1 className="font-display text-3xl font-bold">Productos</h1>
           <p className="text-muted">{products ? `${products.length} ${products.length === 1 ? "producto" : "productos"}` : ""}</p>
         </div>
         <LinkButton href="/admin/productos/nuevo">
@@ -107,7 +107,7 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
         <p className="mt-6 rounded-2xl bg-coral-soft p-4 font-semibold">No pudimos cargar los productos.</p>
       ) : !products || products.length === 0 ? (
         <div className="mt-6 rounded-3xl border border-dashed border-line bg-warm-white p-10 text-center">
-          <p className="font-display text-xl font-semibold">
+          <p className="font-display text-xl font-bold">
             {filtered ? "No hay productos con esos filtros." : "Todavía no hay productos."}
           </p>
           {!filtered ? (

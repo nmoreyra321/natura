@@ -15,16 +15,16 @@ export default function OpengraphImage() {
           flexDirection: "column",
           justifyContent: "center",
           padding: "80px",
-          background: "linear-gradient(135deg, #fcebee 0%, #fbf6ee 55%, #e4efe7 100%)",
-          color: "#1f3a2c",
-          fontFamily: "serif",
+          background: "#fff7ef",
+          color: "#3b1e4a",
+          fontFamily: "sans-serif",
           position: "relative",
         }}
       >
-        <div style={{ position: "absolute", right: 90, top: 90, width: 180, height: 180, borderRadius: 999, background: "#f0766a", opacity: 0.85 }} />
-        <div style={{ position: "absolute", right: 210, bottom: 70, width: 260, height: 260, borderRadius: 999, background: "#3e7c59", opacity: 0.25 }} />
+        <div style={{ position: "absolute", right: 90, top: 90, width: 180, height: 180, borderRadius: 999, background: "#ffd45c" }} />
+        <div style={{ position: "absolute", right: 210, bottom: 70, width: 260, height: 260, borderRadius: 999, background: "#d1166b", opacity: 0.9 }} />
         <div style={{ display: "flex", fontSize: 96, fontWeight: 700 }}>
-          Natu&nbsp;<span style={{ color: "#c2453a", fontStyle: "italic" }}>Mariel</span>
+          Natu&nbsp;<span style={{ color: "#d1166b" }}>Mariel</span>
         </div>
         <div style={{ fontSize: 40, marginTop: 24, maxWidth: 760 }}>Natura te encanta. Nuestros precios, todavía más.</div>
       </div>

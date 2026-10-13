@@ -77,7 +77,7 @@ export function ProductForm({
   return (
     <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-6">
       <section className="grid gap-4 rounded-3xl bg-warm-white p-5 shadow-soft sm:grid-cols-2">
-        <h2 className="font-display text-xl font-semibold sm:col-span-2">Información</h2>
+        <h2 className="font-display text-xl font-bold sm:col-span-2">Información</h2>
         <Field label="Nombre" htmlFor="name" error={err("name")} className="sm:col-span-2">
           <Input
             id="name"
@@ -116,7 +116,7 @@ export function ProductForm({
       </section>
 
       <section className="grid gap-4 rounded-3xl bg-warm-white p-5 shadow-soft sm:grid-cols-2">
-        <h2 className="font-display text-xl font-semibold sm:col-span-2">Precios y stock</h2>
+        <h2 className="font-display text-xl font-bold sm:col-span-2">Precios y stock</h2>
         <Field label="Precio de revista ($)" htmlFor="magazine_price" error={err("magazine_price")} hint="El precio oficial de la revista Natura.">
           <Input id="magazine_price" inputMode="decimal" placeholder="Ej.: 25.000 o 25000,50" aria-invalid={Boolean(errors.magazine_price)} {...register("magazine_price")} />
         </Field>
@@ -146,7 +146,7 @@ export function ProductForm({
       </section>
 
       <section className="grid gap-3 rounded-3xl bg-warm-white p-5 shadow-soft sm:grid-cols-2">
-        <h2 className="font-display text-xl font-semibold sm:col-span-2">Visibilidad</h2>
+        <h2 className="font-display text-xl font-bold sm:col-span-2">Visibilidad</h2>
         <Field label="Estado" htmlFor="status" className="sm:col-span-2">
           <Select id="status" {...register("status")}>
             <option value="draft">Borrador (no se ve en la tienda)</option>

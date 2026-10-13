@@ -97,23 +97,30 @@ export default async function ProductPage({ params }: PageProps<"/productos/[slu
       </nav>
 
       <div className="grid gap-8 md:grid-cols-2 md:gap-12">
-        <Gallery images={images} name={product.name} />
+        <div className="relative">
+          <Gallery images={images} name={product.name} />
+          <DiscountBadge
+            magazinePrice={product.magazine_price}
+            salePrice={product.sale_price}
+            size="lg"
+            className="absolute -top-4 -right-2 z-10 sm:-right-4"
+          />
+        </div>
 
         <div className="flex flex-col gap-5">
           <div>
             <div className="flex flex-wrap items-center gap-2">
               {product.category ? (
-                <span className="text-xs font-bold tracking-[0.12em] text-botanical-deep uppercase">
+                <span className="rounded-full bg-lilac px-3 py-1 text-xs font-extrabold tracking-[0.1em] text-grape uppercase">
                   {product.category.name}
                 </span>
               ) : null}
-              <DiscountBadge magazinePrice={product.magazine_price} salePrice={product.sale_price} />
             </div>
-            <h1 className="mt-2 font-display text-3xl leading-tight font-semibold sm:text-4xl">{product.name}</h1>
+            <h1 className="mt-3 font-display text-4xl leading-tight font-bold sm:text-5xl">{product.name}</h1>
             {product.size ? <p className="mt-1 text-muted">{product.size}</p> : null}
           </div>
 
-          <div className="rounded-3xl bg-warm-white p-5 shadow-soft">
+          <div className="rounded-3xl border-2 border-forest bg-warm-white p-5 shadow-[4px_4px_0_var(--forest)]">
             <Price magazinePrice={product.magazine_price} salePrice={product.sale_price} size="lg" showSavings />
             <StockBadge stock={product.stock} className="mt-3" />
           </div>
@@ -149,7 +156,7 @@ export default async function ProductPage({ params }: PageProps<"/productos/[slu
 
           {product.description ? (
             <section aria-labelledby="desc" className="border-t border-line pt-5">
-              <h2 id="desc" className="font-display text-xl font-semibold">Descripción</h2>
+              <h2 id="desc" className="font-display text-xl font-bold">Descripción</h2>
               <div className="mt-2 leading-relaxed whitespace-pre-line text-forest/90">{product.description}</div>
             </section>
           ) : null}
@@ -158,7 +165,7 @@ export default async function ProductPage({ params }: PageProps<"/productos/[slu
 
       {related.length > 0 ? (
         <section className="mt-16" aria-labelledby="rel">
-          <h2 id="rel" className="mb-6 font-display text-2xl font-semibold">También te puede gustar</h2>
+          <h2 id="rel" className="mb-6 font-display text-2xl font-bold">También te puede gustar</h2>
           <ProductGrid products={related} />
         </section>
       ) : null}

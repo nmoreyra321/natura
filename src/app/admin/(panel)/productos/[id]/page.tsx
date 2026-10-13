@@ -35,7 +35,7 @@ export default async function EditProductPage({
       </Link>
       <div className="mt-2 mb-6 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="font-display text-3xl font-semibold">{product.name}</h1>
+          <h1 className="font-display text-3xl font-bold">{product.name}</h1>
           <p className="text-sm text-muted">
             Creado el {formatDate(product.created_at)} · Actualizado el {formatDate(product.updated_at)}
           </p>

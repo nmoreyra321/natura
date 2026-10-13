@@ -39,7 +39,7 @@ export function ConfirmDialog({
       className="m-auto w-[min(92vw,440px)] rounded-3xl bg-warm-white p-6 text-forest shadow-lift backdrop:bg-forest/40"
       aria-labelledby="confirm-title"
     >
-      <h2 id="confirm-title" className="font-display text-xl font-semibold">{title}</h2>
+      <h2 id="confirm-title" className="font-display text-xl font-bold">{title}</h2>
       <p className="mt-2 text-muted">{description}</p>
       <div className="mt-6 flex flex-wrap justify-end gap-2">
         <Button variant="outline" onClick={onCancel} disabled={pending} autoFocus>

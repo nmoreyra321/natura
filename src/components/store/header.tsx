@@ -22,7 +22,7 @@ function CartLink() {
       <ShoppingBag className="size-6" aria-hidden="true" />
       {count > 0 ? (
         <span
-          className="absolute -top-0.5 -right-0.5 flex min-w-5 items-center justify-center rounded-full bg-coral-deep px-1.5 text-[0.7rem] leading-5 font-bold text-white tabular"
+          className="absolute -top-0.5 -right-0.5 flex min-w-5 items-center justify-center rounded-full bg-coral-deep px-1.5 text-[0.7rem] leading-5 font-bold text-white tabular ring-2 ring-cream"
           aria-hidden="true"
         >
           {count > 99 ? "99+" : count}
@@ -63,7 +63,7 @@ function SearchForm({ onDone, autoFocus = false }: { onDone?: () => void; autoFo
       />
       <button
         type="submit"
-        className="absolute top-1 right-1 inline-flex size-9 items-center justify-center rounded-full bg-botanical-deep text-white transition-colors hover:bg-[#245a3c]"
+        className="absolute top-1 right-1 inline-flex size-9 items-center justify-center rounded-full bg-botanical-deep text-white transition-colors hover:bg-[#146347]"
         aria-label="Buscar"
       >
         <Search className="size-4.5" aria-hidden="true" />
@@ -105,7 +105,10 @@ export function Header({ categories }: { categories: NavCategory[] }) {
   ];
 
   return (
-    <header className="sticky top-0 z-40 border-b border-line/70 bg-cream/90 backdrop-blur-md supports-[backdrop-filter]:bg-cream/75">
+    <header className="sticky top-0 z-40 border-b-2 border-forest bg-cream/95 backdrop-blur-md supports-[backdrop-filter]:bg-cream/85">
+      <p className="bg-coral-deep px-4 py-1.5 text-center text-xs font-extrabold tracking-wide text-white sm:text-sm">
+        ✨ Productos Natura a precios especiales · Pedidos por WhatsApp ✨
+      </p>
       <div className="mx-auto flex h-16 max-w-7xl items-center gap-2 px-4 sm:h-18 sm:gap-4 sm:px-6">
         <button
           type="button"
@@ -126,7 +129,7 @@ export function Header({ categories }: { categories: NavCategory[] }) {
               <li key={l.href}>
                 <Link
                   href={l.href}
-                  className="rounded-full px-3.5 py-2 text-[0.95rem] font-semibold text-forest/85 transition-colors hover:bg-forest/5 hover:text-forest"
+                  className="rounded-full px-3.5 py-2 text-[0.95rem] font-bold text-forest transition-colors hover:bg-sun"
                 >
                   {l.label}
                 </Link>
@@ -198,7 +201,7 @@ export function Header({ categories }: { categories: NavCategory[] }) {
                     <li key={l.href}>
                       <Link
                         href={l.href}
-                        className="flex min-h-12 items-center rounded-2xl px-4 text-lg font-semibold hover:bg-blush"
+                        className="flex min-h-12 items-center rounded-2xl px-4 text-lg font-semibold hover:bg-sun"
                       >
                         {l.label}
                       </Link>
@@ -213,7 +216,7 @@ export function Header({ categories }: { categories: NavCategory[] }) {
                 <ul className="flex flex-col gap-1">
                   {categories.slice(4).map((c) => (
                     <li key={c.slug}>
-                      <Link href={`/categorias/${c.slug}`} className="flex min-h-11 items-center rounded-2xl px-4 hover:bg-blush">
+                      <Link href={`/categorias/${c.slug}`} className="flex min-h-11 items-center rounded-2xl px-4 hover:bg-sun">
                         {c.name}
                       </Link>
                     </li>

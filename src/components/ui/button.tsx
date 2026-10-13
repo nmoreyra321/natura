@@ -5,12 +5,12 @@ type Variant = "primary" | "secondary" | "ghost" | "outline" | "danger" | "whats
 type Size = "sm" | "md" | "lg";
 
 const base =
-  "inline-flex items-center justify-center gap-2 rounded-full font-semibold transition-[background-color,color,box-shadow,transform] duration-200 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-55 aria-disabled:pointer-events-none aria-disabled:opacity-55 select-none";
+  "inline-flex items-center justify-center gap-2 rounded-full font-bold transition-[background-color,color,box-shadow,transform] duration-200 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-55 aria-disabled:pointer-events-none aria-disabled:opacity-55 select-none";
 
 const variants: Record<Variant, string> = {
-  primary: "bg-coral-deep text-white shadow-soft hover:bg-[#a93a30] hover:shadow-lift",
-  secondary: "bg-botanical-deep text-white shadow-soft hover:bg-[#245a3c]",
-  outline: "border border-forest/20 bg-warm-white text-forest hover:border-forest/40 hover:bg-white",
+  primary: "bg-coral-deep text-white shadow-soft hover:bg-[#b8125e] hover:shadow-lift",
+  secondary: "bg-botanical-deep text-white shadow-soft hover:bg-[#146347]",
+  outline: "border-2 border-forest bg-warm-white text-forest hover:bg-sun",
   ghost: "text-forest hover:bg-forest/5",
   danger: "bg-[#b42318] text-white hover:bg-[#912018]",
   whatsapp: "bg-[#1a7f4b] text-white shadow-soft hover:bg-[#156a3e]",

@@ -24,11 +24,11 @@ export default async function LoginPage() {
       <div className="w-full max-w-md rounded-3xl bg-warm-white p-6 shadow-lift sm:p-8">
         <div className="flex items-center gap-2">
           <LeafMark className="size-9 text-botanical" />
-          <p className="font-display text-2xl font-semibold">
-            Natu <span className="italic text-coral-deep">Mariel</span>
+          <p className="font-display text-2xl font-bold">
+            Natu <span className="text-coral-deep">Mariel</span>
           </p>
         </div>
-        <h1 className="mt-6 font-display text-3xl font-semibold">Panel de administración</h1>
+        <h1 className="mt-6 font-display text-3xl font-bold">Panel de administración</h1>
         <p className="mt-1 text-muted">Ingresá con tu usuario y contraseña.</p>
         <LoginForm />
       </div>

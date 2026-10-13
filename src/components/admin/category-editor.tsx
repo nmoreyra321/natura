@@ -43,7 +43,7 @@ export function CategoryEditor({ category, counts }: { category: Category | null
 
   return (
     <form ref={formRef} action={action} className="grid gap-3 rounded-3xl bg-warm-white p-4 shadow-soft sm:grid-cols-[2fr_1.5fr_90px] sm:items-start">
-      {!category ? <h2 className="font-display text-lg font-semibold sm:col-span-3">Nueva categoría</h2> : null}
+      {!category ? <h2 className="font-display text-lg font-bold sm:col-span-3">Nueva categoría</h2> : null}
       <Field label="Nombre" htmlFor={`n-${p}`} error={fields?.name}>
         <Input id={`n-${p}`} name="name" defaultValue={category?.name} required />
       </Field>

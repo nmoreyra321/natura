@@ -1,25 +1,30 @@
 @import "tailwindcss";
 
 /* ---------------------------------------------------------------
-   Natu Mariel — sistema visual
-   Verde botánico · rosa pastel · coral · crema · blanco cálido
-   Contrastes verificados (WCAG AA) para texto sobre fondos de marca.
+   Natu Mariel — estilo "colorido y alegre"
+   Fucsia · coral · mandarina · sol · menta · lila sobre crema
+   Contrastes verificados (WCAG AA) para textos y botones.
 ---------------------------------------------------------------- */
 
 :root {
-  --cream: #fbf6ee;
-  --warm-white: #fffcf8;
-  --forest: #1f3a2c; /* texto principal: 11.5:1 sobre crema */
-  --muted: #5b6b61; /* texto secundario: 5.2:1 sobre crema */
-  --botanical: #3e7c59;
-  --botanical-deep: #2f6b4a; /* blanco encima: 6.3:1 */
-  --sage: #e4efe7;
-  --pink: #f8d7dd;
-  --blush: #fcebee;
-  --coral: #f0766a; /* decorativo */
-  --coral-deep: #c2453a; /* botones de compra y precio: blanco encima 5:1 */
-  --coral-soft: #fde6e1;
-  --line: #eadfd3;
+  --cream: #fff7ef;
+  --warm-white: #ffffff;
+  --forest: #3b1e4a; /* texto principal (ciruela): 13.5:1 sobre crema */
+  --muted: #6b5577; /* texto secundario: 6.2:1 sobre crema */
+  --botanical: #2fa36b;
+  --botanical-deep: #1b7a57; /* blanco encima: 5.3:1 */
+  --sage: #d7f2e3; /* menta */
+  --pink: #ffc4d6;
+  --blush: #ffe3ec;
+  --coral: #ff7a59; /* decorativo */
+  --coral-deep: #d1166b; /* fucsia: botones de compra y precios, blanco encima 5.2:1 */
+  --coral-soft: #ffe1ec;
+  --line: #f3dce6;
+  --sun: #ffd45c;
+  --tangerine: #ff9a62;
+  --lilac: #eadcf5;
+  --grape: #7b3fa0;
+  --peach: #ffe1cc;
 }
 
 @theme inline {
@@ -36,10 +41,16 @@
   --color-coral-deep: var(--coral-deep);
   --color-coral-soft: var(--coral-soft);
   --color-line: var(--line);
-  --font-display: var(--font-fraunces), Georgia, "Times New Roman", serif;
+  --color-sun: var(--sun);
+  --color-tangerine: var(--tangerine);
+  --color-lilac: var(--lilac);
+  --color-grape: var(--grape);
+  --color-peach: var(--peach);
+  --font-display: var(--font-fredoka), "Trebuchet MS", system-ui, sans-serif;
   --font-sans: var(--font-nunito), system-ui, -apple-system, "Segoe UI", sans-serif;
-  --shadow-soft: 0 1px 2px rgb(31 58 44 / 0.04), 0 8px 24px -12px rgb(31 58 44 / 0.18);
-  --shadow-lift: 0 2px 4px rgb(31 58 44 / 0.05), 0 18px 40px -18px rgb(31 58 44 / 0.28);
+  --shadow-soft: 0 2px 0 rgb(59 30 74 / 0.06), 0 10px 26px -14px rgb(209 22 107 / 0.35);
+  --shadow-lift: 0 3px 0 rgb(59 30 74 / 0.08), 0 22px 40px -18px rgb(209 22 107 / 0.45);
+  --shadow-pop: 4px 4px 0 var(--forest);
 }
 
 html {
@@ -54,26 +65,53 @@ body {
   font-feature-settings: "kern";
 }
 
+h1,
+h2,
+h3,
+.font-display {
+  letter-spacing: -0.01em;
+}
+
 ::selection {
-  background: var(--pink);
+  background: var(--sun);
   color: var(--forest);
 }
 
 /* Foco visible y consistente para navegación por teclado */
 :focus-visible {
-  outline: 3px solid var(--botanical);
+  outline: 3px solid var(--grape);
   outline-offset: 2px;
-  border-radius: 6px;
+  border-radius: 8px;
 }
 
 .tabular {
   font-variant-numeric: tabular-nums;
 }
 
+/* Subrayado ondulado para títulos de sección */
+.wavy-underline {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='10' viewBox='0 0 40 10'%3E%3Cpath d='M0 5 Q10 0 20 5 T40 5' fill='none' stroke='%23ff9a62' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: repeat-x;
+  background-position: 0 100%;
+  background-size: 40px 10px;
+  padding-bottom: 10px;
+}
+
+/* Sticker: etiquetas giradas tipo calcomanía */
+.sticker {
+  transform: rotate(-6deg);
+  transition: transform 0.25s cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+
+.group:hover .sticker,
+.sticker:hover {
+  transform: rotate(4deg) scale(1.08);
+}
+
 @keyframes rise-in {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(10px);
   }
   to {
     opacity: 1;
@@ -82,7 +120,7 @@ body {
 }
 
 .animate-rise {
-  animation: rise-in 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  animation: rise-in 0.55s cubic-bezier(0.2, 0.7, 0.2, 1) both;
 }
 
 @keyframes float-soft {
@@ -91,12 +129,46 @@ body {
     transform: translateY(0) rotate(0);
   }
   50% {
-    transform: translateY(-6px) rotate(1.5deg);
+    transform: translateY(-10px) rotate(2deg);
   }
 }
 
 .animate-float {
-  animation: float-soft 7s ease-in-out infinite;
+  animation: float-soft 6s ease-in-out infinite;
+}
+
+.animate-float-slow {
+  animation: float-soft 9s ease-in-out infinite reverse;
+}
+
+@keyframes wiggle {
+  0%,
+  100% {
+    transform: rotate(-6deg);
+  }
+  50% {
+    transform: rotate(6deg);
+  }
+}
+
+.animate-wiggle {
+  animation: wiggle 2.8s ease-in-out infinite;
+}
+
+@keyframes pop {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.25);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.animate-pop {
+  animation: pop 0.4s ease-out;
 }
 
 @media (prefers-reduced-motion: reduce) {

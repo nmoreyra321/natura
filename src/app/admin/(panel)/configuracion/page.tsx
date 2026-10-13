@@ -30,7 +30,7 @@ export default async function SettingsPage() {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ? getSiteUrl() : null;
   return (
     <div className="mx-auto max-w-3xl">
-      <h1 className="font-display text-3xl font-semibold">Configuración</h1>
+      <h1 className="font-display text-3xl font-bold">Configuración</h1>
       <p className="text-muted">Estado de las integraciones de la tienda.</p>
       <ul className="mt-6 flex flex-col gap-3">
         <Status ok={Boolean(whatsapp)} label="WhatsApp para pedidos">

@@ -1,19 +1,18 @@
 import type { Metadata, Viewport } from "next";
-import { Fraunces, Nunito_Sans } from "next/font/google";
+import { Fredoka, Nunito } from "next/font/google";
 import { Toaster } from "sonner";
 
 import { getSiteUrl, SITE_DESCRIPTION, SITE_NAME } from "@/lib/config";
 import "./globals.css";
 
-const fraunces = Fraunces({
-  variable: "--font-fraunces",
+const fredoka = Fredoka({
+  variable: "--font-fredoka",
   subsets: ["latin"],
-  axes: ["SOFT", "opsz"],
-  style: ["normal", "italic"],
+  weight: ["500", "600", "700"],
   display: "swap",
 });
 
-const nunito = Nunito_Sans({
+const nunito = Nunito({
   variable: "--font-nunito",
   subsets: ["latin"],
   display: "swap",
@@ -39,14 +38,14 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#fbf6ee",
+  themeColor: "#fff7ef",
   width: "device-width",
   initialScale: 1,
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es-AR" className={`${fraunces.variable} ${nunito.variable} antialiased`}>
+    <html lang="es-AR" className={`${fredoka.variable} ${nunito.variable} antialiased`}>
       <body className="flex min-h-dvh flex-col">
         {children}
         <Toaster

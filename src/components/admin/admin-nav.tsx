@@ -19,10 +19,10 @@ export function AdminNav({ email }: { email: string | null }) {
   return (
     <aside className="sticky top-0 z-30 border-b border-line bg-warm-white lg:h-dvh lg:w-64 lg:shrink-0 lg:border-r lg:border-b-0">
       <div className="flex items-center justify-between gap-2 px-4 py-3 lg:flex-col lg:items-stretch lg:gap-6 lg:p-5">
-        <Link href="/admin" className="flex items-center gap-2 font-display text-xl font-semibold">
+        <Link href="/admin" className="flex items-center gap-2 font-display text-xl font-bold">
           <LeafMark className="size-7 text-botanical" />
           <span>
-            Natu <span className="italic text-coral-deep">Mariel</span>
+            Natu <span className="text-coral-deep">Mariel</span>
           </span>
         </Link>
         <form action={signOut} className="lg:hidden">

@@ -14,7 +14,7 @@ export default async function NewProductPage() {
       <Link href="/admin/productos" className="inline-flex items-center gap-1 text-sm font-semibold text-muted hover:text-forest">
         <ArrowLeft className="size-4" aria-hidden="true" /> Productos
       </Link>
-      <h1 className="mt-2 mb-1 font-display text-3xl font-semibold">Nuevo producto</h1>
+      <h1 className="mt-2 mb-1 font-display text-3xl font-bold">Nuevo producto</h1>
       <p className="mb-6 text-muted">Después de crearlo vas a poder agregar las fotos.</p>
       <ProductForm
         productId={null}

@@ -147,13 +147,13 @@ export function ImageManager({ productId, images, productName }: { productId: st
     <section className="rounded-3xl bg-warm-white p-5 shadow-soft" aria-labelledby="fotos">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 id="fotos" className="font-display text-xl font-semibold">Fotos</h2>
+          <h2 id="fotos" className="font-display text-xl font-bold">Fotos</h2>
           <p className="text-sm text-muted">
             JPG, PNG, WebP o AVIF de hasta 5 MB. La primera es la principal. ({sorted.length}/{MAX_IMAGES_PER_PRODUCT})
           </p>
         </div>
         <label
-          className={`inline-flex h-11 cursor-pointer items-center gap-2 rounded-full bg-botanical-deep px-5 font-semibold text-white shadow-soft hover:bg-[#245a3c] has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-botanical ${disabled || full ? "pointer-events-none opacity-55" : ""}`}
+          className={`inline-flex h-11 cursor-pointer items-center gap-2 rounded-full bg-botanical-deep px-5 font-semibold text-white shadow-soft hover:bg-[#146347] has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-botanical ${disabled || full ? "pointer-events-none opacity-55" : ""}`}
         >
           {busy ? <Loader2 className="size-5 animate-spin" aria-hidden="true" /> : <ImagePlus className="size-5" aria-hidden="true" />}
           {busy ? "Subiendo…" : "Agregar fotos"}

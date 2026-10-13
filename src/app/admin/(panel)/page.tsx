@@ -28,7 +28,7 @@ export default async function DashboardPage() {
     <div className="mx-auto max-w-5xl">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="font-display text-3xl font-semibold">¡Hola, Mariel!</h1>
+          <h1 className="font-display text-3xl font-bold">¡Hola, Mariel!</h1>
           <p className="text-muted">Así está tu tienda hoy.</p>
         </div>
         <LinkButton href="/admin/productos/nuevo" size="lg">
@@ -69,7 +69,7 @@ export default async function DashboardPage() {
 
       {list.length === 0 && !error ? (
         <div className="mt-8 rounded-3xl border border-dashed border-line bg-warm-white p-8 text-center">
-          <p className="font-display text-xl font-semibold">Todavía no cargaste productos.</p>
+          <p className="font-display text-xl font-bold">Todavía no cargaste productos.</p>
           <p className="mt-1 text-muted">Creá el primero: cuando lo publiques, va a aparecer en la tienda.</p>
           <LinkButton href="/admin/productos/nuevo" className="mt-5">
             <Plus className="size-5" aria-hidden="true" /> Cargar mi primer producto

@@ -20,7 +20,7 @@ export default async function CategoriesPage() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <h1 className="font-display text-3xl font-semibold">Categorías</h1>
+      <h1 className="font-display text-3xl font-bold">Categorías</h1>
       <p className="text-muted">
         Una categoría aparece en la tienda solo si está visible y tiene al menos un producto publicado.
       </p>

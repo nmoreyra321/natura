@@ -105,7 +105,7 @@ export function CartView({ whatsappNumber, siteUrl }: { whatsappNumber: string |
         <div className="mx-auto flex size-20 items-center justify-center rounded-full bg-blush">
           <ShoppingBag className="size-9 text-coral-deep" aria-hidden="true" />
         </div>
-        <h2 className="mt-6 font-display text-2xl font-semibold">Tu carrito está vacío</h2>
+        <h2 className="mt-6 font-display text-2xl font-bold">Tu carrito está vacío</h2>
         <p className="mt-2 text-muted">Cuando agregues productos, los vas a ver acá.</p>
         {notices.length > 0 ? (
           <ul className="mt-4 text-sm text-muted">
@@ -156,7 +156,7 @@ export function CartView({ whatsappNumber, siteUrl }: { whatsappNumber: string |
                 <div className="flex min-w-0 flex-1 flex-col gap-2">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                      <Link href={`/productos/${item.slug}`} className="font-display text-lg leading-snug font-semibold hover:text-coral-deep">
+                      <Link href={`/productos/${item.slug}`} className="font-display text-lg leading-snug font-bold hover:text-coral-deep">
                         {item.name}
                       </Link>
                       {item.size ? <p className="text-sm text-muted">{item.size}</p> : null}
@@ -199,7 +199,7 @@ export function CartView({ whatsappNumber, siteUrl }: { whatsappNumber: string |
       </section>
 
       <aside aria-labelledby="summary-title" className="h-fit rounded-3xl bg-warm-white p-5 shadow-lift lg:sticky lg:top-24">
-        <h2 id="summary-title" className="font-display text-2xl font-semibold">Resumen</h2>
+        <h2 id="summary-title" className="font-display text-2xl font-bold">Resumen</h2>
         <dl className="mt-4 flex flex-col gap-2 tabular">
           <div className="flex justify-between">
             <dt className="text-muted">Productos</dt>

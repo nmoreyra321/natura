@@ -8,7 +8,7 @@ export function SetupPending() {
         <div className="flex size-12 items-center justify-center rounded-full bg-coral-soft text-coral-deep">
           <Settings className="size-6" aria-hidden="true" />
         </div>
-        <h1 className="mt-5 font-display text-2xl font-semibold">Configuración pendiente</h1>
+        <h1 className="mt-5 font-display text-2xl font-bold">Configuración pendiente</h1>
         <p className="mt-2 text-muted">
           El panel todavía no está conectado a la base de datos. Para habilitarlo hay que cargar estas variables de
           entorno en Vercel y volver a desplegar:
