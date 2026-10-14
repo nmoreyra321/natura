@@ -31,8 +31,8 @@ describe("mensaje de pedido", () => {
     expect(msg).toContain("2 x $ 20.000,00 = $ 40.000,00");
     expect(msg).toContain("1 x $ 3.000,00 = $ 3.000,00");
     expect(msg).toContain("*Total: $ 43.000,00*");
-    expect(msg).toContain("Ahorro frente a precio de revista: $ 10.000,00");
-    expect(msg).toMatch(/espera de tu confirmación/);
+    expect(msg).toContain("Ahorro respecto del precio de revista: $ 10.000,00");
+    expect(msg).toMatch(/espera de la confirmación de disponibilidad/);
   });
 
   it("codifica el mensaje para URL", () => {
@@ -44,15 +44,22 @@ describe("mensaje de pedido", () => {
   });
 });
 
-describe("buildOrderMessage con número de pedido", () => {
-  it("incluye el número y el nombre cuando están", () => {
+describe("buildOrderMessage con código de pedido", () => {
+  it("saluda formal, incluye nombre y código, y nunca un número correlativo", () => {
     const msg = buildOrderMessage(
       [{ name: "Crema", quantity: 1, unitCents: 100000, magazineUnitCents: 100000 }],
-      undefined,
-      { orderNumber: 42, customerName: "  Ana " },
+      "https://natumariel.vercel.app",
+      { orderCode: "NM-7F3A9C", customerName: "  Ana López " },
     );
-    expect(msg.startsWith("¡Hola Mariel! Soy Ana y quiero hacer este pedido:")).toBe(true);
-    expect(msg).toContain("*Pedido N.º 42*");
+    expect(msg.startsWith("Hola, Natu Mariel.\nMi nombre es Ana López y quisiera realizar el siguiente pedido:")).toBe(true);
+    expect(msg).toContain("*Código de pedido: NM-7F3A9C*");
+    expect(msg).not.toMatch(/N\.º/);
+    expect(msg).toContain("Pedido realizado en natumariel.vercel.app");
+  });
+
+  it("sin nombre también es formal", () => {
+    const msg = buildOrderMessage([{ name: "Crema", quantity: 1, unitCents: 100000, magazineUnitCents: 100000 }]);
+    expect(msg.startsWith("Hola, Natu Mariel.\nQuisiera realizar el siguiente pedido:")).toBe(true);
   });
 });
 
@@ -64,10 +71,10 @@ describe("buildOrderMessage con forma de pago", () => {
   });
 
   it("si ya pagó con Mercado Pago lo dice y no pide confirmar el pago", () => {
-    const msg = buildOrderMessage(lines, undefined, { orderNumber: 7, paid: true });
-    expect(msg).toContain("Ya lo pagué con Mercado Pago");
-    expect(msg).toContain("Pedido N.º 7");
-    expect(msg).not.toContain("confirmación de stock, pago");
+    const msg = buildOrderMessage(lines, undefined, { orderCode: "NM-ABC123", paid: true });
+    expect(msg).toContain("El pago ya fue realizado mediante Mercado Pago.");
+    expect(msg).toContain("Código de pedido: NM-ABC123");
+    expect(msg).not.toContain("confirmación de disponibilidad");
   });
 });
 
@@ -75,7 +82,7 @@ describe("buildOrderMessage por transferencia", () => {
   it("avisa que manda el comprobante", () => {
     const lines = [{ name: "Tododia", quantity: 2, unitCents: 500_000, magazineUnitCents: 500_000 }];
     expect(buildOrderMessage(lines, undefined, { paymentMethod: "transferencia" })).toContain(
-      "Forma de pago: Transferencia (te mando el comprobante)",
+      "Forma de pago: Transferencia (adjunto el comprobante a continuación)",
     );
   });
 });

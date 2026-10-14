@@ -16,7 +16,7 @@ export function PaidOrderActions({ whatsappUrl }: { whatsappUrl: string | null }
   return (
     <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className={buttonClasses("whatsapp", "lg")}>
       <MessageCircle className="size-5" aria-hidden="true" />
-      Avisarle a Mariel por WhatsApp
+      Avisar a Natu Mariel por WhatsApp
     </a>
   );
 }

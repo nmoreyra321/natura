@@ -34,7 +34,7 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
   if (!admin) notFound();
   const { data: order } = await admin
     .from("orders")
-    .select("id, number, total, savings, customer_name, payment_method, payment_status, items:order_items(name, size, quantity, unit_price, magazine_price)")
+    .select("id, code, total, savings, customer_name, payment_method, payment_status, items:order_items(name, size, quantity, unit_price, magazine_price)")
     .eq("id", id)
     .maybeSingle();
   if (!order || order.payment_method !== "mercadopago") notFound();
@@ -56,7 +56,7 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
       ? buildWhatsAppUrl(
           whatsapp,
           buildOrderMessage(lines, getSiteUrl(), {
-            orderNumber: order.number,
+            orderCode: order.code,
             customerName: order.customer_name,
             paid: true,
           }),
@@ -77,11 +77,11 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
           {approved ? "¡Pago aprobado!" : waiting ? "Tu pago está en proceso" : "El pago no se completó"}
         </h1>
         <p className="mt-2 text-muted">
-          Pedido N.º <strong className="text-forest">{order.number}</strong> · {formatARS(toCents(order.total))}
+          Pedido <strong className="text-forest">{order.code}</strong> · {formatARS(toCents(order.total))}
         </p>
         <p className="mt-4">
           {approved
-            ? "¡Gracias por tu compra! Avisale a Mariel por WhatsApp para coordinar la entrega."
+            ? "¡Gracias por tu compra! Avisá a Natu Mariel por WhatsApp para coordinar la entrega."
             : waiting
               ? "Mercado Pago todavía está procesando el pago (por ejemplo, si elegiste pagar en efectivo en un punto de pago). Cuando se acredite, Mariel lo va a ver en su panel."
               : "No se hizo ningún cobro. Podés volver al carrito y probar de nuevo, o elegir pagar en efectivo."}

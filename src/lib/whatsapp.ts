@@ -47,12 +47,15 @@ export function getOrderTotals(lines: OrderLine[]) {
   return { totalCents, savingsCents, units };
 }
 
-/** Arma el mensaje de pedido. Deja claro que queda pendiente de confirmación. */
+/**
+ * Arma el mensaje de pedido, en tono formal. Usa el código del pedido (al azar), nunca el número
+ * correlativo, para no mostrar cuántas ventas hay. Deja claro que queda pendiente de confirmación.
+ */
 export function buildOrderMessage(
   lines: OrderLine[],
   siteUrl?: string,
   extra: {
-    orderNumber?: number | null;
+    orderCode?: string | null;
     customerName?: string | null;
     paymentMethod?: "efectivo" | "transferencia" | "mercadopago";
     /** true si ya se pagó online (mensaje desde la página del pedido). */
@@ -68,26 +71,37 @@ export function buildOrderMessage(
 
   const name = extra.customerName?.trim();
   const parts = [
-    name ? `¡Hola Mariel! Soy ${name} y quiero hacer este pedido:` : "¡Hola Mariel! Quiero hacer este pedido:",
-    ...(extra.orderNumber ? [`*Pedido N.º ${extra.orderNumber}*`] : []),
+    "Hola, Natu Mariel.",
+    name
+      ? `Mi nombre es ${name} y quisiera realizar el siguiente pedido:`
+      : "Quisiera realizar el siguiente pedido:",
+    ...(extra.orderCode ? [`*Código de pedido: ${extra.orderCode}*`] : []),
     "",
     ...rows,
     "",
     `*Total: ${formatARS(totalCents)}*`,
   ];
   if (savingsCents > 0) {
-    parts.push(`Ahorro frente a precio de revista: ${formatARS(savingsCents)}`);
+    parts.push(`Ahorro respecto del precio de revista: ${formatARS(savingsCents)}`);
   }
   if (extra.paid) {
-    parts.push("", "✅ Ya lo pagué con Mercado Pago. Quedo a la espera para coordinar la entrega. ¡Gracias!");
+    parts.push(
+      "",
+      "El pago ya fue realizado mediante Mercado Pago.",
+      "Quedo a la espera para coordinar la entrega. Muchas gracias.",
+    );
   } else {
     if (extra.paymentMethod) {
-      const label = { efectivo: "Efectivo", transferencia: "Transferencia (te mando el comprobante)", mercadopago: "Mercado Pago" };
+      const label = {
+        efectivo: "Efectivo",
+        transferencia: "Transferencia (adjunto el comprobante a continuación)",
+        mercadopago: "Mercado Pago",
+      };
       parts.push("", `Forma de pago: ${label[extra.paymentMethod]}`);
     }
-    parts.push("", "Quedo a la espera de tu confirmación de stock, pago y entrega. ¡Gracias!");
+    parts.push("", "Quedo a la espera de la confirmación de disponibilidad y de la coordinación de la entrega. Muchas gracias.");
   }
-  if (siteUrl) parts.push(`(Pedido armado en ${siteUrl})`);
+  if (siteUrl) parts.push("", `Pedido realizado en ${siteUrl.replace(/^https?:\/\//, "")}`);
   return parts.join("\n");
 }
 

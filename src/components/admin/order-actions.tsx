@@ -17,7 +17,7 @@ const SUCCESS: Record<OrderStatus, string> = {
 };
 
 /** Botones para avanzar el pedido. Confirmar descuenta stock; cancelar o volver a pendiente lo devuelve. */
-export function OrderActions({ id, number, status }: { id: string; number: number; status: OrderStatus }) {
+export function OrderActions({ id, code, status }: { id: string; code: string; status: OrderStatus }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [confirmCancel, setConfirmCancel] = useState(false);
@@ -57,7 +57,7 @@ export function OrderActions({ id, number, status }: { id: string; number: numbe
       ) : null}
       <ConfirmDialog
         open={confirmCancel}
-        title={`¿Cancelar el pedido N.º ${number}?`}
+        title={`¿Cancelar el pedido ${code}?`}
         description={
           status === "pending"
             ? "El pedido queda como cancelado. No cambia el stock."

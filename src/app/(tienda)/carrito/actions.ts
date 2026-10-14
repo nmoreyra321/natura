@@ -55,7 +55,7 @@ export async function validateCart(input: unknown): Promise<CartValidationResult
   };
 }
 
-export type RegisterOrderResult = { ok: true; number: number } | { ok: false; error: string };
+export type RegisterOrderResult = { ok: true; code: string | null } | { ok: false; error: string };
 
 /**
  * Registra el pedido para el panel de Mariel justo antes de abrir WhatsApp.
@@ -77,14 +77,23 @@ export async function registerOrder(input: unknown): Promise<RegisterOrderResult
     console.error("[pedido] No se pudo registrar:", error?.message);
     return { ok: false, error: "No pudimos registrar el pedido." };
   }
-  if (parsed.data.paymentMethod === "transferencia") {
-    // Lo anota el servidor (la clienta no puede editar pedidos). Si falla, el pedido igual queda.
-    await createAdminClient()?.from("orders").update({ payment_method: "transferencia" }).eq("id", row.id);
+  // El código (al azar) y la forma de pago los maneja el servidor: la clienta no puede leer ni editar pedidos.
+  // Si algo de esto falla, el pedido igual queda registrado.
+  const admin = createAdminClient();
+  let code: string | null = null;
+  if (admin) {
+    const { data: saved } = await admin
+      .from("orders")
+      .update({ payment_method: parsed.data.paymentMethod === "transferencia" ? "transferencia" : "efectivo" })
+      .eq("id", row.id)
+      .select("code")
+      .maybeSingle();
+    code = saved?.code ?? null;
   }
-  return { ok: true, number: row.number };
+  return { ok: true, code };
 }
 
-export type MercadoPagoCheckoutResult = { ok: true; url: string; number: number } | { ok: false; error: string };
+export type MercadoPagoCheckoutResult = { ok: true; url: string } | { ok: false; error: string };
 
 /**
  * Registra el pedido como "Mercado Pago" y devuelve el link para pagar.
@@ -141,5 +150,5 @@ export async function payWithMercadoPago(input: unknown): Promise<MercadoPagoChe
     await admin.from("orders").update({ status: "cancelled", payment_status: "cancelled" }).eq("id", order.id);
     return { ok: false, error: "Mercado Pago no respondió. Probá de nuevo en un rato o elegí efectivo." };
   }
-  return { ok: true, url: preference.url, number: order.number };
+  return { ok: true, url: preference.url };
 }

@@ -286,16 +286,16 @@ export function CartView({
             <>
               <div>
                 <label htmlFor="nombre-pedido" className="text-sm font-semibold">
-                  Tu nombre <span className="font-normal text-muted">(opcional)</span>
+                  Nombre y apellido <span className="font-normal text-muted">(opcional)</span>
                 </label>
                 <input
                   id="nombre-pedido"
                   type="text"
-                  autoComplete="given-name"
+                  autoComplete="name"
                   maxLength={80}
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
-                  placeholder="Para que Mariel sepa quién sos"
+                  placeholder="Para identificar tu pedido en Natu Mariel"
                   className="mt-1 h-11 w-full rounded-full border border-line bg-white px-4 text-base focus:border-botanical focus:ring-3 focus:ring-botanical/20 focus:outline-none"
                 />
               </div>
@@ -393,7 +393,7 @@ export function CartView({
                     paymentMethod: payment === "transferencia" ? "transferencia" : "efectivo",
                   }).catch(() => null);
                   const message = buildOrderMessage(lines, siteUrl, {
-                    orderNumber: res?.ok ? res.number : null,
+                    orderCode: res?.ok ? res.code : null,
                     customerName: name,
                     paymentMethod: paymentOptions.length > 1 ? (payment === "transferencia" ? "transferencia" : "efectivo") : undefined,
                   });
@@ -433,10 +433,10 @@ export function CartView({
           ) : null}
           <p className="text-xs leading-relaxed text-muted">
             {payment === "mercadopago" && mercadoPago
-              ? "Te llevamos a la página segura de Mercado Pago para pagar con tarjeta, dinero en cuenta o efectivo en puntos de pago. Cuando termines, volvés a la tienda y Mariel coordina la entrega con vos."
+              ? "Te llevamos a la página segura de Mercado Pago para pagar con tarjeta, dinero en cuenta o efectivo en puntos de pago. Cuando termines, volvés a la tienda y Natu Mariel coordina la entrega con vos."
               : payment === "transferencia"
-                ? "Al enviar el pedido se abre WhatsApp con el detalle. Transferí el total a la cuenta de arriba y mandale el comprobante a Mariel por WhatsApp. Ella te confirma stock y entrega."
-                : "Al enviar el pedido se abre WhatsApp con el detalle. Mariel te va a confirmar stock, pago y entrega. El pedido no queda confirmado ni el stock reservado hasta esa confirmación."}
+                ? "Al enviar el pedido se abre WhatsApp con el detalle. Transferí el total a la cuenta indicada y enviá el comprobante por el mismo chat. Natu Mariel te confirmará disponibilidad y entrega."
+                : "Al enviar el pedido se abre WhatsApp con el detalle. Natu Mariel te confirmará disponibilidad, pago y entrega. El pedido queda confirmado y el stock reservado recién con esa confirmación."}
           </p>
           <Link href="/productos" className="text-center text-sm font-semibold text-coral-deep hover:underline">
             Seguir comprando

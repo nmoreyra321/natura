@@ -72,7 +72,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
   let query = supabase
     .from("orders")
     .select(
-      "id, number, status, customer_name, total, savings, created_at, payment_method, payment_status, items:order_items(id, product_id, name, size, quantity, unit_price), lots:order_lot_allocations(product_id, expires_on, quantity)",
+      "id, number, code, status, customer_name, total, savings, created_at, payment_method, payment_status, items:order_items(id, product_id, name, size, quantity, unit_price), lots:order_lot_allocations(product_id, expires_on, quantity)",
       { count: "exact" },
     )
     .order("created_at", { ascending: false })
@@ -125,7 +125,8 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <p className="flex flex-wrap items-center gap-2">
-                      <span className="font-display text-xl font-bold">Pedido N.º {o.number}</span>
+                      <span className="font-display text-xl font-bold">Pedido {o.code}</span>
+                      <span className="text-sm text-muted tabular">N.º interno {o.number}</span>
                       <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${STATUS_LABELS[status].tone}`}>
                         {STATUS_LABELS[status].label}
                       </span>
@@ -168,7 +169,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
                   ))}
                 </ul>
                 <div className="mt-3">
-                  <OrderActions id={o.id} number={o.number} status={status} />
+                  <OrderActions id={o.id} code={o.code} status={status} />
                 </div>
               </li>
             );
