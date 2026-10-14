@@ -79,7 +79,17 @@ function SuggestionsPanel({
   return (
     <div className="absolute top-full right-0 left-0 z-50 mt-2 overflow-hidden rounded-3xl border-2 border-forest bg-warm-white text-left shadow-[4px_4px_0_var(--forest)] md:min-w-[22rem]">
       {results.length > 0 ? (
-        <ul id={listId} role="listbox" aria-label="Sugerencias" className="max-h-[60vh] overflow-y-auto p-1.5">
+        <>
+        <p className="border-b border-line px-4 py-2 text-xs font-bold text-muted">
+          {results.length === 1 ? "1 producto" : `${results.length >= 30 ? "Más de 30" : results.length} productos`}
+          {results.length > 4 ? " · deslizá para ver más" : ""}
+        </p>
+        <ul
+          id={listId}
+          role="listbox"
+          aria-label="Sugerencias"
+          className="max-h-[55vh] overflow-y-auto overscroll-contain p-1.5"
+        >
           {results.map((r, i) => {
             const src = r.image ? productImageUrl(r.image) : null;
             const sale = toCents(r.salePrice);
@@ -112,6 +122,7 @@ function SuggestionsPanel({
             );
           })}
         </ul>
+        </>
       ) : (
         <p id={listId} className="flex items-center gap-2 px-4 py-3 text-sm text-muted" role="status">
           {loading ? (
