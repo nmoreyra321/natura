@@ -798,6 +798,31 @@ export async function searchProductsForSale(q: string): Promise<SaleProductOptio
   }
 }
 
+export type AdminSearchOption = SaleProductOption & { status: string };
+
+/** Sugerencias del buscador del panel (incluye borradores), con foto, precio y stock. */
+export async function searchAdminProducts(q: string): Promise<AdminSearchOption[]> {
+  try {
+    const { supabase } = await assertAdmin();
+    const patterns = nameSearchPatterns(String(q).slice(0, 80));
+    if (patterns.length === 0) return [];
+    let query = supabase.from("products").select("id, name, size, sale_price, stock, status, images:product_images(storage_path, position)");
+    for (const pattern of patterns) query = query.filter("name", "imatch", pattern);
+    const { data } = await query.order("status", { ascending: false }).order("name").limit(30);
+    return (data ?? []).map((p) => ({
+      id: p.id,
+      name: p.name,
+      size: p.size,
+      status: p.status,
+      image: [...(p.images ?? [])].sort((a, b) => a.position - b.position)[0]?.storage_path ?? null,
+      salePrice: toCents(p.sale_price) / 100,
+      stock: p.stock,
+    }));
+  } catch {
+    return [];
+  }
+}
+
 export type ManualSaleInput = {
   items: { productId: string; quantity: number; unitPrice: number }[];
   customerName?: string;

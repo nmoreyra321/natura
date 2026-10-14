@@ -1,6 +1,7 @@
 import { Search } from "lucide-react";
 import Link from "next/link";
 
+import { AdminProductSearch } from "@/components/admin/admin-product-search";
 import { InventoryList, type InventoryRow } from "@/components/admin/inventory-list";
 import { buttonClasses } from "@/components/ui/button";
 import { inputClasses } from "@/components/ui/fields";
@@ -75,7 +76,7 @@ export async function InventoryView({ supabase, sp }: { supabase: Client; sp: Se
           <label htmlFor="iq" className="sr-only">
             Buscar por nombre
           </label>
-          <input id="iq" name="q" type="search" defaultValue={q} placeholder="Buscar (ej.: ekos)" className={`${inputClasses} h-11`} />
+          <AdminProductSearch id="iq" defaultValue={q} placeholder="Buscar (ej.: ekos)" mode="stock" />
         </div>
         <div>
           <label htmlFor="ic" className="sr-only">

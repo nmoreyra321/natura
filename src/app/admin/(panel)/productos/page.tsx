@@ -6,6 +6,7 @@ import { InventoryView } from "@/components/admin/inventory-view";
 import { ReceiptHistory } from "@/components/admin/receipt-history";
 import { ReceiptImport } from "@/components/admin/receipt-import";
 import { ProductRowActions } from "@/components/admin/product-row-actions";
+import { AdminProductSearch } from "@/components/admin/admin-product-search";
 import { ProductsHeader } from "@/components/admin/product-tabs";
 import { LinkButton, buttonClasses } from "@/components/ui/button";
 import { inputClasses } from "@/components/ui/fields";
@@ -128,7 +129,7 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
       <form method="get" className="mt-4 grid grid-cols-2 gap-2 rounded-2xl bg-warm-white p-2.5 shadow-soft md:grid-cols-[1.6fr_1fr_1fr_1.2fr_auto]">
         <div className="col-span-2 md:col-span-1">
           <label htmlFor="aq" className="sr-only">Buscar por nombre</label>
-          <input id="aq" name="q" type="search" defaultValue={q} placeholder="Buscar por nombre" className={`${inputClasses} h-10 text-sm`} />
+          <AdminProductSearch id="aq" defaultValue={q} placeholder="Buscar por nombre (ej.: crema ekos)" />
         </div>
         <div>
           <label htmlFor="ae" className="sr-only">Estado</label>
