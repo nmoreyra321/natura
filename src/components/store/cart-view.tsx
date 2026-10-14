@@ -413,7 +413,7 @@ export function CartView({
                 ) : (
                   <MessageCircle className="size-5" aria-hidden="true" />
                 )}
-                Hacer pedido por WhatsApp
+                {payment === "transferencia" ? "Enviar pedido y comprobante" : "Hacer pedido por WhatsApp"}
               </a>
               )}
             </>
@@ -436,7 +436,7 @@ export function CartView({
             {payment === "mercadopago" && mercadoPago
               ? "Te llevamos a la página segura de Mercado Pago para pagar con tarjeta, dinero en cuenta o efectivo en puntos de pago. Cuando termines, volvés a la tienda y Natu Mariel coordina la entrega con vos."
               : payment === "transferencia"
-                ? "Al enviar el pedido se abre WhatsApp con el detalle. Transferí el total a la cuenta indicada y enviá el comprobante por el mismo chat. Natu Mariel te confirmará disponibilidad y entrega."
+                ? "Al tocar el botón se abre WhatsApp con el detalle del pedido. Adjuntá ahí la captura del comprobante y enviala."
                 : "Al enviar el pedido se abre WhatsApp con el detalle. Natu Mariel te confirmará disponibilidad, pago y entrega. El pedido queda confirmado y el stock reservado recién con esa confirmación."}
           </p>
           <Link href="/productos" className="text-center text-sm font-semibold text-coral-deep hover:underline">
@@ -494,45 +494,77 @@ function TransferBox({ transfer, totalCents }: { transfer: TransferDetails; tota
     { label: "Banco", value: transfer.bank, noCopy: true },
   ].filter((r) => r.value);
   const key = transfer.alias ?? transfer.cbu ?? "";
+  const keyLabel = transfer.alias ? "alias" : "CBU";
+  const step = (n: number) => (
+    <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-botanical-deep text-xs font-bold text-white">
+      {n}
+    </span>
+  );
   return (
     <div className="rounded-2xl border-2 border-dashed border-botanical/60 bg-sage/40 p-3 text-sm">
       <p className="font-bold">
-        Transferí {formatARS(totalCents)} a esta cuenta <span className="font-normal text-muted">(sin recargo)</span>:
+        Cómo pagar por transferencia <span className="font-normal text-muted">(sin recargo)</span>
       </p>
-      <dl className="mt-2 flex flex-col gap-1.5">
-        {rows.map((r) => (
-          <div key={r.label} className="flex items-center justify-between gap-2">
-            <dt className="shrink-0 text-muted">{r.label}</dt>
-            <dd className="flex min-w-0 items-center gap-1 font-semibold">
-              <span className="truncate font-mono text-[0.85rem]">{r.display ?? r.value}</span>
-              {r.noCopy ? null : <CopyButton text={r.value!} label={r.label} />}
-            </dd>
+      <ol className="mt-3 flex flex-col gap-3">
+        <li className="flex gap-2.5">
+          {step(1)}
+          <div className="min-w-0 flex-1">
+            <p>
+              Transferí <strong>{formatARS(totalCents)}</strong> a esta cuenta:
+            </p>
+            <dl className="mt-1.5 flex flex-col gap-1 rounded-xl bg-white/70 px-2.5 py-1.5">
+              {rows.map((r) => (
+                <div key={r.label} className="flex items-center justify-between gap-2">
+                  <dt className="shrink-0 text-muted">{r.label}</dt>
+                  <dd className="flex min-w-0 items-center gap-1 font-semibold">
+                    <span className="truncate font-mono text-[0.85rem]">{r.display ?? r.value}</span>
+                    {r.noCopy ? null : <CopyButton text={r.value!} label={r.label} />}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+            {key ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => {
+                    // Se copia y se abre en el mismo toque (si no, el navegador bloquea la ventana).
+                    navigator.clipboard
+                      ?.writeText(key)
+                      .then(() => toast.success(`${transfer.alias ? "Alias" : "CBU"} copiado: pegalo en Mercado Pago.`))
+                      .catch(() => toast.info(`Copiá el ${keyLabel}: ${key}`));
+                    openMercadoPagoApp();
+                  }}
+                  className="mt-2 inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-[#009ee3] px-4 font-bold text-white transition-colors hover:bg-[#0089c7]"
+                >
+                  <Copy className="size-4.5" aria-hidden="true" />
+                  Copiar {keyLabel} y abrir Mercado Pago
+                </button>
+                <p className="mt-1.5 text-xs text-muted">
+                  En Mercado Pago tocá <strong>Transferir</strong> y pegá el {keyLabel}. ¿Otro banco o billetera? Pegalo en
+                  la app que uses.
+                </p>
+              </>
+            ) : null}
           </div>
-        ))}
-      </dl>
-      {key ? (
-        <>
-          <button
-            type="button"
-            onClick={() => {
-              // Se copia y se abre en el mismo toque (si no, el navegador bloquea la ventana).
-              navigator.clipboard
-                ?.writeText(key)
-                .then(() => toast.success(`${transfer.alias ? "Alias" : "CBU"} copiado: pegalo en Mercado Pago.`))
-                .catch(() => toast.info(`Copiá el ${transfer.alias ? "alias" : "CBU"}: ${key}`));
-              openMercadoPagoApp();
-            }}
-            className="mt-3 inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[#009ee3] px-5 font-bold text-white transition-colors hover:bg-[#0089c7]"
-          >
-            <Copy className="size-4.5" aria-hidden="true" />
-            Copiar {transfer.alias ? "alias" : "CBU"} y abrir Mercado Pago
-          </button>
-          <p className="mt-2 text-xs text-muted">
-            En Mercado Pago tocá <strong>Transferir</strong> y pegá el {transfer.alias ? "alias" : "CBU"}. ¿Usás otro banco
-            o billetera? Copiá el {transfer.alias ? "alias" : "CBU"} y pegalo en la app que uses.
+        </li>
+        <li className="flex gap-2.5">
+          {step(2)}
+          <p>
+            Guardá el <strong>comprobante</strong>: con una captura de pantalla alcanza.
           </p>
-        </>
-      ) : null}
+        </li>
+        <li className="flex gap-2.5">
+          {step(3)}
+          <p>
+            Volvé a esta página y tocá <strong>Enviar pedido y comprobante</strong> (acá abajo). Se abre WhatsApp con tu
+            pedido: <strong>adjuntá la captura</strong> en ese chat y enviala.
+          </p>
+        </li>
+      </ol>
+      <p className="mt-3 border-t border-botanical/30 pt-2 text-xs text-muted">
+        Natu Mariel verifica el pago y te confirma la entrega por WhatsApp. Tu carrito queda guardado mientras transferís.
+      </p>
     </div>
   );
 }
