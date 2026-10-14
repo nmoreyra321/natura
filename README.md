@@ -3,7 +3,7 @@
 Tienda online para vender productos Natura a precios especiales. Los clientes arman su carrito y envían el pedido por WhatsApp, sin crear una cuenta. Mariel administra el catálogo desde un panel privado en `/admin`.
 
 - **Tienda pública:** inicio, catálogo con búsqueda, filtros (categoría, precio, ofertas), orden y paginación, fichas de producto, carrito (con panel lateral), buscador instantáneo, «Cómo comprar» con preguntas frecuentes, contacto y botón para instalarla como app en el celular.
-- **Panel `/admin`:** login con email y contraseña, resumen del catálogo, pedidos (confirmar, entregar, cancelar; el stock se descuenta al confirmar), productos (crear, editar, publicar, despublicar, eliminar, stock rápido, destacados y ofertas) con paginación, fotos (subir, reemplazar, ordenar y eliminar), categorías, actualización de precios desde Natura y estado de la configuración.
+- **Panel `/admin`:** login con email y contraseña, resumen del catálogo, pedidos (confirmar, entregar, cancelar; el stock se descuenta al confirmar), ventas del mes con gráficos y lo más vendido, productos (crear, editar, publicar, despublicar, eliminar, stock rápido, destacados y ofertas) con paginación, fotos (subir, reemplazar, ordenar y eliminar), categorías, actualización de precios desde Natura y estado de la configuración.
 - **Catálogo inicial vacío:** no hay productos de ejemplo. Mientras no haya productos publicados, la tienda muestra "Estamos preparando algo lindo para vos."
 
 ## Tecnología
@@ -131,6 +131,10 @@ Cuando una clienta toca **Hacer pedido por WhatsApp**, el pedido queda guardado 
 - **Cancelar** o **Volver a pendiente:** devuelve al stock lo que se había descontado.
 
 Los precios del pedido los toma la base de datos, no el navegador. Las clientas no pueden ver ni modificar pedidos.
+
+### Ventas
+
+En **Ventas** ves, mes por mes, cuánto vendiste desde la tienda: total vendido (con la variación frente al mes anterior), cantidad de pedidos, ticket promedio, unidades, ventas por día, los últimos 6 meses y los productos más vendidos. Cuentan como venta los pedidos **confirmados** y **entregados**; los pendientes se muestran aparte y los cancelados no suman. Las fechas se toman en hora de Argentina.
 
 ### Actualizar precios cuando sale una revista
 
