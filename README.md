@@ -165,7 +165,7 @@ Cuando llega la caja de Natura: subí el PDF de la factura («Nota Fiscal») o s
 - Agregar un producto que llegó y no figura en la lista.
 - Para los que **no están en la página**: crearlos como productos nuevos (nombre y precio de revista; quedan ocultos hasta que les pongas foto) o elegir a cuál producto existente corresponden.
 
-Al **Confirmar** se suma todo al stock (no se reemplaza). Necesita la variable `GEMINI_API_KEY` en Vercel (se crea gratis en aistudio.google.com/apikey). Se usa el nivel gratis de Google, que alcanza de sobra para algunas boletas por mes; en ese nivel Google puede usar las fotos para mejorar su servicio. Opcional: `GEMINI_MODEL` para elegir otro modelo (por defecto `gemini-flash-latest`).
+Cada producto tiene su botón **Cargar este** para sumarlo de a uno (los seguros primero), y al final **Cargar todos** suma lo que queda. Siempre se suma al stock (no se reemplaza). Necesita la variable `GEMINI_API_KEY` en Vercel (se crea gratis en aistudio.google.com/apikey). Se usa el nivel gratis de Google, que alcanza de sobra para algunas boletas por mes; en ese nivel Google puede usar las fotos para mejorar su servicio. Opcional: `GEMINI_MODEL` para elegir otro modelo (por defecto `gemini-flash-latest`).
 
 ### Cargar stock rápido (Productos → pestaña «Cargar stock»)
 

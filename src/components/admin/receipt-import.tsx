@@ -47,6 +47,26 @@ type Row = {
 
 type Done = { units: number; updated: number; created: { id: string; name: string }[] };
 
+const EMPTY_DONE: Done = { units: 0, updated: 0, created: [] };
+
+const addDone = (a: Done, b: Done): Done => ({ units: a.units + b.units, updated: a.updated + b.updated, created: [...a.created, ...b.created] });
+
+/** Un renglón revisado, tal como lo espera la acción que suma el stock. */
+function toLine(r: Row) {
+  return r.mode === "existing" && r.match
+    ? { kind: "existing" as const, productId: r.match.id, quantity: r.quantity, description: r.description }
+    : { kind: "new" as const, name: r.newName, code: r.code, price: parseMoney(r.newPrice), quantity: r.quantity, description: r.description };
+}
+
+/** Qué le falta a un renglón para poder cargarlo (null si está listo). */
+function pendingReason(r: Row): string | null {
+  if (r.mode === "existing" && r.match && r.unsure) {
+    return `Confirmá si «${r.description}» es «${r.match.name}» (tocá «Sí, es este» o «No»).`;
+  }
+  if (r.mode === "existing" && !r.match) return `Elegí a qué producto corresponde «${r.description}», o crealo como nuevo.`;
+  return null;
+}
+
 /** Achica la foto en el teléfono (las fotos de cámara pesan mucho) y la pasa a JPG. */
 async function shrinkPhoto(file: File): Promise<Blob> {
   const url = URL.createObjectURL(file);
@@ -196,6 +216,9 @@ export function ReceiptImport() {
   const [rows, setRows] = useState<Row[] | null>(null);
   const [publish, setPublish] = useState(true);
   const [done, setDone] = useState<Done | null>(null);
+  /** Lo que ya se cargó de a uno (antes de terminar la lista). */
+  const [applied, setApplied] = useState<Done>(EMPTY_DONE);
+  const [busyKey, setBusyKey] = useState<string | null>(null);
   const [reading, startReading] = useTransition();
   const [saving, startSaving] = useTransition();
 
@@ -275,34 +298,53 @@ export function ReceiptImport() {
     setPhotos([]);
     setRows(null);
     setDone(null);
+    setApplied(EMPTY_DONE);
+  };
+
+  /** Carga un solo renglón y lo saca de la lista. */
+  const confirmOne = async (r: Row) => {
+    const reason = pendingReason(r);
+    if (reason) {
+      toast.error(reason);
+      return;
+    }
+    setBusyKey(r.key);
+    try {
+      const res = await applyReceipt({ publish, lines: [toLine(r)] });
+      if (!res.ok) {
+        toast.error(res.error);
+        return;
+      }
+      const result = res.data ?? EMPTY_DONE;
+      const total = addDone(applied, result);
+      setApplied(total);
+      toast.success(`Listo: se sumaron ${r.quantity} al stock.`);
+      const rest = (rows ?? []).filter((x) => x.key !== r.key);
+      if (rest.length === 0) {
+        setDone(total);
+        setRows(null);
+      } else {
+        setRows(rest);
+      }
+    } finally {
+      setBusyKey(null);
+    }
   };
 
   const confirm = () =>
     startSaving(async () => {
       if (!rows) return;
-      const unsure = rows.find((r) => r.mode === "existing" && r.match && r.unsure);
-      if (unsure) {
-        toast.error(`Confirmá si «${unsure.description}» es «${unsure.match!.name}» (tocá «Sí, es este» o «No»).`);
+      const reason = rows.map(pendingReason).find(Boolean);
+      if (reason) {
+        toast.error(reason);
         return;
       }
-      const pendingLink = rows.find((r) => r.mode === "existing" && !r.match);
-      if (pendingLink) {
-        toast.error(`Elegí a qué producto corresponde «${pendingLink.description}», o creálo como nuevo.`);
-        return;
-      }
-      const res = await applyReceipt({
-        publish,
-        lines: rows.map((r) =>
-          r.mode === "existing" && r.match
-            ? { kind: "existing" as const, productId: r.match.id, quantity: r.quantity, description: r.description }
-            : { kind: "new" as const, name: r.newName, code: r.code, price: parseMoney(r.newPrice), quantity: r.quantity, description: r.description },
-        ),
-      });
+      const res = await applyReceipt({ publish, lines: rows.map(toLine) });
       if (!res.ok) {
         toast.error(res.error);
         return;
       }
-      setDone(res.data ?? { units: 0, updated: 0, created: [] });
+      setDone(addDone(applied, res.data ?? EMPTY_DONE));
       setRows(null);
     });
 
@@ -354,8 +396,13 @@ export function ReceiptImport() {
             Encontramos <strong className="text-forest">{rows.length}</strong> productos ({units} unidades). Compará con la caja: si
             llegó uno más, tocá <strong>+</strong>; si llegó uno menos, tocá <strong>−</strong>; si no vino, tocá el tachito.
           </p>
+          {applied.units > 0 ? (
+            <p className="mt-2 rounded-2xl bg-sage p-3 text-sm font-semibold text-botanical-deep">
+              Ya cargaste {applied.units} {applied.units === 1 ? "unidad" : "unidades"}. Quedan estos por revisar.
+            </p>
+          ) : null}
           <p className="mt-1 text-sm text-muted">
-            Lo que confirmes queda guardado: la próxima factura reconoce sola esos nombres abreviados.
+            Podés cargar de a uno con «Cargar este» los que ya tenés seguros, o todos juntos al final. Lo que confirmes queda guardado: la próxima factura reconoce sola esos nombres abreviados.
           </p>
           {toCheck > 0 ? (
             <p className="mt-2 flex items-start gap-2 rounded-2xl bg-sky-100 p-3 text-sm font-semibold">
@@ -493,6 +540,19 @@ export function ReceiptImport() {
                 <span className="text-sm font-semibold">Llegaron:</span>
                 <Stepper value={r.quantity} onChange={(n) => update(r.key, { quantity: n })} />
               </div>
+              <button
+                type="button"
+                onClick={() => void confirmOne(r)}
+                disabled={busyKey !== null || saving}
+                className="mt-3 inline-flex h-11 w-full items-center justify-center gap-2 rounded-full border-2 border-botanical-deep bg-sage font-bold text-botanical-deep hover:bg-botanical-deep hover:text-white disabled:opacity-50"
+              >
+                {busyKey === r.key ? (
+                  <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                ) : (
+                  <CheckCircle2 className="size-4" aria-hidden="true" />
+                )}
+                Cargar este ({r.quantity})
+              </button>
             </li>
           ))}
         </ul>
@@ -516,14 +576,19 @@ export function ReceiptImport() {
           <button
             type="button"
             onClick={confirm}
-            disabled={saving || rows.length === 0}
+            disabled={saving || busyKey !== null || rows.length === 0}
             className={buttonClasses("primary", "lg", "flex-1")}
           >
             {saving ? <Loader2 className="size-5 animate-spin" aria-hidden="true" /> : <CheckCircle2 className="size-5" aria-hidden="true" />}
-            Confirmar ({units}<span className="hidden sm:inline">&nbsp;{units === 1 ? "unidad" : "unidades"}</span>)
+            Cargar todos ({units}<span className="hidden sm:inline">&nbsp;{units === 1 ? "unidad" : "unidades"}</span>)
           </button>
-          <button type="button" onClick={restart} disabled={saving} className={buttonClasses("outline", "lg")}>
-            Cancelar
+          <button
+            type="button"
+            onClick={() => (applied.units > 0 ? (setDone(applied), setRows(null)) : restart())}
+            disabled={saving || busyKey !== null}
+            className={buttonClasses("outline", "lg")}
+          >
+            {applied.units > 0 ? "Dejar el resto" : "Cancelar"}
           </button>
         </div>
       </div>
