@@ -7,6 +7,8 @@ import {
   monthStartIso,
   monthlyTotals,
   percentChange,
+  recentDays,
+  shiftDay,
   shiftMonth,
   summarizeMonth,
   type SalesOrder,
@@ -80,5 +82,26 @@ describe("percentChange", () => {
     expect(percentChange(150, 100)).toBe(50);
     expect(percentChange(50, 100)).toBe(-50);
     expect(percentChange(10, 0)).toBeNull();
+  });
+});
+
+describe("recentDays", () => {
+  it("suma las ventas de cada día (hora de Argentina) y no cuenta pendientes ni cancelados", () => {
+    const orders = [
+      { status: "confirmed", total: 1000, savings: 0, created_at: "2026-10-14T15:00:00Z", items: [] },
+      { status: "delivered", total: 500, savings: 0, created_at: "2026-10-14T02:00:00Z", items: [] }, // 13/10 23 h en Argentina
+      { status: "pending", total: 999, savings: 0, created_at: "2026-10-14T15:00:00Z", items: [] },
+      { status: "cancelled", total: 999, savings: 0, created_at: "2026-10-14T15:00:00Z", items: [] },
+    ];
+    const days = recentDays(orders, "2026-10-14", 3);
+    expect(days.map((d) => d.day)).toEqual(["2026-10-12", "2026-10-13", "2026-10-14"]);
+    expect(days.map((d) => d.cents)).toEqual([0, 50000, 100000]);
+    expect(days[2].orders).toBe(1);
+  });
+});
+
+describe("shiftDay", () => {
+  it("cruza meses", () => {
+    expect(shiftDay("2026-03-01", -1)).toBe("2026-02-28");
   });
 });

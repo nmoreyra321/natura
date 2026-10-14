@@ -145,3 +145,30 @@ export function percentChange(current: number, previous: number): number | null 
   if (previous <= 0) return null;
   return Math.round(((current - previous) / previous) * 100);
 }
+
+/** Hoy (AAAA-MM-DD) en hora de Argentina. */
+export function todayKey(now = new Date()): string {
+  return localDay(now.toISOString());
+}
+
+/** Suma un número de días a una fecha AAAA-MM-DD. */
+export function shiftDay(day: string, delta: number): string {
+  const d = new Date(`${day}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + delta);
+  return d.toISOString().slice(0, 10);
+}
+
+/** Ventas (confirmadas o entregadas) de cada uno de los últimos `count` días, terminando en `today`. */
+export function recentDays(orders: SalesOrder[], today: string, count = 14): { day: string; cents: number; orders: number }[] {
+  const days = Array.from({ length: count }, (_, i) => shiftDay(today, i - count + 1));
+  const index = new Map(days.map((d, i) => [d, i]));
+  const out = days.map((day) => ({ day, cents: 0, orders: 0 }));
+  for (const o of orders) {
+    if (!SOLD.has(o.status)) continue;
+    const i = index.get(localDay(o.created_at));
+    if (i === undefined) continue;
+    out[i].cents += toCents(o.total);
+    out[i].orders++;
+  }
+  return out;
+}
