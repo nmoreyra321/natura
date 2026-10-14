@@ -132,6 +132,12 @@ Cuando una clienta toca **Hacer pedido por WhatsApp**, el pedido queda guardado 
 
 Los precios del pedido los toma la base de datos, no el navegador. Las clientas no pueden ver ni modificar pedidos.
 
+### Vencimientos
+
+En **Vencimientos** cargás las fechas por lote, rápido y con el teclado: escribí parte del nombre, Enter, el vencimiento como figura en el envase (`0129` = 01/29, vence a fin de enero de 2029), la cantidad y Enter. El cursor vuelve solo al buscador para el siguiente; si cargás dos veces el mismo producto con la misma fecha, se suman las unidades.
+
+La lista **Por vencer** muestra lo que vence en los próximos 3 meses (lo vencido, en rojo), y el inicio del panel avisa cuántos lotes hay. En cada lote podés **restar 1** cuando vendés una unidad o tocar **Ya no lo tengo**.
+
 ### Ventas
 
 En **Ventas** ves, mes por mes, cuánto vendiste desde la tienda: total vendido (con la variación frente al mes anterior), cantidad de pedidos, ticket promedio, unidades, ventas por día, los últimos 6 meses y los productos más vendidos. Cuentan como venta los pedidos **confirmados** y **entregados**; los pendientes se muestran aparte y los cancelados no suman. Las fechas se toman en hora de Argentina.

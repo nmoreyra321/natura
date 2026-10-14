@@ -1,18 +1,20 @@
-import { AlertTriangle, ClipboardList, Eye, FileEdit, PackageX, Percent, Plus, Settings, Tags, TrendingDown } from "lucide-react";
+import { AlertTriangle, CalendarClock, ClipboardList, Eye, FileEdit, PackageX, Percent, Plus, Settings, Tags, TrendingDown } from "lucide-react";
 import Link from "next/link";
 
 import { LinkButton } from "@/components/ui/button";
 import { requireAdmin } from "@/lib/auth";
 import { LOW_STOCK_THRESHOLD } from "@/lib/config";
+import { expiryWarningLimit } from "@/lib/lots";
 import { getWhatsAppNumber } from "@/lib/whatsapp";
 
 export const metadata = { title: "Inicio" };
 
 export default async function DashboardPage() {
   const { supabase } = await requireAdmin();
-  const [{ data: products, error }, { count: pendingOrders }] = await Promise.all([
+  const [{ data: products, error }, { count: pendingOrders }, { count: expiringLots }] = await Promise.all([
     supabase.from("products").select("status, stock, is_offer, discount_percent"),
     supabase.from("orders").select("id", { count: "exact", head: true }).eq("status", "pending"),
+    supabase.from("product_lots").select("id", { count: "exact", head: true }).lte("expires_on", expiryWarningLimit()),
   ]);
 
   const list = products ?? [];
@@ -44,6 +46,16 @@ export default async function DashboardPage() {
         >
           <ClipboardList className="size-6 shrink-0" aria-hidden="true" />
           Tenés {pendingOrders} {pendingOrders === 1 ? "pedido pendiente" : "pedidos pendientes"} de confirmar. Ver pedidos →
+        </Link>
+      ) : null}
+
+      {expiringLots ? (
+        <Link
+          href="/admin/vencimientos"
+          className="mt-3 flex items-center gap-3 rounded-3xl border-2 border-forest bg-coral-soft p-4 font-semibold shadow-[3px_3px_0_var(--forest)] hover:bg-blush"
+        >
+          <CalendarClock className="size-6 shrink-0 text-coral-deep" aria-hidden="true" />
+          {expiringLots} {expiringLots === 1 ? "lote vence" : "lotes vencen"} en los próximos 3 meses (o ya {expiringLots === 1 ? "venció" : "vencieron"}). Ver la lista →
         </Link>
       ) : null}
 

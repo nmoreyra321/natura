@@ -1,6 +1,6 @@
 "use client";
 
-import { ClipboardList, ExternalLink, LayoutDashboard, LogOut, Package, RefreshCw, Settings, Tags, TrendingUp } from "lucide-react";
+import { CalendarClock, ClipboardList, ExternalLink, LayoutDashboard, LogOut, Package, RefreshCw, Settings, Tags, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -12,6 +12,7 @@ const items = [
   { href: "/admin/pedidos", label: "Pedidos", icon: ClipboardList },
   { href: "/admin/ventas", label: "Ventas", icon: TrendingUp },
   { href: "/admin/productos", label: "Productos", icon: Package },
+  { href: "/admin/vencimientos", label: "Vencimientos", icon: CalendarClock },
   { href: "/admin/precios", label: "Precios Natura", icon: RefreshCw },
   { href: "/admin/categorias", label: "Categorías", icon: Tags },
   { href: "/admin/configuracion", label: "Configuración", icon: Settings },

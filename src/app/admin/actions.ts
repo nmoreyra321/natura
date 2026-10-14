@@ -7,7 +7,9 @@ import { assertAdmin, UnauthorizedError } from "@/lib/auth";
 import { PRODUCT_IMAGES_BUCKET } from "@/lib/config";
 import { isValidProductImagePath, MAX_IMAGES_PER_PRODUCT } from "@/lib/images";
 import type { NaturaLookup } from "@/lib/natura";
+import { parseExpiry } from "@/lib/lots";
 import { isValidPrice, planMagazinePriceUpdate } from "@/lib/pricing";
+import { nameSearchPatterns } from "@/lib/search";
 import { slugify } from "@/lib/slug";
 import { createSessionClient, CATALOG_TAG } from "@/lib/supabase/server";
 import { categorySchema, fieldErrors, loginSchema, productSchema } from "@/lib/validation";
@@ -446,5 +448,94 @@ export async function bulkDeleteProducts(productIds: string[]): Promise<ActionRe
     return { ok: true, data: { deleted }, message: `${deleted} ${deleted === 1 ? "producto eliminado" : "productos eliminados"}.` };
   } catch (e) {
     return fail(e, "No pudimos eliminar los productos.");
+  }
+}
+
+/* ---------------------------- Vencimientos ---------------------------- */
+
+export type LotProductOption = { id: string; name: string; size: string | null; image: string | null };
+
+/** Productos (publicados o borradores) para el buscador de la carga de vencimientos. */
+export async function searchProductsForLots(q: string): Promise<LotProductOption[]> {
+  try {
+    const { supabase } = await assertAdmin();
+    const patterns = nameSearchPatterns(String(q).slice(0, 80));
+    if (patterns.length === 0) return [];
+    let query = supabase.from("products").select("id, name, size, images:product_images(storage_path, position)");
+    for (const pattern of patterns) query = query.ilike("name", pattern);
+    const { data } = await query.order("status", { ascending: false }).order("name").limit(8);
+    return (data ?? []).map((p) => ({
+      id: p.id,
+      name: p.name,
+      size: p.size,
+      image: [...(p.images ?? [])].sort((a, b) => a.position - b.position)[0]?.storage_path ?? null,
+    }));
+  } catch {
+    return [];
+  }
+}
+
+/** Carga un lote: producto, vencimiento como en el envase ("01/29") y cantidad. */
+export async function addProductLot(productId: string, expiry: string, quantity: number): Promise<ActionResult> {
+  try {
+    const { supabase } = await assertAdmin();
+    if (!UUID_RE.test(productId)) return { ok: false, error: "Elegí un producto de la lista." };
+    const expiresOn = parseExpiry(String(expiry));
+    if (!expiresOn) return { ok: false, error: "Escribí el vencimiento como en el envase, por ejemplo 01/29." };
+    if (!Number.isInteger(quantity) || quantity < 1 || quantity > 10000) {
+      return { ok: false, error: "La cantidad tiene que ser un número entero, 1 o más." };
+    }
+    // Si ya hay un lote del mismo producto con el mismo vencimiento, se suman las unidades.
+    const { data: existing } = await supabase
+      .from("product_lots")
+      .select("id, quantity")
+      .eq("product_id", productId)
+      .eq("expires_on", expiresOn)
+      .maybeSingle();
+    const { error } = existing
+      ? await supabase.from("product_lots").update({ quantity: Math.min(existing.quantity + quantity, 10000) }).eq("id", existing.id)
+      : await supabase.from("product_lots").insert({ product_id: productId, expires_on: expiresOn, quantity });
+    if (error) return fail(error, "No pudimos guardar el vencimiento.");
+    revalidatePath("/admin/vencimientos");
+    revalidatePath("/admin");
+    return { ok: true };
+  } catch (e) {
+    return fail(e, "No pudimos guardar el vencimiento.");
+  }
+}
+
+/** Resta (o suma) unidades de un lote; si llega a 0 se borra. */
+export async function changeLotQuantity(lotId: string, delta: number): Promise<ActionResult> {
+  try {
+    const { supabase } = await assertAdmin();
+    if (!UUID_RE.test(lotId) || !Number.isInteger(delta) || delta === 0) return { ok: false, error: "Datos inválidos." };
+    const { data: lot } = await supabase.from("product_lots").select("quantity").eq("id", lotId).maybeSingle();
+    if (!lot) return { ok: false, error: "Ese lote ya no existe." };
+    const next = lot.quantity + delta;
+    const { error } =
+      next <= 0
+        ? await supabase.from("product_lots").delete().eq("id", lotId)
+        : await supabase.from("product_lots").update({ quantity: Math.min(next, 10000) }).eq("id", lotId);
+    if (error) return fail(error, "No pudimos actualizar el lote.");
+    revalidatePath("/admin/vencimientos");
+    revalidatePath("/admin");
+    return { ok: true };
+  } catch (e) {
+    return fail(e, "No pudimos actualizar el lote.");
+  }
+}
+
+/** Borra un lote ("ya no lo tengo"). */
+export async function deleteLot(lotId: string): Promise<ActionResult> {
+  try {
+    const { supabase } = await assertAdmin();
+    if (!UUID_RE.test(lotId)) return { ok: false, error: "Datos inválidos." };
+    const { error } = await supabase.from("product_lots").delete().eq("id", lotId);
+    if (error) return fail(error, "No pudimos borrar el lote.");
+    revalidatePath("/admin/vencimientos");
+    revalidatePath("/admin");
+    return { ok: true };
+  } catch (e) {
+    return fail(e, "No pudimos borrar el lote.");
   }
 }

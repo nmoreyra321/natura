@@ -93,6 +93,26 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"product_lots": {
+                  Row: {
+                    "created_at": string,"expires_on": string,"id": string,"product_id": string,"quantity": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"expires_on": string,"id"?: string,"product_id": string,"quantity": number
+                  }
+                  Update: {
+                    "created_at"?: string,"expires_on"?: string,"id"?: string,"product_id"?: string,"quantity"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "product_lots_product_id_fkey"
+      columns: ["product_id"]
+isOneToOne: false
+      referencedRelation: "products"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"product_images": {
                   Row: {
                     "alt": string | null,"created_at": string,"id": string,"position": number,"product_id": string,"storage_path": string
