@@ -1,26 +1,10 @@
 /**
  * Lectura del precio de revista vigente en naturacosmeticos.com.ar.
  * La ficha de cada producto trae sus datos dentro del HTML (formato de React Server Components).
+ *
+ * La consulta la hace la función de Supabase `precios-natura` (Natura rechaza los pedidos que
+ * salen de Vercel); su copia de este lector tiene que mantenerse igual a la de este archivo.
  */
-
-export const NATURA_BASE_URL = "https://www.naturacosmeticos.com.ar";
-
-/** Cabeceras de navegador: sin ellas el sitio de Natura rechaza la consulta. */
-const BROWSER_HEADERS = {
-  "User-Agent":
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36",
-  Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-  "Accept-Language": "es-AR,es;q=0.9",
-  "Sec-Fetch-Mode": "navigate",
-  "Sec-Fetch-Dest": "document",
-  "Sec-Fetch-Site": "none",
-  "Upgrade-Insecure-Requests": "1",
-};
-
-export function naturaProductUrl(sku: string): string {
-  // El texto del medio de la URL no importa: Natura identifica el producto por el código final.
-  return `${NATURA_BASE_URL}/p/p/${encodeURIComponent(sku)}`;
-}
 
 /** Une los fragmentos `self.__next_f.push([1,"..."])` en un solo texto. */
 function flightText(html: string): string {
@@ -82,21 +66,3 @@ export type NaturaLookup =
   | { status: "not_found" }
   | { status: "blocked" }
   | { status: "error"; message: string };
-
-/** Consulta la ficha de un producto en Natura. */
-export async function fetchNaturaMagazinePrice(sku: string): Promise<NaturaLookup> {
-  try {
-    const res = await fetch(naturaProductUrl(sku), {
-      headers: BROWSER_HEADERS,
-      cache: "no-store",
-      signal: AbortSignal.timeout(20_000),
-    });
-    if (res.status === 404) return { status: "not_found" };
-    if (res.status === 403) return { status: "blocked" };
-    if (!res.ok) return { status: "error", message: `Natura respondió ${res.status}` };
-    const price = parseNaturaMagazinePrice(await res.text());
-    return price ? { status: "ok", magazinePrice: price } : { status: "not_found" };
-  } catch (e) {
-    return { status: "error", message: (e as Error).message };
-  }
-}

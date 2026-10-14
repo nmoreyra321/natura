@@ -2,8 +2,8 @@
 
 Tienda online para vender productos Natura a precios especiales. Los clientes arman su carrito y envían el pedido por WhatsApp, sin crear una cuenta. Mariel administra el catálogo desde un panel privado en `/admin`.
 
-- **Tienda pública:** inicio, catálogo con búsqueda, filtros (categoría, precio, ofertas), orden y paginación, fichas de producto, carrito y contacto.
-- **Panel `/admin`:** login con email y contraseña, resumen del catálogo, productos (crear, editar, publicar, despublicar, eliminar, stock rápido, destacados y ofertas), fotos (subir, reemplazar, ordenar y eliminar), categorías y estado de la configuración.
+- **Tienda pública:** inicio, catálogo con búsqueda, filtros (categoría, precio, ofertas), orden y paginación, fichas de producto, carrito (con panel lateral), buscador instantáneo, «Cómo comprar» con preguntas frecuentes, contacto y botón para instalarla como app en el celular.
+- **Panel `/admin`:** login con email y contraseña, resumen del catálogo, pedidos (confirmar, entregar, cancelar; el stock se descuenta al confirmar), productos (crear, editar, publicar, despublicar, eliminar, stock rápido, destacados y ofertas) con paginación, fotos (subir, reemplazar, ordenar y eliminar), categorías, actualización de precios desde Natura y estado de la configuración.
 - **Catálogo inicial vacío:** no hay productos de ejemplo. Mientras no haya productos publicados, la tienda muestra "Estamos preparando algo lindo para vos."
 
 ## Tecnología
@@ -44,7 +44,7 @@ tests/                     Unitarias (Vitest), permisos (rls-check.mjs) y navega
 
 1. Creá un proyecto en https://supabase.com. Elegí la región São Paulo (`sa-east-1`), que es la más cercana a Argentina.
 2. Aplicá el esquema con **una** de estas dos opciones:
-   - **SQL Editor:** pegá y ejecutá el contenido de `supabase/migrations/20261013000000_esquema_inicial.sql`.
+   - **SQL Editor:** pegá y ejecutá, en orden, el contenido de cada archivo de `supabase/migrations/` (esquema inicial, permisos, pedidos y código de Natura).
    - **CLI:**
      ```bash
      npx supabase login
@@ -121,6 +121,30 @@ Abrí `/admin` e ingresá con tu **usuario** (por ejemplo `natumariel2026`) o tu
 4. Cargá el stock y tocá **Crear producto**. El producto queda como **borrador**.
 5. Se abre la edición del producto: agregá las fotos. La primera foto es la principal.
 6. Cambiá el estado a **Publicado** y guardá, o tocá **Publicar** desde el listado. El producto aparece en la tienda al instante, sin volver a desplegar.
+
+### Pedidos
+
+Cuando una clienta toca **Hacer pedido por WhatsApp**, el pedido queda guardado con un número (por ejemplo *Pedido N.º 12*), que también aparece en el mensaje de WhatsApp. En **Pedidos**:
+
+- **Confirmar:** descuenta del stock las unidades del pedido.
+- **Marcar entregado:** cierra el pedido (el stock ya estaba descontado).
+- **Cancelar** o **Volver a pendiente:** devuelve al stock lo que se había descontado.
+
+Los precios del pedido los toma la base de datos, no el navegador. Las clientas no pueden ver ni modificar pedidos.
+
+### Actualizar precios cuando sale una revista
+
+En **Precios Natura**, tocá **Buscar precios nuevos en Natura**. La tienda consulta cada producto que tiene código de Natura (por ejemplo `NATARG-2821`) y muestra los que cambiaron. Elegí cuáles aplicar:
+
+- Si el precio especial era igual al de revista, acompaña el cambio.
+- Si pusiste un precio especial propio, se mantiene.
+- Si estaba en oferta y el especial ya no es menor, deja de ser oferta.
+
+El código de Natura se puede cargar o corregir en la edición de cada producto.
+
+### Estadísticas
+
+La tienda envía visitas a **Vercel Web Analytics** (no cuenta las visitas al panel). Para verlas, activalo una vez en **Vercel → proyecto `natumariel` → Analytics → Enable**.
 
 ### Precios y descuentos
 

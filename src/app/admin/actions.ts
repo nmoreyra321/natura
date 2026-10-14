@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 import { assertAdmin, UnauthorizedError } from "@/lib/auth";
 import { PRODUCT_IMAGES_BUCKET } from "@/lib/config";
 import { isValidProductImagePath, MAX_IMAGES_PER_PRODUCT } from "@/lib/images";
-import { fetchNaturaMagazinePrice, type NaturaLookup } from "@/lib/natura";
+import type { NaturaLookup } from "@/lib/natura";
 import { isValidPrice, planMagazinePriceUpdate } from "@/lib/pricing";
 import { slugify } from "@/lib/slug";
 import { createSessionClient, CATALOG_TAG } from "@/lib/supabase/server";
@@ -328,24 +328,29 @@ export async function checkNaturaPrices(productIds: string[]): Promise<ActionRes
       .not("natura_sku", "is", null);
     if (error) return fail(error, "No pudimos leer los productos.");
 
-    const results: NaturaPriceCheck[] = [];
-    // De a 4 consultas a la vez, para no saturar el sitio de Natura.
-    const queue = [...(products ?? [])];
-    await Promise.all(
-      Array.from({ length: 4 }, async () => {
-        for (let p = queue.shift(); p; p = queue.shift()) {
-          results.push({
-            id: p.id,
-            name: p.name,
-            sku: p.natura_sku!,
-            magazinePrice: Number(p.magazine_price),
-            salePrice: Number(p.sale_price),
-            isOffer: p.is_offer,
-            result: await fetchNaturaMagazinePrice(p.natura_sku!),
-          });
-        }
-      }),
+    const list = products ?? [];
+    if (list.length === 0) return { ok: true, data: [] };
+
+    // Natura rechaza los pedidos desde Vercel: la consulta la hace la función de Supabase,
+    // que vuelve a verificar que quien llama es administradora.
+    const { data: lookup, error: fnError } = await supabase.functions.invoke<{ results: Record<string, NaturaLookup> }>(
+      "precios-natura",
+      { body: { skus: list.map((p) => p.natura_sku) } },
     );
+    if (fnError || !lookup) {
+      console.error("[admin] precios-natura:", fnError?.message);
+      return { ok: false, error: "No pudimos consultar los precios de Natura. Probá de nuevo en un rato." };
+    }
+
+    const results: NaturaPriceCheck[] = list.map((p) => ({
+      id: p.id,
+      name: p.name,
+      sku: p.natura_sku!,
+      magazinePrice: Number(p.magazine_price),
+      salePrice: Number(p.sale_price),
+      isOffer: p.is_offer,
+      result: lookup.results[p.natura_sku!] ?? { status: "error", message: "Sin respuesta" },
+    }));
     return { ok: true, data: results };
   } catch (e) {
     return fail(e, "No pudimos consultar los precios de Natura.");
