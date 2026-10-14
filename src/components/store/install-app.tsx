@@ -66,16 +66,17 @@ function detectBrowser(): Browser {
  * Mini animación en bucle con los pasos reales de cada celular:
  * - Chrome en iPhone: Compartir → Ver más → Añadir a pantalla de inicio → Agregar.
  * - Safari: Compartir → Agregar a pantalla de inicio → Agregar.
- * - Android: ⋮ → Agregar a la pantalla principal → Agregar.
+ * - Android: ⋮ → Agregar a la pantalla principal → Agregar → Añadir.
  */
 function InstallDemo({ browser }: { browser: Browser }) {
   const android = browser === "android";
   const iosChrome = browser === "chrome";
   const shareTop = iosChrome || android;
   const share = shareTop ? { x: 123, y: 6 } : { x: 31, y: 234 };
-  const verMas = iosChrome ? { x: 114, y: 196 } : share;
-  const row = android ? { x: 79, y: 69 } : { x: 59, y: 205 };
-  const add = android ? { x: 99, y: 151 } : { x: 117, y: 7 };
+  // En Android los 4 toques son: ⋮, la opción del menú, "Agregar" y "Añadir".
+  const verMas = android ? { x: 79, y: 98 } : iosChrome ? { x: 114, y: 196 } : share;
+  const row = android ? { x: 101, y: 145 } : { x: 59, y: 205 };
+  const add = android ? { x: 101, y: 239 } : { x: 117, y: 7 };
   const addLabel = iosChrome ? "Añadir a pantalla de inicio" : "Agregar a pantalla de inicio";
   const vars = {
     "--sx": `${share.x}px`,
@@ -137,15 +138,33 @@ function InstallDemo({ browser }: { browser: Browser }) {
 
           {android ? (
             /* Android: menú de los tres puntitos */
-            <div className="idemo-menu absolute top-1.5 right-1.5 w-[124px] origin-top-right rounded-lg bg-white py-1 text-[8px] text-neutral-800 shadow-[0_4px_16px_rgb(0_0_0/0.2)]">
-              <div className="flex h-5 items-center px-2.5">Nueva pestaña</div>
-              <div className="flex h-5 items-center px-2.5">Historial</div>
-              <div className="flex h-5 items-center px-2.5">Compartir…</div>
-              <div className="idemo-row flex h-5 items-center px-2.5 font-semibold whitespace-nowrap">
-                Agregar a la pantalla principal
+            <>
+              <div className="idemo-menu absolute top-1.5 right-1.5 w-[124px] origin-top-right rounded-lg bg-white py-1 text-[8px] text-neutral-800 shadow-[0_4px_16px_rgb(0_0_0/0.2)]">
+                {["Nueva pestaña", "Historial", "Descargas", "Compartir…", "Traducir…"].map((label) => (
+                  <div key={label} className="flex h-[18px] items-center px-2.5">
+                    {label}
+                  </div>
+                ))}
+                <div className="idemo-row-early flex h-[18px] items-center px-2.5 font-semibold whitespace-nowrap">
+                  Agregar a la pantalla principal
+                </div>
+                <div className="flex h-[18px] items-center px-2.5">Sitio para computadoras</div>
+                <div className="flex h-[18px] items-center px-2.5">Configuración</div>
               </div>
-              <div className="flex h-5 items-center px-2.5">Configuración</div>
-            </div>
+              {/* Cartel "Crear acceso directo" */}
+              <div className="idemo-sheet-b absolute inset-0 bg-black/40">
+                <div className="absolute inset-x-3 top-[90px] h-[80px] rounded-xl bg-white p-2.5 text-[8px] text-neutral-800">
+                  <p className="font-bold">Crear acceso directo</p>
+                  <p className="mt-2 flex items-center gap-1.5 border-b border-[#1a73e8] pb-0.5">
+                    {appIcon("size-4", "rounded")} Natu Mariel
+                  </p>
+                  <p className="absolute right-2.5 bottom-2 flex gap-3 font-bold text-[#1a73e8]">
+                    <span>Cancelar</span>
+                    <span className="idemo-add-early">Agregar</span>
+                  </p>
+                </div>
+              </div>
+            </>
           ) : (
             <>
               {iosChrome ? (
@@ -196,14 +215,15 @@ function InstallDemo({ browser }: { browser: Browser }) {
           {/* Confirmar: botón Agregar */}
           {android ? (
             <div className="idemo-confirm absolute inset-0 bg-black/40">
-              <div className="absolute inset-x-3 top-[80px] h-[100px] rounded-xl bg-white p-2.5 text-[8px] text-neutral-800">
-                <p className="font-bold">Agregar a la pantalla principal</p>
-                <p className="mt-2 flex items-center gap-1.5">
-                  {appIcon("size-5")} Natu Mariel
-                </p>
-                <p className="absolute right-2.5 bottom-2 flex gap-3 font-bold text-[#1a73e8]">
+              <div className="absolute inset-x-1.5 bottom-1.5 h-[120px] rounded-2xl bg-white p-2.5 text-center text-[8px] text-neutral-800">
+                <p className="text-left font-bold">¿Desea añadir a la pantalla de inicio?</p>
+                <div className="mt-2 flex flex-col items-center gap-0.5">
+                  {appIcon("size-7")}
+                  <span className="text-[7px]">Natu Mariel</span>
+                </div>
+                <p className="absolute inset-x-2.5 bottom-2 grid grid-cols-2 font-bold text-[#1a73e8]">
                   <span>Cancelar</span>
-                  <span className="idemo-add">Agregar</span>
+                  <span className="idemo-add">Añadir</span>
                 </p>
               </div>
             </div>
@@ -248,9 +268,9 @@ function InstallDemo({ browser }: { browser: Browser }) {
       <figcaption className="relative mt-3 h-5 w-full text-center text-sm font-bold">
         <span className="idemo-cap1 absolute inset-0">{android ? "1. Tocá los tres puntitos ⋮" : "1. Tocá Compartir"}</span>
         <span className="idemo-cap2 absolute inset-0">
-          {android ? "2. Agregar a la pantalla principal" : iosChrome ? "2. Ver más → Añadir a pantalla de inicio" : "2. Agregar a pantalla de inicio"}
+          {android ? "2. Agregar a la pantalla principal → Agregar" : iosChrome ? "2. Ver más → Añadir a pantalla de inicio" : "2. Agregar a pantalla de inicio"}
         </span>
-        <span className="idemo-cap3 absolute inset-0">3. Tocá Agregar</span>
+        <span className="idemo-cap3 absolute inset-0">{android ? "3. Tocá Añadir" : "3. Tocá Agregar"}</span>
         <span className="idemo-cap4 absolute inset-0">¡Listo! Ya tenés la app</span>
       </figcaption>
     </figure>
@@ -399,7 +419,7 @@ export function InstallAppButton({ className = "" }: { className?: string }) {
               <span>
                 {tab === "android" ? (
                   <>
-                    Elegí <strong>Agregar a la pantalla principal</strong> (o <strong>Instalar app</strong>).
+                    Bajá y elegí <strong>Agregar a la pantalla principal</strong>.
                   </>
                 ) : iosNav === "chrome" ? (
                   <>
@@ -415,9 +435,25 @@ export function InstallAppButton({ className = "" }: { className?: string }) {
             <li className="flex items-center gap-3">
               <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-lilac font-bold">3</span>
               <span>
-                Tocá <strong>Agregar</strong> y listo: el ícono aparece en tu pantalla.
+                {tab === "android" ? (
+                  <>
+                    En «Crear acceso directo» tocá <strong>Agregar</strong>.
+                  </>
+                ) : (
+                  <>
+                    Tocá <strong>Agregar</strong> y listo: el ícono aparece en tu pantalla.
+                  </>
+                )}
               </span>
             </li>
+            {tab === "android" ? (
+              <li className="flex items-center gap-3">
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-sky-100 font-bold">4</span>
+                <span>
+                  Tocá <strong>Añadir</strong> y listo: el ícono aparece en tu pantalla.
+                </span>
+              </li>
+            ) : null}
           </ol>
           <p className="mt-4 text-sm text-muted">La tienda queda como una app en tu pantalla de inicio.</p>
         </dialog>
