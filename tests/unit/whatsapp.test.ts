@@ -70,3 +70,12 @@ describe("buildOrderMessage con forma de pago", () => {
     expect(msg).not.toContain("confirmación de stock, pago");
   });
 });
+
+describe("buildOrderMessage por transferencia", () => {
+  it("avisa que manda el comprobante", () => {
+    const lines = [{ name: "Tododia", quantity: 2, unitCents: 500_000, magazineUnitCents: 500_000 }];
+    expect(buildOrderMessage(lines, undefined, { paymentMethod: "transferencia" })).toContain(
+      "Forma de pago: Transferencia (te mando el comprobante)",
+    );
+  });
+});

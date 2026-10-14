@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertCircle, Banknote, CreditCard, Info, Loader2, MessageCircle, ShoppingBag, Trash2 } from "lucide-react";
+import { AlertCircle, ArrowLeftRight, Banknote, Check, Copy, CreditCard, Info, Loader2, MessageCircle, ShoppingBag, Trash2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -10,12 +10,14 @@ import { Button, LinkButton, buttonClasses } from "@/components/ui/button";
 import { cart, useCart, useCartHydrated } from "@/lib/cart-store";
 import { formatARS } from "@/lib/format";
 import { productImageUrl } from "@/lib/images";
-import { toCents } from "@/lib/pricing";
+import { surchargeCents, toCents } from "@/lib/pricing";
 import { buildOrderMessage, buildWhatsAppUrl, getOrderTotals, type OrderLine } from "@/lib/whatsapp";
+import type { TransferDetails } from "@/lib/store-settings";
 import { QuantityInput } from "./add-to-cart";
 import { ProductImageFallback } from "./product-card";
 
 type Status = "idle" | "checking" | "ok" | "error";
+type PaymentChoice = "efectivo" | "transferencia" | "mercadopago";
 
 const NAME_KEY = "natu-mariel:nombre";
 
@@ -31,11 +33,17 @@ export function CartView({
   whatsappNumber,
   siteUrl,
   mercadoPago = false,
+  transfer = null,
+  mpSurcharge = 0,
 }: {
   whatsappNumber: string | null;
   siteUrl: string;
   /** true si la tienda tiene Mercado Pago configurado. */
   mercadoPago?: boolean;
+  /** Datos de la cuenta para transferir (null si no hay alias cargado). */
+  transfer?: TransferDetails | null;
+  /** % de recargo si paga con Mercado Pago. */
+  mpSurcharge?: number;
 }) {
   const items = useCart();
   const hydrated = useCartHydrated();
@@ -45,7 +53,14 @@ export function CartView({
   const requestId = useRef(0);
   const [customerName, setCustomerName] = useState(readSavedName);
   const [sending, setSending] = useState(false);
-  const [payment, setPayment] = useState<"efectivo" | "mercadopago">("efectivo");
+  const [payment, setPayment] = useState<PaymentChoice>("efectivo");
+  const paymentOptions: { value: PaymentChoice; label: string; Icon: typeof Banknote }[] = [
+    { value: "efectivo", label: "Efectivo", Icon: Banknote },
+    ...(transfer ? [{ value: "transferencia" as const, label: "Transferencia", Icon: ArrowLeftRight }] : []),
+    ...(mercadoPago
+      ? [{ value: "mercadopago" as const, label: mpSurcharge > 0 ? `Mercado Pago (+${mpSurcharge}%)` : "Mercado Pago", Icon: CreditCard }]
+      : []),
+  ];
 
   // Clave estable: cambia solo si cambian productos o cantidades.
   const key = items.map((i) => `${i.productId}:${i.quantity}`).join("|");
@@ -269,19 +284,14 @@ export function CartView({
                   className="mt-1 h-11 w-full rounded-full border border-line bg-white px-4 text-base focus:border-botanical focus:ring-3 focus:ring-botanical/20 focus:outline-none"
                 />
               </div>
-              {mercadoPago ? (
+              {paymentOptions.length > 1 ? (
                 <fieldset>
                   <legend className="text-sm font-semibold">¿Cómo querés pagar?</legend>
-                  <div className="mt-1.5 grid grid-cols-2 gap-2">
-                    {(
-                      [
-                        ["efectivo", "Efectivo", Banknote],
-                        ["mercadopago", "Mercado Pago", CreditCard],
-                      ] as const
-                    ).map(([value, label, Icon]) => (
+                  <div className={`mt-1.5 grid gap-2 ${paymentOptions.length === 3 ? "grid-cols-3" : "grid-cols-2"}`}>
+                    {paymentOptions.map(({ value, label, Icon }) => (
                       <label
                         key={value}
-                        className={`flex cursor-pointer items-center justify-center gap-2 rounded-2xl border-2 px-3 py-3 text-sm font-bold transition-colors ${payment === value ? "border-forest bg-sun/60" : "border-line bg-white hover:bg-cream"}`}
+                        className={`flex cursor-pointer flex-col items-center justify-center gap-1 rounded-2xl border-2 px-2 py-2.5 text-center text-sm font-bold transition-colors ${payment === value ? "border-forest bg-sun/60" : "border-line bg-white hover:bg-cream"}`}
                       >
                         <input
                           type="radio"
@@ -297,6 +307,17 @@ export function CartView({
                     ))}
                   </div>
                 </fieldset>
+              ) : null}
+              {payment === "mercadopago" && mercadoPago && mpSurcharge > 0 ? (
+                <p className="rounded-2xl bg-[#e6f6fd] p-3 text-sm text-[#00496f]">
+                  Pagando con Mercado Pago se suma un recargo de {mpSurcharge}% (
+                  {formatARS(surchargeCents(totals.totalCents, mpSurcharge))}). Total a pagar:{" "}
+                  <strong>{formatARS(totals.totalCents + surchargeCents(totals.totalCents, mpSurcharge))}</strong>. En
+                  efectivo o transferencia no hay recargo.
+                </p>
+              ) : null}
+              {payment === "transferencia" && transfer ? (
+                <TransferBox transfer={transfer} totalCents={totals.totalCents} />
               ) : null}
               {payment === "mercadopago" && mercadoPago ? (
                 <button
@@ -354,11 +375,12 @@ export function CartView({
                   const res = await registerOrder({
                     items: items.map((i) => ({ productId: i.productId, quantity: i.quantity })),
                     customerName: name || undefined,
+                    paymentMethod: payment === "transferencia" ? "transferencia" : "efectivo",
                   }).catch(() => null);
                   const message = buildOrderMessage(lines, siteUrl, {
                     orderNumber: res?.ok ? res.number : null,
                     customerName: name,
-                    paymentMethod: mercadoPago ? "efectivo" : undefined,
+                    paymentMethod: paymentOptions.length > 1 ? (payment === "transferencia" ? "transferencia" : "efectivo") : undefined,
                   });
                   const url = buildWhatsAppUrl(whatsappNumber, message);
                   if (win) {
@@ -397,7 +419,9 @@ export function CartView({
           <p className="text-xs leading-relaxed text-muted">
             {payment === "mercadopago" && mercadoPago
               ? "Te llevamos a la página segura de Mercado Pago para pagar con tarjeta, dinero en cuenta o efectivo en puntos de pago. Cuando termines, volvés a la tienda y Mariel coordina la entrega con vos."
-              : "Al enviar el pedido se abre WhatsApp con el detalle. Mariel te va a confirmar stock, pago y entrega. El pedido no queda confirmado ni el stock reservado hasta esa confirmación."}
+              : payment === "transferencia"
+                ? "Al enviar el pedido se abre WhatsApp con el detalle. Transferí el total a la cuenta de arriba y mandale el comprobante a Mariel por WhatsApp. Ella te confirma stock y entrega."
+                : "Al enviar el pedido se abre WhatsApp con el detalle. Mariel te va a confirmar stock, pago y entrega. El pedido no queda confirmado ni el stock reservado hasta esa confirmación."}
           </p>
           <Link href="/productos" className="text-center text-sm font-semibold text-coral-deep hover:underline">
             Seguir comprando
@@ -405,5 +429,59 @@ export function CartView({
         </div>
       </aside>
     </div>
+  );
+}
+
+/** Datos para transferir, con botón para copiar cada uno. */
+function TransferBox({ transfer, totalCents }: { transfer: TransferDetails; totalCents: number }) {
+  const rows = [
+    { label: "Alias", value: transfer.alias },
+    { label: "CBU/CVU", value: transfer.cbu },
+    { label: "Titular", value: transfer.holder, noCopy: true },
+    { label: "Banco", value: transfer.bank, noCopy: true },
+  ].filter((r) => r.value);
+  return (
+    <div className="rounded-2xl border-2 border-dashed border-botanical/60 bg-sage/40 p-3 text-sm">
+      <p className="font-bold">
+        Transferí {formatARS(totalCents)} a esta cuenta <span className="font-normal text-muted">(sin recargo)</span>:
+      </p>
+      <dl className="mt-2 flex flex-col gap-1.5">
+        {rows.map((r) => (
+          <div key={r.label} className="flex items-center justify-between gap-2">
+            <dt className="shrink-0 text-muted">{r.label}</dt>
+            <dd className="flex min-w-0 items-center gap-1 font-semibold">
+              <span className="truncate font-mono text-[0.85rem]">{r.value}</span>
+              {r.noCopy ? null : <CopyButton text={r.value!} label={r.label} />}
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+  );
+}
+
+function CopyButton({ text, label }: { text: string; label: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      type="button"
+      onClick={async () => {
+        try {
+          await navigator.clipboard.writeText(text);
+          setCopied(true);
+          setTimeout(() => setCopied(false), 1800);
+        } catch {
+          // Sin permiso para copiar: la clienta lo puede seleccionar a mano.
+        }
+      }}
+      className="inline-flex size-8 shrink-0 items-center justify-center rounded-full hover:bg-white"
+      aria-label={copied ? `${label} copiado` : `Copiar ${label}`}
+    >
+      {copied ? (
+        <Check className="size-4 text-botanical-deep" aria-hidden="true" />
+      ) : (
+        <Copy className="size-4" aria-hidden="true" />
+      )}
+    </button>
   );
 }

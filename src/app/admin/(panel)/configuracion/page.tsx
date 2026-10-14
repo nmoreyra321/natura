@@ -1,7 +1,10 @@
 import { CheckCircle2, CircleAlert } from "lucide-react";
 
+import { SurchargeForm } from "@/components/admin/surcharge-form";
+import { TransferSettingsForm } from "@/components/admin/transfer-settings-form";
 import { requireAdmin } from "@/lib/auth";
 import { getSiteUrl } from "@/lib/config";
+import { isMercadoPagoEnabled } from "@/lib/mercadopago";
 import { getWhatsAppNumber } from "@/lib/whatsapp";
 
 export const metadata = { title: "Configuración" };
@@ -25,13 +28,54 @@ function Status({ ok, label, children }: { ok: boolean; label: string; children:
 }
 
 export default async function SettingsPage() {
-  await requireAdmin();
+  const { supabase } = await requireAdmin();
+  const { data: settings } = await supabase
+    .from("store_settings")
+    .select("transfer_alias, transfer_cbu, transfer_holder, transfer_bank, mp_surcharge_percent")
+    .eq("id", 1)
+    .maybeSingle();
   const whatsapp = getWhatsAppNumber();
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ? getSiteUrl() : null;
   return (
     <div className="mx-auto max-w-3xl">
       <h1 className="font-display text-3xl font-bold">Configuración</h1>
       <p className="text-muted">Estado de las integraciones de la tienda.</p>
+
+      <section className="mt-6 rounded-3xl bg-warm-white p-5 shadow-soft">
+        <h2 className="font-display text-xl font-bold">Cobrar por transferencia</h2>
+        <p className="mt-1 mb-4 text-sm text-muted">
+          Sin comisión. Cuando cargás tu alias, en el carrito aparece la opción <strong>Transferencia</strong>: la clienta
+          ve estos datos, te transfiere y te manda el comprobante por WhatsApp. Si borrás el alias y el CBU, la opción
+          desaparece.
+        </p>
+        <TransferSettingsForm
+          defaults={{
+            alias: settings?.transfer_alias ?? "",
+            cbu: settings?.transfer_cbu ?? "",
+            holder: settings?.transfer_holder ?? "",
+            bank: settings?.transfer_bank ?? "",
+          }}
+        />
+      </section>
+
+      <section className="mt-4 rounded-3xl bg-warm-white p-5 shadow-soft">
+        <h2 className="font-display text-xl font-bold">Cobrar con Mercado Pago</h2>
+        {isMercadoPagoEnabled() ? (
+          <p className="mt-1 text-sm text-muted">
+            Activo: en el carrito aparece <strong>Mercado Pago</strong>. Mercado Pago cobra una comisión por cada venta;
+            con el recargo la paga la clienta.
+          </p>
+        ) : (
+          <p className="mt-1 text-sm text-muted">
+            Todavía no está conectado. Para activarlo hay que cargar en Vercel la variable{" "}
+            <code className="font-mono">MP_ACCESS_TOKEN</code> (Access Token de producción de tu cuenta de Mercado Pago) y
+            volver a desplegar. Podés dejar el recargo listo desde ahora.
+          </p>
+        )}
+        <div className="mt-4">
+          <SurchargeForm defaultPercent={Number(settings?.mp_surcharge_percent ?? 0)} />
+        </div>
+      </section>
       <ul className="mt-6 flex flex-col gap-3">
         <Status ok={Boolean(whatsapp)} label="WhatsApp para pedidos">
           {whatsapp ? (

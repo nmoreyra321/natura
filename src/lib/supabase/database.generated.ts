@@ -120,6 +120,20 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"store_settings": {
+                  Row: {
+                    "id": number,"mp_surcharge_percent": number,"transfer_alias": string | null,"transfer_bank": string | null,"transfer_cbu": string | null,"transfer_holder": string | null,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "id"?: number,"mp_surcharge_percent"?: number,"transfer_alias"?: string | null,"transfer_bank"?: string | null,"transfer_cbu"?: string | null,"transfer_holder"?: string | null,"updated_at"?: string
+                  }
+                  Update: {
+                    "id"?: number,"mp_surcharge_percent"?: number,"transfer_alias"?: string | null,"transfer_bank"?: string | null,"transfer_cbu"?: string | null,"transfer_holder"?: string | null,"updated_at"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"product_lots": {
                   Row: {
                     "created_at": string,"expires_on": string,"id": string,"product_id": string,"quantity": number

@@ -105,3 +105,9 @@ export function salePriceFromDiscount(magazinePrice: number | string, percent: n
   const pesos = Math.floor((magazineCents * (100 - percent)) / 100 / 100);
   return Math.max(pesos, 1);
 }
+
+/** Recargo en centavos por pagar con Mercado Pago (redondeado al peso). */
+export function surchargeCents(totalCents: number, percent: number): number {
+  if (!Number.isFinite(totalCents) || totalCents <= 0 || !Number.isFinite(percent) || percent <= 0) return 0;
+  return Math.round((totalCents * percent) / 100 / 100) * 100;
+}

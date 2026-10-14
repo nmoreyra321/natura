@@ -5,7 +5,8 @@ import { getSiteUrl } from "@/lib/config";
 import { createPreference, isMercadoPagoEnabled } from "@/lib/mercadopago";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createPublicClient } from "@/lib/supabase/server";
-import { toCents } from "@/lib/pricing";
+import { surchargeCents, toCents } from "@/lib/pricing";
+import { getMercadoPagoSurcharge } from "@/lib/store-settings";
 import { cartRequestSchema, orderRequestSchema } from "@/lib/validation";
 
 export type CartValidationLine = {
@@ -76,6 +77,10 @@ export async function registerOrder(input: unknown): Promise<RegisterOrderResult
     console.error("[pedido] No se pudo registrar:", error?.message);
     return { ok: false, error: "No pudimos registrar el pedido." };
   }
+  if (parsed.data.paymentMethod === "transferencia") {
+    // Lo anota el servidor (la clienta no puede editar pedidos). Si falla, el pedido igual queda.
+    await createAdminClient()?.from("orders").update({ payment_method: "transferencia" }).eq("id", row.id);
+  }
   return { ok: true, number: row.number };
 }
 
@@ -113,16 +118,23 @@ export async function payWithMercadoPago(input: unknown): Promise<MercadoPagoChe
     return { ok: false, error: "No pudimos preparar el pago. Probá de nuevo." };
   }
 
+  const lines = items.map((i) => ({
+    id: i.product_id ?? i.name,
+    title: i.size ? `${i.name} (${i.size})` : i.name,
+    quantity: i.quantity,
+    unitPrice: toCents(i.unit_price) / 100,
+  }));
+  // Recargo por Mercado Pago (lo paga la clienta para cubrir la comisión).
+  const surcharge = surchargeCents(toCents(order.total), await getMercadoPagoSurcharge());
+  if (surcharge > 0) {
+    lines.push({ id: "recargo-mp", title: "Recargo por pago con Mercado Pago", quantity: 1, unitPrice: surcharge / 100 });
+  }
+
   const preference = await createPreference({
     orderId: order.id,
     orderNumber: order.number,
     siteUrl: getSiteUrl(),
-    items: items.map((i) => ({
-      id: i.product_id ?? i.name,
-      title: i.size ? `${i.name} (${i.size})` : i.name,
-      quantity: i.quantity,
-      unitPrice: toCents(i.unit_price) / 100,
-    })),
+    items: lines,
   });
   if (!preference) {
     // El pedido no sirve sin link de pago: lo dejamos cancelado para que no confunda en el panel.

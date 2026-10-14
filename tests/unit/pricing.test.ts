@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { formatARS } from "@/lib/format";
-import { getPriceInfo, planMagazinePriceUpdate, salePriceFromDiscount, toCents } from "@/lib/pricing";
+import { getPriceInfo, planMagazinePriceUpdate, salePriceFromDiscount, surchargeCents, toCents } from "@/lib/pricing";
 
 describe("getPriceInfo", () => {
   it("calcula descuento, ahorro y porcentaje", () => {
@@ -93,5 +93,16 @@ describe("salePriceFromDiscount", () => {
 describe("descuento sin errores de coma flotante", () => {
   it("29% sobre $100 se muestra como 29%", () => {
     expect(getPriceInfo(100, salePriceFromDiscount(100, 29)).discountPercent).toBe(29);
+  });
+});
+
+describe("surchargeCents", () => {
+  it("calcula el recargo redondeado al peso", () => {
+    expect(surchargeCents(2_000_000, 8)).toBe(160_000);
+    expect(surchargeCents(1_999_900, 7.5)).toBe(150_000);
+  });
+  it("sin recargo devuelve 0", () => {
+    expect(surchargeCents(2_000_000, 0)).toBe(0);
+    expect(surchargeCents(0, 8)).toBe(0);
   });
 });

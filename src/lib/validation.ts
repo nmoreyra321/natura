@@ -103,6 +103,40 @@ export const productSchema = z
 export type ProductInput = z.input<typeof productSchema>;
 export type ProductData = z.output<typeof productSchema>;
 
+const blankToNull = (v: string) => (v.trim() === "" ? null : v.trim());
+
+/** Datos de la cuenta para que las clientas paguen por transferencia. */
+export const transferSettingsSchema = z
+  .object({
+    alias: z
+      .string()
+      .transform(blankToNull)
+      .refine(
+        (v) => v === null || /^[a-zA-Z0-9.-]{6,20}$/.test(v),
+        "El alias tiene entre 6 y 20 letras, números, puntos o guiones.",
+      ),
+    cbu: z
+      .string()
+      .transform((v) => blankToNull(v.replace(/[\s-]/g, "")))
+      .refine((v) => v === null || /^\d{22}$/.test(v), "El CBU o CVU tiene 22 números."),
+    holder: z
+      .string()
+      .transform(blankToNull)
+      .refine((v) => v === null || (v.length >= 2 && v.length <= 80), "Escribí el nombre del titular."),
+    bank: z
+      .string()
+      .transform(blankToNull)
+      .refine((v) => v === null || (v.length >= 2 && v.length <= 40), "El banco puede tener hasta 40 letras."),
+  });
+
+export const surchargeSchema = z.coerce
+  .number({ message: "Escribí un número." })
+  .min(0, "No puede ser negativo.")
+  .max(25, "Como máximo 25%.")
+  .transform((n) => Math.round(n * 100) / 100);
+
+export type TransferSettingsInput = z.input<typeof transferSettingsSchema>;
+
 export const categorySchema = z.object({
   name: z
     .string()
@@ -167,6 +201,7 @@ export const cartRequestSchema = z
 export const orderRequestSchema = z.object({
   items: cartRequestSchema.min(1),
   customerName: z.string().trim().max(80).optional(),
+  paymentMethod: z.enum(["efectivo", "transferencia"]).optional(),
 });
 
 /** Convierte los errores de Zod en { campo: mensaje } para mostrar en el formulario. */

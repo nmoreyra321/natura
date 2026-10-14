@@ -12,7 +12,7 @@ import { isValidPrice, planMagazinePriceUpdate, salePriceFromDiscount } from "@/
 import { nameSearchPatterns } from "@/lib/search";
 import { slugify } from "@/lib/slug";
 import { createSessionClient, CATALOG_TAG } from "@/lib/supabase/server";
-import { categorySchema, fieldErrors, loginSchema, productSchema } from "@/lib/validation";
+import { categorySchema, fieldErrors, loginSchema, productSchema, surchargeSchema, transferSettingsSchema } from "@/lib/validation";
 
 export type ActionResult<T = undefined> =
   | { ok: true; data?: T; message?: string }
@@ -611,5 +611,56 @@ export async function setInventoryStock(
     return { ok: true, data: { status: data.status === "published" ? "published" : "draft" } };
   } catch (e) {
     return fail(e, "No pudimos guardar la cantidad.");
+  }
+}
+
+/** Guarda el alias / CBU para que las clientas paguen por transferencia (sin comisión). */
+export async function saveTransferSettings(input: unknown): Promise<ActionResult> {
+  try {
+    const { supabase } = await assertAdmin();
+    const parsed = transferSettingsSchema.safeParse(input);
+    if (!parsed.success) {
+      return { ok: false, error: "Revisá los campos marcados.", fields: fieldErrors(parsed.error) };
+    }
+    const d = parsed.data;
+    const { error } = await supabase
+      .from("store_settings")
+      .update({
+        transfer_alias: d.alias,
+        transfer_cbu: d.cbu,
+        transfer_holder: d.holder,
+        transfer_bank: d.bank,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", 1);
+    if (error) return fail(error, "No pudimos guardar los datos.");
+    refreshCatalog();
+    return {
+      ok: true,
+      message: d.alias || d.cbu ? "Listo: las clientas ya pueden elegir Transferencia." : "Transferencia desactivada.",
+    };
+  } catch (e) {
+    return fail(e, "No pudimos guardar los datos.");
+  }
+}
+
+/** % de recargo que se le suma a la clienta si paga con Mercado Pago. */
+export async function saveMercadoPagoSurcharge(percent: unknown): Promise<ActionResult> {
+  try {
+    const { supabase } = await assertAdmin();
+    const parsed = surchargeSchema.safeParse(typeof percent === "string" ? percent.replace(",", ".") : percent);
+    if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Número inválido." };
+    const { error } = await supabase
+      .from("store_settings")
+      .update({ mp_surcharge_percent: parsed.data, updated_at: new Date().toISOString() })
+      .eq("id", 1);
+    if (error) return fail(error, "No pudimos guardar el recargo.");
+    refreshCatalog();
+    return {
+      ok: true,
+      message: parsed.data > 0 ? `Listo: con Mercado Pago se suma ${parsed.data}%.` : "Mercado Pago sin recargo.",
+    };
+  } catch (e) {
+    return fail(e, "No pudimos guardar el recargo.");
   }
 }

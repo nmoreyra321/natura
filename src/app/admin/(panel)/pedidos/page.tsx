@@ -31,6 +31,7 @@ const PAYMENT_LABELS: Record<string, { label: string; tone: string }> = {
 };
 
 function paymentBadge(method: string, status: string | null) {
+  if (method === "transferencia") return { label: "Transferencia", tone: "bg-lilac text-grape" };
   if (method !== "mercadopago") return { label: "Efectivo", tone: "bg-sage text-botanical-deep" };
   return PAYMENT_LABELS[status ?? "pending"] ?? PAYMENT_LABELS.pending;
 }
