@@ -60,7 +60,7 @@ export function getPriceInfo(
 
   const savingsCents = magazineCents - saleCents;
   // Redondeo hacia abajo: nunca prometer más descuento del real.
-  const discountPercent = Math.floor((savingsCents / magazineCents) * 100);
+  const discountPercent = Math.floor((savingsCents * 100) / magazineCents);
 
   return {
     saleCents,
@@ -90,4 +90,18 @@ export function planMagazinePriceUpdate(
     sale_price: sale / 100,
     is_offer: product.is_offer && sale < newMagazine,
   };
+}
+
+/**
+ * Precio especial a partir de un % de descuento sobre el precio de revista.
+ * Se redondea hacia abajo al peso entero, así el descuento que ve la clienta
+ * nunca queda por debajo del elegido (ej.: $27.990 con 25% → $20.992, 25%).
+ */
+export function salePriceFromDiscount(magazinePrice: number | string, percent: number): number {
+  const magazineCents = toCents(magazinePrice);
+  if (!Number.isFinite(magazineCents) || magazineCents <= 0) return NaN;
+  if (!Number.isFinite(percent) || percent < 0 || percent >= 100) return NaN;
+  if (percent === 0) return magazineCents / 100;
+  const pesos = Math.floor((magazineCents * (100 - percent)) / 100 / 100);
+  return Math.max(pesos, 1);
 }

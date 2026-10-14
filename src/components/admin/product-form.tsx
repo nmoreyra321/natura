@@ -3,6 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2, Save } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 
@@ -10,7 +11,7 @@ import { saveProduct } from "@/app/admin/actions";
 import { Button } from "@/components/ui/button";
 import { Checkbox, Field, Input, Select, Textarea } from "@/components/ui/fields";
 import { formatARS } from "@/lib/format";
-import { getPriceInfo } from "@/lib/pricing";
+import { getPriceInfo, salePriceFromDiscount } from "@/lib/pricing";
 import { slugify } from "@/lib/slug";
 import { parseMoney, productSchema, type ProductData, type ProductInput } from "@/lib/validation";
 
@@ -59,6 +60,21 @@ export function ProductForm({
   const [magazine, sale, name, slug] = useWatch({ control, name: ["magazine_price", "sale_price", "name", "slug"] });
   const info = getPriceInfo(parseMoney(magazine), parseMoney(sale));
   const bothValid = Number.isFinite(parseMoney(magazine)) && Number.isFinite(parseMoney(sale));
+
+  // Dos formas de poner el precio: un % de descuento sobre la revista, o el precio final.
+  const [priceMode, setPriceMode] = useState<"descuento" | "precio">("descuento");
+  const [percent, setPercent] = useState(() => {
+    const start = getPriceInfo(parseMoney(defaults.magazine_price), parseMoney(defaults.sale_price));
+    return start.hasDiscount ? String(start.discountPercent) : defaults.sale_price ? "0" : "";
+  });
+  const applyDiscount = (magazineRaw: string | number, percentRaw: string) => {
+    const pct = Number(percentRaw.replace(",", "."));
+    if (percentRaw.trim() === "" || !Number.isFinite(pct)) return;
+    const price = salePriceFromDiscount(parseMoney(magazineRaw), pct);
+    if (Number.isFinite(price)) setValue("sale_price", String(price), { shouldDirty: true, shouldValidate: true });
+  };
+  const percentInvalid =
+    percent.trim() !== "" && !(Number(percent.replace(",", ".")) >= 0 && Number(percent.replace(",", ".")) < 100);
 
   const onSubmit = async (data: ProductData) => {
     const res = await saveProduct(productId, data);
@@ -143,12 +159,95 @@ export function ProductForm({
 
       <section className="grid gap-4 rounded-3xl bg-warm-white p-5 shadow-soft sm:grid-cols-2">
         <h2 className="font-display text-xl font-bold sm:col-span-2">Precios y stock</h2>
+        <div className="sm:col-span-2">
+          <p className="mb-2 text-sm font-semibold">¿Cómo querés poner el precio?</p>
+          <div role="radiogroup" aria-label="Forma de poner el precio" className="inline-flex rounded-full bg-cream p-1">
+            {(
+              [
+                ["descuento", "Con % de descuento"],
+                ["precio", "Precio final"],
+              ] as const
+            ).map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                role="radio"
+                aria-checked={priceMode === value}
+                onClick={() => {
+                  setPriceMode(value);
+                  if (value === "descuento") {
+                    const now = getPriceInfo(parseMoney(magazine), parseMoney(sale));
+                    if (now.hasDiscount) setPercent(String(now.discountPercent));
+                  }
+                }}
+                className={`rounded-full px-4 py-2 text-sm font-bold ${priceMode === value ? "bg-forest text-white" : "text-forest hover:bg-sun"}`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
         <Field label="Precio de revista ($)" htmlFor="magazine_price" error={err("magazine_price")} hint="El precio oficial de la revista Natura.">
-          <Input id="magazine_price" inputMode="decimal" placeholder="Ej.: 25.000 o 25000,50" aria-invalid={Boolean(errors.magazine_price)} {...register("magazine_price")} />
+          <Input
+            id="magazine_price"
+            inputMode="decimal"
+            placeholder="Ej.: 25.000 o 25000,50"
+            aria-invalid={Boolean(errors.magazine_price)}
+            {...register("magazine_price", {
+              onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
+                if (priceMode === "descuento") applyDiscount(e.target.value, percent);
+              },
+            })}
+          />
         </Field>
-        <Field label="Precio especial Natu Mariel ($)" htmlFor="sale_price" error={err("sale_price")} hint="El precio al que lo vendés.">
-          <Input id="sale_price" inputMode="decimal" placeholder="Ej.: 21.000" aria-invalid={Boolean(errors.sale_price)} {...register("sale_price")} />
-        </Field>
+        {priceMode === "descuento" ? (
+          <Field
+            label="Descuento sobre la revista (%)"
+            htmlFor="discount_pct"
+            error={percentInvalid ? "Poné un número entre 0 y 99." : err("sale_price")}
+            hint={
+              Number.isFinite(parseMoney(sale)) && !percentInvalid
+                ? `Precio de venta: ${formatARS(Math.round(parseMoney(sale) * 100))}`
+                : "Ej.: 25 para venderlo 25% más barato que la revista."
+            }
+          >
+            <div className="flex items-center gap-2">
+              <Input
+                id="discount_pct"
+                inputMode="decimal"
+                placeholder="Ej.: 25"
+                value={percent}
+                aria-invalid={percentInvalid || Boolean(errors.sale_price)}
+                onChange={(e) => {
+                  setPercent(e.target.value);
+                  applyDiscount(String(magazine ?? ""), e.target.value);
+                }}
+                className="max-w-28"
+              />
+              <span className="font-bold">%</span>
+            </div>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {[10, 15, 20, 25, 30].map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  onClick={() => {
+                    setPercent(String(n));
+                    applyDiscount(String(magazine ?? ""), String(n));
+                  }}
+                  className={`rounded-full border px-3 py-1 text-sm font-bold ${percent === String(n) ? "border-forest bg-forest text-white" : "border-line bg-white hover:bg-sun"}`}
+                >
+                  {n}%
+                </button>
+              ))}
+            </div>
+            <input type="hidden" {...register("sale_price")} />
+          </Field>
+        ) : (
+          <Field label="Precio especial Natu Mariel ($)" htmlFor="sale_price" error={err("sale_price")} hint="El precio al que lo vendés.">
+            <Input id="sale_price" inputMode="decimal" placeholder="Ej.: 21.000" aria-invalid={Boolean(errors.sale_price)} {...register("sale_price")} />
+          </Field>
+        )}
         <div className="rounded-2xl bg-cream p-4 text-sm sm:col-span-2" aria-live="polite">
           {!bothValid ? (
             <span className="text-muted">Completá ambos precios para ver el descuento.</span>

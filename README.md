@@ -166,6 +166,8 @@ La tienda envía visitas a **Vercel Web Analytics** (no cuenta las visitas al pa
 
 ### Precios y descuentos
 
+En cada producto podés poner el precio de dos formas: **Con % de descuento** (escribís el precio de revista y el %, por ejemplo 25, y el precio de venta se calcula solo) o **Precio final** (escribís directamente a cuánto lo vendés). Para varios a la vez: en Productos marcá los que quieras, escribí el % en la barra de abajo y tocá «Aplicar descuento».
+
 ```
 descuento = ((precio de revista − precio especial) / precio de revista) × 100
 ```

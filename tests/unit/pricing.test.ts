@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { formatARS } from "@/lib/format";
-import { getPriceInfo, planMagazinePriceUpdate, toCents } from "@/lib/pricing";
+import { getPriceInfo, planMagazinePriceUpdate, salePriceFromDiscount, toCents } from "@/lib/pricing";
 
 describe("getPriceInfo", () => {
   it("calcula descuento, ahorro y porcentaje", () => {
@@ -67,5 +67,31 @@ describe("planMagazinePriceUpdate", () => {
 
   it("deja de ser oferta si el especial ya no es menor que el de revista", () => {
     expect(planMagazinePriceUpdate({ magazine_price: 20000, sale_price: 15000, is_offer: true }, 14000).is_offer).toBe(false);
+  });
+});
+
+describe("salePriceFromDiscount", () => {
+  it("aplica el % sobre el precio de revista", () => {
+    expect(salePriceFromDiscount(30000, 25)).toBe(22500);
+    expect(salePriceFromDiscount("18500.00", 10)).toBe(16650);
+  });
+
+  it("redondea hacia abajo para no mostrar menos descuento del elegido", () => {
+    const sale = salePriceFromDiscount(27990, 25);
+    expect(sale).toBe(20992);
+    expect(getPriceInfo(27990, sale).discountPercent).toBe(25);
+  });
+
+  it("0% deja el precio de revista y rechaza valores inválidos", () => {
+    expect(salePriceFromDiscount(30000, 0)).toBe(30000);
+    expect(salePriceFromDiscount(30000, 100)).toBeNaN();
+    expect(salePriceFromDiscount(30000, -5)).toBeNaN();
+    expect(salePriceFromDiscount(0, 10)).toBeNaN();
+  });
+});
+
+describe("descuento sin errores de coma flotante", () => {
+  it("29% sobre $100 se muestra como 29%", () => {
+    expect(getPriceInfo(100, salePriceFromDiscount(100, 29)).discountPercent).toBe(29);
   });
 });

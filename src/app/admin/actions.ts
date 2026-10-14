@@ -8,7 +8,7 @@ import { PRODUCT_IMAGES_BUCKET } from "@/lib/config";
 import { isValidProductImagePath, MAX_IMAGES_PER_PRODUCT } from "@/lib/images";
 import type { NaturaLookup } from "@/lib/natura";
 import { parseExpiry } from "@/lib/lots";
-import { isValidPrice, planMagazinePriceUpdate } from "@/lib/pricing";
+import { isValidPrice, planMagazinePriceUpdate, salePriceFromDiscount } from "@/lib/pricing";
 import { nameSearchPatterns } from "@/lib/search";
 import { slugify } from "@/lib/slug";
 import { createSessionClient, CATALOG_TAG } from "@/lib/supabase/server";
@@ -425,6 +425,52 @@ export async function bulkUpdateProducts(
     return { ok: true, data: { updated }, message: `${updated} ${updated === 1 ? "producto actualizado" : "productos actualizados"}.` };
   } catch (e) {
     return fail(e, "No pudimos actualizar los productos.");
+  }
+}
+
+/** Pone el precio especial de varios productos como la revista menos un % de descuento. */
+export async function bulkApplyDiscount(
+  productIds: string[],
+  percent: number,
+): Promise<ActionResult<{ updated: number }>> {
+  try {
+    const { supabase } = await assertAdmin();
+    const ids = cleanIds(productIds);
+    if (ids.length === 0) return { ok: false, error: "No elegiste productos." };
+    if (!Number.isFinite(percent) || percent < 0 || percent >= 100) {
+      return { ok: false, error: "El descuento tiene que ser un número entre 0 y 99." };
+    }
+
+    const { data: rows, error: readError } = await supabase
+      .from("products")
+      .select("id, magazine_price, is_offer")
+      .in("id", ids);
+    if (readError) return fail(readError, "No pudimos leer los productos.");
+
+    const results = await Promise.all(
+      (rows ?? []).map((p) => {
+        const sale_price = salePriceFromDiscount(p.magazine_price, percent);
+        if (!Number.isFinite(sale_price)) return Promise.resolve({ error: null, skipped: true });
+        // Sin descuento no puede seguir marcado como oferta.
+        const is_offer = p.is_offer && sale_price < Number(p.magazine_price);
+        return supabase
+          .from("products")
+          .update({ sale_price, is_offer })
+          .eq("id", p.id)
+          .then(({ error }) => ({ error, skipped: false }));
+      }),
+    );
+    const failed = results.find((r) => r.error);
+    if (failed?.error) return fail(failed.error, "No pudimos actualizar algunos precios.");
+    refreshCatalog();
+    const updated = results.filter((r) => !r.skipped).length;
+    return {
+      ok: true,
+      data: { updated },
+      message: `${updated} ${updated === 1 ? "precio actualizado" : "precios actualizados"} con ${percent}% de descuento.`,
+    };
+  } catch (e) {
+    return fail(e, "No pudimos actualizar los precios.");
   }
 }
 

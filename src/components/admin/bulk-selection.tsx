@@ -1,11 +1,11 @@
 "use client";
 
-import { Eye, EyeOff, Loader2, Tags, Trash2, X } from "lucide-react";
+import { Eye, EyeOff, Loader2, Percent, Tags, Trash2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { createContext, useContext, useState, useTransition } from "react";
 import { toast } from "sonner";
 
-import { bulkDeleteProducts, bulkUpdateProducts } from "@/app/admin/actions";
+import { bulkApplyDiscount, bulkDeleteProducts, bulkUpdateProducts } from "@/app/admin/actions";
 import { buttonClasses } from "@/components/ui/button";
 import { ConfirmDialog } from "./confirm-dialog";
 
@@ -114,6 +114,9 @@ function BulkBar({
   const router = useRouter();
   const [pending, start] = useTransition();
   const [category, setCategory] = useState("");
+  const [discount, setDiscount] = useState("");
+  const discountValue = Number(discount.replace(",", "."));
+  const discountOk = discount.trim() !== "" && discountValue >= 0 && discountValue < 100;
   const [confirmDelete, setConfirmDelete] = useState(false);
   const n = ids.length;
   const label = `${n} ${n === 1 ? "producto" : "productos"}`;
@@ -200,6 +203,28 @@ function BulkBar({
             }
           >
             <Tags className="size-4" aria-hidden="true" /> Asignar
+          </button>
+        </div>
+        <div className="flex items-center gap-1">
+          <label htmlFor="bulk-descuento" className="sr-only">
+            Descuento sobre la revista para los seleccionados
+          </label>
+          <input
+            id="bulk-descuento"
+            inputMode="decimal"
+            placeholder="25"
+            value={discount}
+            onChange={(e) => setDiscount(e.target.value)}
+            className="h-9 w-16 rounded-full border border-line bg-white px-3 text-center text-sm"
+          />
+          <button
+            type="button"
+            disabled={pending || !discountOk}
+            className={buttonClasses("outline", "sm")}
+            title="El precio de venta queda como el de revista menos este %"
+            onClick={() => run(() => bulkApplyDiscount(ids, discountValue), () => setDiscount(""))}
+          >
+            <Percent className="size-4" aria-hidden="true" /> Aplicar descuento
           </button>
         </div>
         <button
