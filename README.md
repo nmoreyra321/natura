@@ -136,6 +136,10 @@ En el carrito la clienta elige cómo pagar:
 
 En **Pedidos** cada pedido muestra cómo pagó: «Efectivo», «Transferencia», «Mercado Pago · Pagado», «Esperando pago» o «Rechazado».
 
+### Venta rápida (ventas por fuera de la tienda)
+
+En **Panel → Venta rápida** se cargan las ventas de los vivos de Facebook, en persona o por WhatsApp: buscás cada producto, ajustás cantidad (y precio si hiciste uno especial), elegís dónde se vendió, cómo pagó (todo, una parte o nada, con nota) y si ya lo entregaste. Al registrarla se descuenta el stock (y los vencimientos, primero el que vence antes) y queda en Pedidos y en Ventas con su origen.
+
 ### Pedidos
 
 Cuando una clienta toca **Hacer pedido por WhatsApp**, el pedido queda guardado con un número (por ejemplo *Pedido N.º 12*), que también aparece en el mensaje de WhatsApp. En **Pedidos**:

@@ -1,4 +1,4 @@
-import { ClipboardList } from "lucide-react";
+import { CirclePlus, ClipboardList } from "lucide-react";
 import Link from "next/link";
 
 import type { OrderStatus } from "@/app/admin/actions";
@@ -42,6 +42,13 @@ function paymentBadge(method: string, status: string | null, paidCents = 0, tota
   return PAYMENT_LABELS[status ?? "pending"] ?? PAYMENT_LABELS.pending;
 }
 
+const CHANNEL_LABELS: Record<string, string> = {
+  facebook: "Vivo de Facebook",
+  presencial: "En persona",
+  whatsapp: "WhatsApp",
+  otro: "Otro",
+};
+
 const FILTERS: { value: string; label: string }[] = [
   { value: "", label: "Todos" },
   { value: "pending", label: "Pendientes" },
@@ -79,7 +86,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
   let query = supabase
     .from("orders")
     .select(
-      "id, number, code, status, customer_name, total, savings, created_at, payment_method, payment_status, paid_at, amount_paid, payment_note, items:order_items(id, product_id, name, size, quantity, unit_price), lots:order_lot_allocations(product_id, expires_on, quantity)",
+      "id, number, code, channel, status, customer_name, total, savings, created_at, payment_method, payment_status, paid_at, amount_paid, payment_note, items:order_items(id, product_id, name, size, quantity, unit_price), lots:order_lot_allocations(product_id, expires_on, quantity)",
       { count: "exact" },
     )
     .order("created_at", { ascending: false })
@@ -97,7 +104,12 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
 
   return (
     <div className="mx-auto max-w-5xl">
-      <h1 className="font-display text-3xl font-bold">Pedidos</h1>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="font-display text-3xl font-bold">Pedidos</h1>
+        <Link href="/admin/vender" className={buttonClasses("primary", "md")}>
+          <CirclePlus className="size-4" aria-hidden="true" /> Venta rápida
+        </Link>
+      </div>
       <p className="text-muted">
         Cada pedido que una clienta envía por WhatsApp queda acá. Al confirmarlo se descuenta el stock.
       </p>
@@ -146,6 +158,9 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
                         className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${paymentBadge(o.payment_method, o.payment_status, toCents(o.amount_paid), toCents(o.total)).tone}`}
                       >
                         {paymentBadge(o.payment_method, o.payment_status, toCents(o.amount_paid), toCents(o.total)).label}
+                      </span>
+                      <span className="rounded-full border border-line px-2.5 py-0.5 text-xs font-bold text-muted">
+                        {CHANNEL_LABELS[o.channel] ?? "Tienda web"}
                       </span>
                     </p>
                     <p className="text-sm text-muted">

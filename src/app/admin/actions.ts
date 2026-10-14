@@ -9,6 +9,7 @@ import { isValidProductImagePath, MAX_IMAGES_PER_PRODUCT } from "@/lib/images";
 import type { NaturaLookup } from "@/lib/natura";
 import { parseExpiry } from "@/lib/lots";
 import { formatARS } from "@/lib/format";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { isValidPrice, planMagazinePriceUpdate, salePriceFromDiscount, toCents } from "@/lib/pricing";
 import { nameSearchPatterns } from "@/lib/search";
 import { slugify } from "@/lib/slug";
@@ -725,5 +726,139 @@ export async function saveMercadoPagoSurcharge(percent: unknown): Promise<Action
     };
   } catch (e) {
     return fail(e, "No pudimos guardar el recargo.");
+  }
+}
+
+/* ------------------------------ Venta rápida ------------------------------ */
+
+export type SaleProductOption = {
+  id: string;
+  name: string;
+  size: string | null;
+  image: string | null;
+  salePrice: number;
+  stock: number;
+};
+
+/** Búsqueda para la venta rápida: incluye borradores (en los vivos se vende de todo). */
+export async function searchProductsForSale(q: string): Promise<SaleProductOption[]> {
+  try {
+    const { supabase } = await assertAdmin();
+    const patterns = nameSearchPatterns(String(q).slice(0, 80));
+    if (patterns.length === 0) return [];
+    let query = supabase
+      .from("products")
+      .select("id, name, size, sale_price, stock, images:product_images(storage_path, position)");
+    for (const pattern of patterns) query = query.ilike("name", pattern);
+    const { data } = await query.order("stock", { ascending: false }).order("name").limit(10);
+    return (data ?? []).map((p) => ({
+      id: p.id,
+      name: p.name,
+      size: p.size,
+      image: [...(p.images ?? [])].sort((a, b) => a.position - b.position)[0]?.storage_path ?? null,
+      salePrice: toCents(p.sale_price) / 100,
+      stock: p.stock,
+    }));
+  } catch {
+    return [];
+  }
+}
+
+export type ManualSaleInput = {
+  items: { productId: string; quantity: number; unitPrice: number }[];
+  customerName?: string;
+  channel: "facebook" | "presencial" | "whatsapp" | "otro";
+  paymentMethod: "efectivo" | "transferencia";
+  amountPaid: number;
+  paymentNote?: string;
+  delivered: boolean;
+};
+
+const SALE_CHANNELS = ["facebook", "presencial", "whatsapp", "otro"] as const;
+
+/**
+ * Registra una venta hecha por fuera de la tienda (vivo de Facebook, en persona…).
+ * Queda como pedido confirmado (o entregado) y descuenta stock y vencimientos.
+ */
+export async function registerManualSale(input: ManualSaleInput): Promise<ActionResult<{ code: string }>> {
+  try {
+    const { supabase } = await assertAdmin();
+    const admin = createAdminClient();
+    if (!admin) return { ok: false, error: "Falta configurar la clave secreta de la base (SUPABASE_SECRET_KEY)." };
+
+    const lines = new Map<string, { quantity: number; unitCents: number }>();
+    for (const it of Array.isArray(input?.items) ? input.items.slice(0, 50) : []) {
+      const qty = Number(it?.quantity);
+      const unitCents = toCents(it?.unitPrice);
+      if (!UUID_RE.test(String(it?.productId)) || !Number.isInteger(qty) || qty < 1 || qty > 1000) continue;
+      if (!Number.isFinite(unitCents) || unitCents <= 0 || unitCents > 10_000_000_000) {
+        return { ok: false, error: "Revisá los precios: tienen que ser mayores a cero." };
+      }
+      const prev = lines.get(it.productId);
+      lines.set(it.productId, { quantity: (prev?.quantity ?? 0) + qty, unitCents });
+    }
+    if (lines.size === 0) return { ok: false, error: "Agregá al menos un producto." };
+    const channel = SALE_CHANNELS.includes(input.channel) ? input.channel : "otro";
+    const method = input.paymentMethod === "transferencia" ? "transferencia" : "efectivo";
+
+    const { data: products, error: readError } = await supabase
+      .from("products")
+      .select("id, name, size, magazine_price")
+      .in("id", [...lines.keys()]);
+    if (readError) return fail(readError, "No pudimos leer los productos.");
+    if (!products || products.length !== lines.size) return { ok: false, error: "Algún producto ya no existe." };
+
+    let totalCents = 0;
+    let savingsCents = 0;
+    const items = products.map((p) => {
+      const l = lines.get(p.id)!;
+      const magCents = toCents(p.magazine_price);
+      totalCents += l.unitCents * l.quantity;
+      savingsCents += Math.max(magCents - l.unitCents, 0) * l.quantity;
+      return {
+        product_id: p.id,
+        name: p.name,
+        size: p.size,
+        quantity: l.quantity,
+        unit_price: l.unitCents / 100,
+        magazine_price: magCents / 100,
+      };
+    });
+
+    const paidCents = Math.min(Math.max(toCents(input.amountPaid) || 0, 0), totalCents);
+    const complete = paidCents >= totalCents;
+    const { data: order, error: insertError } = await admin
+      .from("orders")
+      .insert({
+        customer_name: input.customerName?.trim().slice(0, 80) || null,
+        total: totalCents / 100,
+        savings: savingsCents / 100,
+        channel,
+        payment_method: method,
+        amount_paid: paidCents / 100,
+        payment_status: complete ? "approved" : null,
+        paid_at: complete ? new Date().toISOString() : null,
+        payment_note: complete ? null : input.paymentNote?.trim().slice(0, 120) || null,
+      })
+      .select("id, code")
+      .single();
+    if (insertError || !order) return fail(insertError, "No pudimos registrar la venta.");
+
+    const { error: itemsError } = await admin.from("order_items").insert(items.map((i) => ({ ...i, order_id: order.id })));
+    // Descuenta stock y vencimientos (el que vence antes primero), igual que al confirmar un pedido.
+    const { error: statusError } = itemsError
+      ? { error: itemsError }
+      : await supabase.rpc("set_order_status", { order_id: order.id, new_status: input.delivered ? "delivered" : "confirmed" });
+    if (statusError) {
+      await admin.from("orders").delete().eq("id", order.id);
+      return fail(statusError, "No pudimos registrar la venta.");
+    }
+
+    refreshCatalog();
+    revalidatePath("/admin/pedidos");
+    revalidatePath("/admin/ventas");
+    return { ok: true, data: { code: order.code }, message: `Venta ${order.code} registrada. Ya descontamos el stock.` };
+  } catch (e) {
+    return fail(e, "No pudimos registrar la venta.");
   }
 }

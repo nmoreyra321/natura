@@ -1,6 +1,6 @@
 "use client";
 
-import { Boxes, CalendarClock, ClipboardList, ExternalLink, LayoutDashboard, LogOut, Package, RefreshCw, Settings, Tags, TrendingUp } from "lucide-react";
+import { Boxes, CalendarClock, CirclePlus, ClipboardList, ExternalLink, LayoutDashboard, LogOut, Package, RefreshCw, Settings, Tags, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -9,6 +9,7 @@ import { LeafMark } from "@/components/store/logo";
 
 const items = [
   { href: "/admin", label: "Inicio", icon: LayoutDashboard, exact: true },
+  { href: "/admin/vender", label: "Venta rápida", icon: CirclePlus },
   { href: "/admin/pedidos", label: "Pedidos", icon: ClipboardList },
   { href: "/admin/ventas", label: "Ventas", icon: TrendingUp },
   { href: "/admin/productos", label: "Productos", icon: Package },
