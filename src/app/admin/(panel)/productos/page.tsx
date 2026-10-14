@@ -1,4 +1,4 @@
-import { Boxes, Camera, List, Plus, Search } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 import Link from "next/link";
 
 import { BulkSelectionProvider, SelectAllCheckbox, SelectProductCheckbox } from "@/components/admin/bulk-selection";
@@ -6,6 +6,7 @@ import { InventoryView } from "@/components/admin/inventory-view";
 import { ReceiptHistory } from "@/components/admin/receipt-history";
 import { ReceiptImport } from "@/components/admin/receipt-import";
 import { ProductRowActions } from "@/components/admin/product-row-actions";
+import { ProductsHeader } from "@/components/admin/product-tabs";
 import { LinkButton, buttonClasses } from "@/components/ui/button";
 import { inputClasses } from "@/components/ui/fields";
 import { ProductImageFallback } from "@/components/store/product-card";
@@ -40,22 +41,11 @@ function pageHref(sp: Search, page: number) {
   return qs ? `/admin/productos?${qs}` : "/admin/productos";
 }
 
-/** Pestañas de Productos: lista/edición o carga rápida de stock. */
-function ProductTabs({ active }: { active: "lista" | "stock" | "boleta" }) {
-  const tab = (on: boolean) =>
-    `inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-bold ${on ? "bg-forest text-white" : "bg-warm-white shadow-soft hover:bg-sun"}`;
+function NewProductButton() {
   return (
-    <nav aria-label="Vista de productos" className="mt-4 flex flex-wrap gap-2">
-      <Link href="/admin/productos" aria-current={active === "lista" ? "page" : undefined} className={tab(active === "lista")}>
-        <List className="size-4" aria-hidden="true" /> Lista y edición
-      </Link>
-      <Link href="/admin/productos?vista=stock" aria-current={active === "stock" ? "page" : undefined} className={tab(active === "stock")}>
-        <Boxes className="size-4" aria-hidden="true" /> Cargar stock
-      </Link>
-      <Link href="/admin/productos?vista=boleta" aria-current={active === "boleta" ? "page" : undefined} className={tab(active === "boleta")}>
-        <Camera className="size-4" aria-hidden="true" /> Cargar factura
-      </Link>
-    </nav>
+    <LinkButton href="/admin/productos/nuevo" size="sm">
+      <Plus className="size-4" aria-hidden="true" /> Nuevo producto
+    </LinkButton>
   );
 }
 
@@ -67,13 +57,7 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
   if (vista === "stock" || vista === "boleta") {
     return (
       <div className="mx-auto max-w-6xl">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <h1 className="font-display text-3xl font-bold">Productos</h1>
-          <LinkButton href="/admin/productos/nuevo">
-            <Plus className="size-5" aria-hidden="true" /> Nuevo producto
-          </LinkButton>
-        </div>
-        <ProductTabs active={vista} />
+        <ProductsHeader active={vista} action={<NewProductButton />} />
         <div className="mt-5">
           {vista === "stock" ? (
             <InventoryView supabase={supabase} sp={sp} />
@@ -129,30 +113,26 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
 
   return (
     <div className="mx-auto max-w-6xl">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="font-display text-3xl font-bold">Productos</h1>
-          <p className="text-muted tabular">
-            {error ? "" : products && products.length > 0
+      <ProductsHeader
+        active="lista"
+        action={<NewProductButton />}
+        subtitle={
+          error
+            ? ""
+            : products && products.length > 0
               ? `Mostrando ${from + 1}–${from + products.length} de ${total} ${total === 1 ? "producto" : "productos"}`
-              : `${total} ${total === 1 ? "producto" : "productos"}`}
-          </p>
-        </div>
-        <LinkButton href="/admin/productos/nuevo">
-          <Plus className="size-5" aria-hidden="true" /> Nuevo producto
-        </LinkButton>
-      </div>
+              : `${total} ${total === 1 ? "producto" : "productos"}`
+        }
+      />
 
-      <ProductTabs active="lista" />
-
-      <form method="get" className="mt-5 grid grid-cols-2 gap-3 rounded-3xl bg-warm-white p-4 shadow-soft md:grid-cols-[1.4fr_1fr_1fr_1.1fr_auto]">
+      <form method="get" className="mt-4 grid grid-cols-2 gap-2 rounded-2xl bg-warm-white p-2.5 shadow-soft md:grid-cols-[1.6fr_1fr_1fr_1.2fr_auto]">
         <div className="col-span-2 md:col-span-1">
           <label htmlFor="aq" className="sr-only">Buscar por nombre</label>
-          <input id="aq" name="q" type="search" defaultValue={q} placeholder="Buscar por nombre" className={`${inputClasses} h-11`} />
+          <input id="aq" name="q" type="search" defaultValue={q} placeholder="Buscar por nombre" className={`${inputClasses} h-10 text-sm`} />
         </div>
         <div>
           <label htmlFor="ae" className="sr-only">Estado</label>
-          <select id="ae" name="estado" defaultValue={estado} className={`${inputClasses} h-11`}>
+          <select id="ae" name="estado" defaultValue={estado} className={`${inputClasses} h-10 text-sm`}>
             <option value="">Estado: todos</option>
             <option value="published">Publicados</option>
             <option value="draft">Borradores</option>
@@ -160,7 +140,7 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
         </div>
         <div>
           <label htmlFor="as" className="sr-only">Stock</label>
-          <select id="as" name="stock" defaultValue={stock} className={`${inputClasses} h-11`}>
+          <select id="as" name="stock" defaultValue={stock} className={`${inputClasses} h-10 text-sm`}>
             <option value="">Stock: todo</option>
             <option value="sin">Sin stock</option>
             <option value="bajo">Stock bajo</option>
@@ -168,7 +148,7 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
         </div>
         <div>
           <label htmlFor="ac" className="sr-only">Categoría</label>
-          <select id="ac" name="categoria" defaultValue={categoria} className={`${inputClasses} h-11`}>
+          <select id="ac" name="categoria" defaultValue={categoria} className={`${inputClasses} h-10 text-sm`}>
             <option value="">Categoría: todas</option>
             <option value={NO_CATEGORY}>Sin categoría</option>
             {(categories ?? []).map((c) => (
@@ -181,7 +161,7 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
             <input type="checkbox" name="oferta" value="1" defaultChecked={oferta} className="size-5 accent-[var(--coral-deep)]" />
             Ofertas
           </label>
-          <button type="submit" className={buttonClasses("secondary", "md")}>
+          <button type="submit" className={buttonClasses("secondary", "sm")}>
             <Search className="size-4" aria-hidden="true" /> Filtrar
           </button>
         </div>
@@ -218,21 +198,21 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
           products={products.map((p) => ({ id: p.id, stock: p.stock }))}
           categories={categories ?? []}
         >
-          <div className="mt-6 flex flex-wrap items-center justify-between gap-2 px-1">
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-2 px-1">
             <SelectAllCheckbox />
-            <p className="text-sm text-muted">Elegí varios para publicarlos, pasarlos a borrador o cambiarles la categoría.</p>
+            <p className="hidden text-xs text-muted sm:block">Elegí varios para publicar, pasar a borrador o cambiar la categoría.</p>
           </div>
-          <ul className="mt-3 flex flex-col gap-3 pb-28">
+          <ul className="mt-2 divide-y divide-line/70 overflow-hidden rounded-2xl bg-warm-white shadow-soft mb-28">
             {products.map((p) => {
               const img = [...(p.images ?? [])].sort((a, b) => a.position - b.position)[0];
               const src = img ? productImageUrl(img.storage_path) : null;
               const info = getPriceInfo(p.magazine_price, p.sale_price);
               const category = (p.category as unknown as { name: string } | null)?.name;
               return (
-                <li key={p.id} className="flex flex-col gap-3 rounded-3xl bg-warm-white p-3 shadow-soft sm:flex-row sm:items-center sm:p-4">
-                  <div className="flex min-w-0 flex-1 items-center gap-3">
+                <li key={p.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 px-3 py-2.5 hover:bg-cream/60">
+                  <div className="flex min-w-0 flex-1 basis-64 items-center gap-3">
                     <SelectProductCheckbox id={p.id} name={p.name} />
-                    <div className="relative size-16 shrink-0 overflow-hidden rounded-2xl bg-white">
+                    <div className="relative size-11 shrink-0 overflow-hidden rounded-xl bg-white">
                       {src ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={src} alt="" className="size-full object-cover" loading="lazy" />
@@ -241,29 +221,25 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
                       )}
                     </div>
                     <div className="min-w-0">
-                      <Link href={`/admin/productos/${p.id}`} className="font-semibold hover:text-coral-deep">
+                      <Link href={`/admin/productos/${p.id}`} className="line-clamp-1 text-sm font-semibold hover:text-coral-deep">
                         {p.name}
                       </Link>
-                      <p className="text-sm text-muted">
-                        {[category ?? "Sin categoría", p.size].filter(Boolean).join(" · ")}
-                      </p>
-                      <p className="text-sm tabular">
-                        <span className="font-bold">{formatARS(info.saleCents)}</span>
-                        {info.hasDiscount ? (
-                          <>
-                            <span className="ml-2 text-muted line-through">{formatARS(info.magazineCents)}</span>
-                            <span className="ml-2 font-semibold text-coral-deep">−{info.discountPercent}%</span>
-                          </>
-                        ) : null}
-                      </p>
-                      <div className="mt-1 flex flex-wrap gap-1.5 text-xs font-bold">
-                        <span className={`rounded-full px-2 py-0.5 ${p.status === "published" ? "bg-sage text-botanical-deep" : "bg-cream text-muted"}`}>
-                          {p.status === "published" ? "Publicado" : "Borrador"}
+                      <p className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted">
+                        <span className="tabular">
+                          <span className="font-bold text-forest">{formatARS(info.saleCents)}</span>
+                          {info.hasDiscount ? (
+                            <>
+                              <span className="ml-1 line-through">{formatARS(info.magazineCents)}</span>
+                              <span className="ml-1 font-semibold text-coral-deep">−{info.discountPercent}%</span>
+                            </>
+                          ) : null}
                         </span>
-                        {p.is_featured ? <span className="rounded-full bg-pink px-2 py-0.5">Destacado</span> : null}
-                        {p.is_offer ? <span className="rounded-full bg-coral-soft px-2 py-0.5 text-coral-deep">Oferta</span> : null}
-                        {p.stock === 0 ? <span className="rounded-full bg-coral-deep px-2 py-0.5 text-white">Sin stock</span> : null}
-                      </div>
+                        <span>{[category ?? "Sin categoría", p.size].filter(Boolean).join(" · ")}</span>
+                        {p.status !== "published" ? <span className="rounded-full bg-cream px-1.5 font-bold text-muted">Borrador</span> : null}
+                        {p.is_featured ? <span className="rounded-full bg-pink px-1.5 font-bold text-forest">Destacado</span> : null}
+                        {p.is_offer ? <span className="rounded-full bg-coral-soft px-1.5 font-bold text-coral-deep">Oferta</span> : null}
+                        {p.stock === 0 ? <span className="rounded-full bg-coral-deep px-1.5 font-bold text-white">Sin stock</span> : null}
+                      </p>
                     </div>
                   </div>
                   <ProductRowActions id={p.id} name={p.name} slug={p.slug} status={p.status as "draft" | "published"} stock={p.stock} />

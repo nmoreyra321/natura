@@ -7,7 +7,6 @@ import { useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { deleteProduct, updateProductQuick } from "@/app/admin/actions";
-import { buttonClasses } from "@/components/ui/button";
 import { ConfirmDialog } from "./confirm-dialog";
 
 export function ProductRowActions({
@@ -50,9 +49,9 @@ export function ProductRowActions({
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-      <div className="flex items-center gap-1.5">
-        <label htmlFor={`stock-${id}`} className="text-sm font-semibold text-muted">
+    <div className="ml-auto flex items-center gap-1">
+      <div className="mr-1 flex items-center gap-1.5">
+        <label htmlFor={`stock-${id}`} className="text-xs font-semibold text-muted">
           Stock
         </label>
         <input
@@ -66,7 +65,7 @@ export function ProductRowActions({
           onBlur={saveStock}
           onKeyDown={(e) => e.key === "Enter" && (e.currentTarget as HTMLInputElement).blur()}
           disabled={pending}
-          className="h-9 w-20 rounded-xl border border-line bg-white px-2 text-center tabular focus:border-botanical focus:outline-none"
+          className="h-9 w-16 rounded-xl border border-line bg-white px-1 text-center text-sm tabular focus:border-botanical focus:outline-none"
         />
       </div>
       <button
@@ -78,13 +77,19 @@ export function ProductRowActions({
             status === "published" ? "Producto despublicado." : "¡Producto publicado!",
           )
         }
-        className={buttonClasses(status === "published" ? "outline" : "secondary", "sm")}
+        className={`inline-flex size-9 items-center justify-center rounded-full ${status === "published" ? "text-muted hover:bg-forest/5 hover:text-forest" : "bg-sage text-botanical-deep hover:bg-botanical-deep hover:text-white"}`}
+        aria-label={status === "published" ? `Ocultar ${name} de la tienda` : `Publicar ${name}`}
+        title={status === "published" ? "Ocultar de la tienda" : "Publicar en la tienda"}
       >
-        {status === "published" ? <EyeOff className="size-4" aria-hidden="true" /> : <Eye className="size-4" aria-hidden="true" />}
-        {status === "published" ? "Despublicar" : "Publicar"}
+        {status === "published" ? <Eye className="size-4.5" aria-hidden="true" /> : <EyeOff className="size-4.5" aria-hidden="true" />}
       </button>
-      <Link href={`/admin/productos/${id}`} className={buttonClasses("outline", "sm")}>
-        <Pencil className="size-4" aria-hidden="true" /> Editar
+      <Link
+        href={`/admin/productos/${id}`}
+        className="inline-flex size-9 items-center justify-center rounded-full text-muted hover:bg-forest/5 hover:text-forest"
+        aria-label={`Editar ${name}`}
+        title="Editar"
+      >
+        <Pencil className="size-4.5" aria-hidden="true" />
       </Link>
       <button
         type="button"
@@ -92,6 +97,7 @@ export function ProductRowActions({
         disabled={pending}
         className="inline-flex size-9 items-center justify-center rounded-full text-muted hover:bg-coral-soft hover:text-coral-deep"
         aria-label={`Eliminar ${name}`}
+        title="Eliminar"
       >
         <Trash2 className="size-4.5" aria-hidden="true" />
       </button>

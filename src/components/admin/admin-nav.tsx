@@ -1,6 +1,6 @@
 "use client";
 
-import { BellRing, CalendarClock, CirclePlus, HandCoins, ClipboardList, ExternalLink, LayoutDashboard, LogOut, Menu, Package, RefreshCw, Settings, ShoppingBasket, Tags, TrendingUp, X } from "lucide-react";
+import { BellRing, CalendarClock, CirclePlus, HandCoins, ClipboardList, ExternalLink, LayoutDashboard, LogOut, Menu, Package, Settings, ShoppingBasket, TrendingUp, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
@@ -9,57 +9,71 @@ import { createPortal } from "react-dom";
 import { signOut } from "@/app/admin/actions";
 import { LeafMark } from "@/components/store/logo";
 
-const items = [
-  { href: "/admin", label: "Inicio", icon: LayoutDashboard, exact: true },
-  { href: "/admin/vender", label: "Venta rápida", icon: CirclePlus },
-  { href: "/admin/pedidos", label: "Pedidos", icon: ClipboardList },
-  { href: "/admin/deudas", label: "Quién me debe", icon: HandCoins },
-  { href: "/admin/ventas", label: "Ventas", icon: TrendingUp },
-  { href: "/admin/productos", label: "Productos", icon: Package },
-  { href: "/admin/reponer", label: "Qué pedir", icon: ShoppingBasket },
-  { href: "/admin/vencimientos", label: "Vencimientos", icon: CalendarClock },
-  { href: "/admin/avisos", label: "Avisos de stock", icon: BellRing },
-  { href: "/admin/precios", label: "Precios y fotos Natura", icon: RefreshCw },
-  { href: "/admin/categorias", label: "Categorías", icon: Tags },
-  { href: "/admin/configuracion", label: "Configuración", icon: Settings },
-];
+type NavItem = { href: string; label: string; icon: typeof LayoutDashboard; exact?: boolean; also?: string[] };
 
-function isActive(pathname: string, item: (typeof items)[number]) {
-  return item.exact ? pathname === item.href : pathname.startsWith(item.href);
+/** Secciones del menú, agrupadas para que sea más fácil encontrar todo. */
+const groups: { title: string | null; items: NavItem[] }[] = [
+  { title: null, items: [{ href: "/admin", label: "Inicio", icon: LayoutDashboard, exact: true }] },
+  {
+    title: "Vender",
+    items: [
+      { href: "/admin/vender", label: "Venta rápida", icon: CirclePlus },
+      { href: "/admin/pedidos", label: "Pedidos", icon: ClipboardList },
+      { href: "/admin/deudas", label: "Quién me debe", icon: HandCoins },
+      { href: "/admin/ventas", label: "Ventas", icon: TrendingUp },
+    ],
+  },
+  {
+    title: "Mercadería",
+    items: [
+      { href: "/admin/productos", label: "Productos", icon: Package, also: ["/admin/categorias", "/admin/precios"] },
+      { href: "/admin/reponer", label: "Qué pedir", icon: ShoppingBasket },
+      { href: "/admin/vencimientos", label: "Vencimientos", icon: CalendarClock },
+      { href: "/admin/avisos", label: "Avisos de stock", icon: BellRing },
+    ],
+  },
+  { title: "Ajustes", items: [{ href: "/admin/configuracion", label: "Configuración", icon: Settings }] },
+];
+const items = groups.flatMap((g) => g.items);
+
+function isActive(pathname: string, item: NavItem) {
+  if (item.exact) return pathname === item.href;
+  return [item.href, ...(item.also ?? [])].some((h) => pathname.startsWith(h));
 }
 
 /** Lista vertical de secciones (la misma en la computadora y en el menú del celular). */
 function NavList({ pathname, onNavigate }: { pathname: string; onNavigate?: () => void }) {
+  const link = (active: boolean) =>
+    `flex h-10 items-center gap-2.5 rounded-xl px-3 text-[15px] font-semibold whitespace-nowrap transition-colors ${active ? "bg-sage text-botanical-deep" : "text-forest/80 hover:bg-forest/5"}`;
   return (
-    <ul className="flex flex-col gap-1">
-      {items.map((item) => {
-        const active = isActive(pathname, item);
-        return (
-          <li key={item.href}>
-            <Link
-              href={item.href}
-              onClick={onNavigate}
-              aria-current={active ? "page" : undefined}
-              className={`flex h-12 items-center gap-3 rounded-2xl px-3.5 font-semibold whitespace-nowrap transition-colors lg:h-11 lg:gap-2.5 ${active ? "bg-sage text-botanical-deep" : "text-forest/80 hover:bg-forest/5"}`}
-            >
-              <item.icon className="size-5" aria-hidden="true" />
-              {item.label}
-            </Link>
-          </li>
-        );
-      })}
-      <li>
-        <Link
-          href="/"
-          target="_blank"
-          onClick={onNavigate}
-          className="flex h-12 items-center gap-3 rounded-2xl px-3.5 font-semibold whitespace-nowrap text-forest/80 hover:bg-forest/5 lg:h-11 lg:gap-2.5"
-        >
-          <ExternalLink className="size-5" aria-hidden="true" />
-          Ver tienda
-        </Link>
-      </li>
-    </ul>
+    <div className="flex flex-col gap-3">
+      {groups.map((g) => (
+        <div key={g.title ?? "inicio"}>
+          {g.title ? <p className="px-3 pb-1 text-[11px] font-bold tracking-wider text-muted uppercase">{g.title}</p> : null}
+          <ul className="flex flex-col gap-0.5">
+            {g.items.map((item) => {
+              const active = isActive(pathname, item);
+              return (
+                <li key={item.href}>
+                  <Link href={item.href} onClick={onNavigate} aria-current={active ? "page" : undefined} className={link(active)}>
+                    <item.icon className="size-[18px]" aria-hidden="true" />
+                    {item.label}
+                  </Link>
+                </li>
+              );
+            })}
+            {g.title === "Ajustes" ? (
+              <li>
+                <Link href="/" target="_blank" onClick={onNavigate} className={link(false)}>
+                  <ExternalLink className="size-[18px]" aria-hidden="true" />
+                  Ver tienda
+                </Link>
+              </li>
+            ) : null}
+          </ul>
+        </div>
+      ))}
+    </div>
   );
 }
 

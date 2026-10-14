@@ -1,4 +1,5 @@
 import { CategoryEditor } from "@/components/admin/category-editor";
+import { ProductsHeader } from "@/components/admin/product-tabs";
 import { requireAdmin } from "@/lib/auth";
 
 export const metadata = { title: "Categorías" };
@@ -19,8 +20,9 @@ export default async function CategoriesPage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl">
-      <h1 className="font-display text-3xl font-bold">Categorías</h1>
+    <div className="mx-auto max-w-6xl">
+      <ProductsHeader active="categorias" />
+      <div className="mx-auto mt-5 max-w-3xl">
       <p className="text-muted">
         Una categoría aparece en la tienda solo si está visible y tiene al menos un producto publicado.
       </p>
@@ -29,6 +31,7 @@ export default async function CategoriesPage() {
           <CategoryEditor key={`${c.id}-${c.name}-${c.position}-${c.is_visible}`} category={c} counts={counts.get(c.id) ?? { total: 0, published: 0 }} />
         ))}
         <CategoryEditor category={null} counts={{ total: 0, published: 0 }} />
+      </div>
       </div>
     </div>
   );

@@ -1,4 +1,5 @@
 import { PhotoUpdater } from "@/components/admin/photo-updater";
+import { ProductsHeader } from "@/components/admin/product-tabs";
 import { PriceUpdater } from "@/components/admin/price-updater";
 import { requireAdmin } from "@/lib/auth";
 
@@ -15,8 +16,9 @@ export default async function NaturaPricesPage() {
     .limit(5000);
 
   return (
-    <div className="mx-auto max-w-5xl">
-      <h1 className="font-display text-3xl font-bold">Precios y fotos de Natura</h1>
+    <div className="mx-auto max-w-6xl">
+      <ProductsHeader active="natura" />
+      <h2 className="mt-5 font-display text-xl font-bold">Precios de Natura</h2>
       <p className="mt-1 max-w-2xl text-muted">
         Cuando sale una revista nueva, buscá acá los precios vigentes en naturacosmeticos.com.ar. Te mostramos qué
         cambió y vos elegís qué aplicar. Nada se modifica hasta que tocás «Aplicar».
