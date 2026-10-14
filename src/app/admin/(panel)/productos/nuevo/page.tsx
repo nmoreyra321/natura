@@ -8,7 +8,11 @@ export const metadata = { title: "Nuevo producto" };
 
 export default async function NewProductPage() {
   const { supabase } = await requireAdmin();
-  const { data: categories } = await supabase.from("categories").select("id, name").order("position");
+  const [{ data: categories }, { data: lineRows }] = await Promise.all([
+    supabase.from("categories").select("id, name").order("position"),
+    supabase.from("products").select("line").not("line", "is", null),
+  ]);
+  const lines = [...new Set((lineRows ?? []).map((r) => r.line!))].sort((a, b) => a.localeCompare(b, "es"));
   return (
     <div className="mx-auto max-w-3xl">
       <Link href="/admin/productos" className="inline-flex items-center gap-1 text-sm font-semibold text-muted hover:text-forest">
@@ -19,12 +23,14 @@ export default async function NewProductPage() {
       <ProductForm
         productId={null}
         categories={categories ?? []}
+        lines={lines}
         defaults={{
           name: "",
           slug: "",
           description: "",
           category_id: "",
           size: "",
+          line: "",
           natura_sku: "",
           magazine_price: "",
           sale_price: "",

@@ -3,6 +3,7 @@ import "server-only";
 import { cache } from "react";
 
 import { nameSearchPatterns } from "@/lib/search";
+import { slugify } from "@/lib/slug";
 import { createPublicClient } from "@/lib/supabase/server";
 import type { CategoryRow, ProductImageRow, ProductRow } from "@/lib/supabase/types";
 
@@ -21,6 +22,8 @@ export type PublicProduct = Pick<
   | "is_offer"
   | "discount_percent"
   | "updated_at"
+  | "line"
+  | "is_refill"
 > & {
   category: Pick<CategoryRow, "id" | "name" | "slug"> | null;
   images: Pick<ProductImageRow, "id" | "storage_path" | "alt" | "position">[];
@@ -31,7 +34,7 @@ export type PublicCategory = Pick<CategoryRow, "id" | "name" | "slug" | "descrip
 };
 
 const PRODUCT_SELECT =
-  "id, name, slug, description, size, magazine_price, sale_price, stock, is_featured, is_offer, discount_percent, updated_at, category:categories(id, name, slug), images:product_images(id, storage_path, alt, position)";
+  "id, name, slug, description, size, magazine_price, sale_price, stock, is_featured, is_offer, discount_percent, updated_at, line, is_refill, category:categories(id, name, slug), images:product_images(id, storage_path, alt, position)";
 
 export const SORT_OPTIONS = {
   destacados: "Destacados",
@@ -46,6 +49,10 @@ export type SortOption = keyof typeof SORT_OPTIONS;
 export type CatalogFilters = {
   q?: string;
   category?: string;
+  /** Slug de la línea Natura (Chronos, Ekos, Tododia…). */
+  line?: string;
+  /** Solo repuestos (refill). */
+  refills?: boolean;
   min?: number;
   max?: number;
   offers?: boolean;
@@ -87,6 +94,8 @@ export function parseCatalogFilters(
   return {
     q: first("q")?.trim().slice(0, 80) || undefined,
     category: first("categoria")?.trim().slice(0, 80) || undefined,
+    line: first("linea")?.trim().slice(0, 60) || undefined,
+    refills: first("repuestos") === "1",
     min: num("min"),
     max: num("max"),
     offers: first("ofertas") === "1",
@@ -107,6 +116,13 @@ export async function getCatalog(filters: CatalogFilters): Promise<CatalogResult
     categoryId = category.id;
   }
 
+  let lineName: string | null = null;
+  if (filters.line) {
+    const line = (await getActiveLines()).find((l) => l.slug === filters.line);
+    if (!line) return { products: [], total: 0, page, pageCount: 0, available: true };
+    lineName = line.name;
+  }
+
   let query = supabase
     .from("products")
     .select(PRODUCT_SELECT, { count: "exact" })
@@ -114,6 +130,8 @@ export async function getCatalog(filters: CatalogFilters): Promise<CatalogResult
 
   for (const pattern of nameSearchPatterns(filters.q ?? "")) query = query.ilike("name", pattern);
   if (categoryId) query = query.eq("category_id", categoryId);
+  if (lineName) query = query.eq("line", lineName);
+  if (filters.refills) query = query.eq("is_refill", true);
   if (filters.min !== undefined) query = query.gte("sale_price", filters.min);
   if (filters.max !== undefined) query = query.lte("sale_price", filters.max);
   if (filters.offers) query = query.eq("is_offer", true).gt("discount_percent", 0);
@@ -292,6 +310,25 @@ export const getActiveCategories = cache(async (): Promise<PublicCategory[]> => 
       productCount: counts.get(c.id) ?? 0,
     }))
     .filter((c) => c.productCount > 0);
+});
+
+export type PublicLine = { name: string; slug: string; productCount: number };
+
+/** Líneas Natura (Chronos, Ekos, Tododia…) que tienen al menos un producto publicado. */
+export const getActiveLines = cache(async (): Promise<PublicLine[]> => {
+  const supabase = createPublicClient();
+  if (!supabase) return [];
+  const { data, error } = await supabase
+    .from("products")
+    .select("line")
+    .eq("status", "published")
+    .not("line", "is", null);
+  if (error || !data) return [];
+  const counts = new Map<string, number>();
+  for (const p of data) if (p.line) counts.set(p.line, (counts.get(p.line) ?? 0) + 1);
+  return [...counts.entries()]
+    .map(([name, productCount]) => ({ name, slug: slugify(name), productCount }))
+    .sort((a, b) => a.name.localeCompare(b.name, "es"));
 });
 
 export const getCategoryBySlug = cache(async (slug: string) => {

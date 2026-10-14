@@ -31,6 +31,10 @@ export type ProductRow = {
   is_offer: boolean;
   /** Código del producto en naturacosmeticos.com.ar (por ejemplo NATARG-2821). */
   natura_sku: string | null;
+  /** Línea Natura (Chronos, Ekos, Tododia…). */
+  line: string | null;
+  /** Calculado por la base: el nombre dice "repuesto". */
+  is_refill: boolean;
   /** Columna generada por la base: solo lectura. */
   discount_percent: number;
   created_at: string;

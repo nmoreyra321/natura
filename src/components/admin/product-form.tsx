@@ -20,6 +20,7 @@ export type ProductFormValues = {
   description: string;
   category_id: string;
   size: string;
+  line: string;
   natura_sku: string;
   magazine_price: string;
   sale_price: string;
@@ -33,10 +34,13 @@ export function ProductForm({
   productId,
   defaults,
   categories,
+  lines = [],
 }: {
   productId: string | null;
   defaults: ProductFormValues;
   categories: { id: string; name: string }[];
+  /** Líneas ya usadas, para sugerirlas al escribir. */
+  lines?: string[];
 }) {
   const router = useRouter();
   const {
@@ -110,6 +114,19 @@ export function ProductForm({
         </Field>
         <Field label="Presentación o tamaño" htmlFor="size" error={err("size")} hint="Ej.: 100 ml, 200 g, kit x3">
           <Input id="size" autoComplete="off" {...register("size")} />
+        </Field>
+        <Field
+          label="Línea Natura (opcional)"
+          htmlFor="line"
+          error={err("line")}
+          hint="Ej.: Chronos, Ekos, Tododia. Las clientas pueden filtrar por línea."
+        >
+          <Input id="line" autoComplete="off" list="lineas-natura" {...register("line")} />
+          <datalist id="lineas-natura">
+            {lines.map((l) => (
+              <option key={l} value={l} />
+            ))}
+          </datalist>
         </Field>
         <Field
           label="Código de Natura (opcional)"

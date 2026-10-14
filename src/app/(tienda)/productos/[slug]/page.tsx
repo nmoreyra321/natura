@@ -12,6 +12,7 @@ import { StockBadge } from "@/components/store/stock-badge";
 import { getProductBySlug, getRelatedProducts } from "@/lib/catalog";
 import { getSiteUrl, SITE_NAME } from "@/lib/config";
 import { productImageUrl } from "@/lib/images";
+import { slugify } from "@/lib/slug";
 import { toCents } from "@/lib/pricing";
 import { buildProductInquiryMessage, buildWhatsAppUrl, getWhatsAppNumber } from "@/lib/whatsapp";
 
@@ -113,6 +114,19 @@ export default async function ProductPage({ params }: PageProps<"/productos/[slu
               {product.category ? (
                 <span className="rounded-full bg-lilac px-3 py-1 text-xs font-extrabold tracking-[0.1em] text-grape uppercase">
                   {product.category.name}
+                </span>
+              ) : null}
+              {product.line ? (
+                <Link
+                  href={`/productos?linea=${slugify(product.line)}`}
+                  className="rounded-full bg-sage px-3 py-1 text-xs font-extrabold tracking-[0.1em] text-botanical-deep uppercase hover:bg-sun"
+                >
+                  Línea {product.line}
+                </Link>
+              ) : null}
+              {product.is_refill ? (
+                <span className="rounded-full bg-cream px-3 py-1 text-xs font-extrabold tracking-[0.1em] text-forest uppercase">
+                  Repuesto
                 </span>
               ) : null}
             </div>

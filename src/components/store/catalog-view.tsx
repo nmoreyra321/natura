@@ -7,6 +7,7 @@ import { EmptyStore } from "./empty-store";
 import { ProductGrid } from "./product-card";
 import {
   getActiveCategories,
+  getActiveLines,
   getCatalog,
   getPublishedCount,
   SORT_OPTIONS,
@@ -17,6 +18,8 @@ function pageHref(base: string, filters: CatalogFilters, page: number, fixedCate
   const p = new URLSearchParams();
   if (filters.q) p.set("q", filters.q);
   if (filters.category && !fixedCategory) p.set("categoria", filters.category);
+  if (filters.line) p.set("linea", filters.line);
+  if (filters.refills) p.set("repuestos", "1");
   if (filters.min !== undefined) p.set("min", String(filters.min));
   if (filters.max !== undefined) p.set("max", String(filters.max));
   if (filters.offers) p.set("ofertas", "1");
@@ -39,9 +42,10 @@ export async function CatalogView({
   filters: CatalogFilters;
   fixedCategory?: boolean;
 }) {
-  const [total, categories, result] = await Promise.all([
+  const [total, categories, lines, result] = await Promise.all([
     getPublishedCount(),
     getActiveCategories(),
+    getActiveLines(),
     getCatalog(filters),
   ]);
 
@@ -55,7 +59,13 @@ export async function CatalogView({
   }
 
   const hasFilters = Boolean(
-    filters.q || filters.min !== undefined || filters.max !== undefined || filters.offers || (!fixedCategory && filters.category),
+    filters.q ||
+      filters.line ||
+      filters.refills ||
+      filters.min !== undefined ||
+      filters.max !== undefined ||
+      filters.offers ||
+      (!fixedCategory && filters.category),
   );
 
   return (
@@ -66,7 +76,7 @@ export async function CatalogView({
       <form
         method="get"
         action={basePath}
-        className="mt-6 grid grid-cols-2 gap-3 rounded-3xl border border-line bg-warm-white p-4 shadow-soft md:grid-cols-[2fr_1.3fr_1fr_1fr_1.3fr_auto]"
+        className={`mt-6 grid grid-cols-2 gap-3 rounded-3xl border border-line bg-warm-white p-4 shadow-soft ${fixedCategory ? "md:grid-cols-[2fr_1.3fr_1fr_1fr_1.3fr]" : "md:grid-cols-3 lg:grid-cols-[2fr_1.2fr_1.2fr_1fr_1fr_1.2fr]"}`}
       >
         <div className="col-span-2 md:col-span-1">
           <label htmlFor="f-q" className="mb-1 block text-sm font-semibold">
@@ -89,6 +99,19 @@ export async function CatalogView({
             </select>
           </div>
         ) : null}
+        <div className="col-span-2 md:col-span-1">
+          <label htmlFor="f-linea" className="mb-1 block text-sm font-semibold">
+            Línea
+          </label>
+          <select id="f-linea" name="linea" defaultValue={filters.line ?? ""} className={`${inputClasses} h-11`}>
+            <option value="">Todas</option>
+            {lines.map((l) => (
+              <option key={l.slug} value={l.slug}>
+                {l.name}
+              </option>
+            ))}
+          </select>
+        </div>
         <div>
           <label htmlFor="f-min" className="mb-1 block text-sm font-semibold">
             Precio desde
@@ -113,12 +136,16 @@ export async function CatalogView({
             ))}
           </select>
         </div>
-        <div className="col-span-2 flex flex-wrap items-end gap-3 md:col-span-1">
+        <div className="col-span-2 flex flex-wrap items-end gap-x-5 gap-y-3 md:col-span-full">
           <label className="flex h-11 cursor-pointer items-center gap-2 font-semibold">
             <input type="checkbox" name="ofertas" value="1" defaultChecked={filters.offers} className="size-5 accent-[var(--coral-deep)]" />
             Ofertas
           </label>
-          <button type="submit" className={buttonClasses("secondary", "md", "flex-1 md:flex-none")}>
+          <label className="flex h-11 cursor-pointer items-center gap-2 font-semibold">
+            <input type="checkbox" name="repuestos" value="1" defaultChecked={filters.refills} className="size-5 accent-[var(--coral-deep)]" />
+            Solo repuestos
+          </label>
+          <button type="submit" className={buttonClasses("secondary", "md", "flex-1 md:ml-auto md:flex-none")}>
             <SlidersHorizontal className="size-4" aria-hidden="true" />
             Filtrar
           </button>

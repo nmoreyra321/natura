@@ -21,12 +21,14 @@ export default async function EditProductPage({
   if (!/^[0-9a-f-]{36}$/.test(id)) notFound();
   const { supabase } = await requireAdmin();
 
-  const [{ data: product }, { data: categories }, { data: images }] = await Promise.all([
+  const [{ data: product }, { data: categories }, { data: images }, { data: lineRows }] = await Promise.all([
     supabase.from("products").select("*").eq("id", id).maybeSingle(),
     supabase.from("categories").select("id, name").order("position"),
     supabase.from("product_images").select("id, storage_path, alt, position").eq("product_id", id).order("position"),
+    supabase.from("products").select("line").not("line", "is", null),
   ]);
   if (!product) notFound();
+  const lines = [...new Set((lineRows ?? []).map((r) => r.line!))].sort((a, b) => a.localeCompare(b, "es"));
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -61,12 +63,14 @@ export default async function EditProductPage({
           key={product.updated_at}
           productId={product.id}
           categories={categories ?? []}
+          lines={lines}
           defaults={{
             name: product.name,
             slug: product.slug,
             description: product.description,
             category_id: product.category_id ?? "",
             size: product.size ?? "",
+            line: product.line ?? "",
             natura_sku: product.natura_sku ?? "",
             magazine_price: String(product.magazine_price),
             sale_price: String(product.sale_price),

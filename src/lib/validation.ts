@@ -68,6 +68,10 @@ export const productSchema = z
       .transform((v) => v ?? null)
       .refine((v) => v === null || z.uuid().safeParse(v).success, "Categoría inválida."),
     size: optionalText(60, "La presentación puede tener hasta 60 caracteres."),
+    line: optionalText(40, "La línea puede tener hasta 40 caracteres.").refine(
+      (v) => v === null || v.length >= 2,
+      "La línea tiene que tener al menos 2 letras.",
+    ),
     natura_sku: z
       .string()
       .trim()

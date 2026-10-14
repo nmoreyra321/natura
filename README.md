@@ -122,6 +122,10 @@ Abrí `/admin` e ingresá con tu **usuario** (por ejemplo `natumariel2026`) o tu
 5. Se abre la edición del producto: agregá las fotos. La primera foto es la principal.
 6. Cambiá el estado a **Publicado** y guardá, o tocá **Publicar** desde el listado. El producto aparece en la tienda al instante, sin volver a desplegar.
 
+### Categorías y líneas
+
+Las **categorías** son el tipo de producto (Perfumería, Cuerpo y baño, Rostro, Cabello, Maquillajes…). La **línea** es la marca de Natura (Chronos, Ekos, Tododia, Una…) y se carga en el campo «Línea Natura» de cada producto. En la tienda se puede filtrar por categoría, por línea y marcar «Solo repuestos» (se detecta solo: todo producto con «repuesto» en el nombre).
+
 ### Pedidos
 
 Cuando una clienta toca **Hacer pedido por WhatsApp**, el pedido queda guardado con un número (por ejemplo *Pedido N.º 12*), que también aparece en el mensaje de WhatsApp. En **Pedidos**:
