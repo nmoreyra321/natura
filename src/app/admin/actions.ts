@@ -366,6 +366,36 @@ export async function resetOrderPayment(orderId: string): Promise<ActionResult> 
   }
 }
 
+/**
+ * Borra pedidos cancelados (con sus productos). Solo cancelados: el stock ya se devolvió
+ * al cancelarlos, así que borrarlos no cambia el inventario.
+ */
+export async function deleteCancelledOrders(orderIds: string[]): Promise<ActionResult<{ deleted: number }>> {
+  try {
+    const { supabase } = await assertAdmin();
+    const ids = [...new Set(orderIds)].filter((id) => /^[0-9a-f-]{36}$/.test(id)).slice(0, 200);
+    if (ids.length === 0) return { ok: false, error: "No elegiste pedidos." };
+    const { data, error } = await supabase
+      .from("orders")
+      .delete()
+      .in("id", ids)
+      .eq("status", "cancelled")
+      .eq("stock_applied", false)
+      .select("id");
+    if (error) return fail(error, "No pudimos borrar los pedidos.");
+    revalidatePath("/admin/pedidos");
+    revalidatePath("/admin/ventas");
+    const deleted = data?.length ?? 0;
+    return {
+      ok: true,
+      data: { deleted },
+      message: `${deleted} ${deleted === 1 ? "pedido cancelado borrado" : "pedidos cancelados borrados"}.`,
+    };
+  } catch (e) {
+    return fail(e, "No pudimos borrar los pedidos.");
+  }
+}
+
 /* --------------------------- Precios de Natura --------------------------- */
 
 export type NaturaPriceCheck = {

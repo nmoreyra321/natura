@@ -2,6 +2,7 @@ import { CirclePlus, ClipboardList } from "lucide-react";
 import Link from "next/link";
 
 import type { OrderStatus } from "@/app/admin/actions";
+import { CancelledOrders } from "@/components/admin/cancelled-orders";
 import { OrderActions, PaymentControl } from "@/components/admin/order-actions";
 import { buttonClasses } from "@/components/ui/button";
 import { requireAdmin } from "@/lib/auth";
@@ -139,6 +140,17 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
             <p className="mt-1 text-muted">Cuando una clienta envíe un pedido por WhatsApp, lo vas a ver acá.</p>
           ) : null}
         </div>
+      ) : estado === "cancelled" ? (
+        <CancelledOrders
+          rows={orders.map((o) => ({
+            id: o.id,
+            code: o.code,
+            date: dateFormatter.format(new Date(o.created_at)),
+            customer: o.customer_name,
+            total: formatARS(toCents(o.total)),
+            units: o.items.reduce((sum, i) => sum + i.quantity, 0),
+          }))}
+        />
       ) : (
         <ul className="mt-6 flex flex-col gap-4">
           {orders.map((o) => {
