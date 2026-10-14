@@ -295,7 +295,7 @@ export function CartView({
                   maxLength={80}
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
-                  placeholder="Para identificar tu pedido en Natu Mariel"
+                  placeholder="Para que Natu Mariel pueda identificar tu pedido"
                   className="mt-1 h-11 w-full rounded-full border border-line bg-white px-4 text-base focus:border-botanical focus:ring-3 focus:ring-botanical/20 focus:outline-none"
                 />
               </div>
