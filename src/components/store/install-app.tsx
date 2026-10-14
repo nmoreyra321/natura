@@ -1,6 +1,6 @@
 "use client";
 
-import { Download, Share, SquarePlus, X } from "lucide-react";
+import { Download, EllipsisVertical, Share, SquarePlus, X } from "lucide-react";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 /** Evento de Chrome/Android para ofrecer la instalación (no está en los tipos del DOM). */
@@ -26,7 +26,7 @@ if (typeof window !== "undefined") {
   });
 }
 
-type Mode = "none" | "prompt" | "ios";
+type Mode = "none" | "prompt" | "ios" | "android";
 
 function getMode(): Mode {
   const standalone =
@@ -36,7 +36,9 @@ function getMode(): Mode {
   if (deferred) return "prompt";
   const ua = navigator.userAgent;
   const isIOS = /iPhone|iPad|iPod/.test(ua) || (ua.includes("Macintosh") && navigator.maxTouchPoints > 1);
-  return isIOS ? "ios" : "none";
+  if (isIOS) return "ios";
+  // Android sin aviso del navegador (otro navegador, o ya lo rechazó): se explica a mano.
+  return /Android/.test(ua) ? "android" : "none";
 }
 
 function useInstallMode(): Mode {
@@ -50,10 +52,11 @@ function useInstallMode(): Mode {
   );
 }
 
-type Browser = "chrome" | "safari" | "other";
+type Browser = "chrome" | "safari" | "other" | "android";
 
-function iosBrowser(): Browser {
+function detectBrowser(): Browser {
   const ua = typeof navigator === "undefined" ? "" : navigator.userAgent;
+  if (/Android/.test(ua)) return "android";
   if (/CriOS/.test(ua)) return "chrome";
   if (/FxiOS|EdgiOS|OPiOS/.test(ua)) return "other";
   return "safari";
@@ -64,7 +67,8 @@ function iosBrowser(): Browser {
  * En Chrome el botón Compartir está arriba; en Safari, abajo.
  */
 function InstallDemo({ browser }: { browser: Browser }) {
-  const shareTop = browser === "chrome";
+  const android = browser === "android";
+  const shareTop = browser === "chrome" || android;
   const shareIcon = <Share className="size-3.5 text-[#0a84ff]" aria-hidden="true" />;
   const urlBar = (
     <div className="flex h-7 flex-1 items-center justify-center rounded-full bg-[#ececf0] text-[8px] text-neutral-600">
@@ -76,14 +80,21 @@ function InstallDemo({ browser }: { browser: Browser }) {
       <div className="relative h-[284px] w-[164px] rounded-[30px] bg-neutral-900 p-[7px] shadow-lift">
         <div
           className="relative h-[270px] w-[150px] overflow-hidden rounded-[23px] bg-white"
-          style={{ ["--sx" as string]: shareTop ? "123px" : "31px", ["--sy" as string]: shareTop ? "6px" : "234px" }}
+          style={{
+            ["--sx" as string]: shareTop ? "123px" : "31px",
+            ["--sy" as string]: shareTop ? "6px" : "234px",
+            ["--rx" as string]: android ? "79px" : "58px",
+            ["--ry" as string]: android ? "69px" : "188px",
+          }}
         >
           {/* 1. La tienda abierta en el navegador */}
           <div className="idemo-store absolute inset-0 flex flex-col">
             {shareTop ? (
               <div className="flex items-center gap-1 px-1.5 pt-2.5">
                 {urlBar}
-                <span className="flex size-6 items-center justify-center">{shareIcon}</span>
+                <span className="flex size-6 items-center justify-center">
+                  {android ? <EllipsisVertical className="size-3.5 text-neutral-700" aria-hidden="true" /> : shareIcon}
+                </span>
               </div>
             ) : null}
             <div className="flex-1 bg-cream px-2.5 pt-2.5">
@@ -109,8 +120,19 @@ function InstallDemo({ browser }: { browser: Browser }) {
             ) : null}
           </div>
 
-          {/* 2. Menú Compartir */}
-          <div className="idemo-sheet absolute inset-x-0 bottom-0 h-[130px] rounded-t-2xl bg-[#f2f2f7] px-2 shadow-[0_-4px_14px_rgb(0_0_0/0.12)]">
+          {/* 2. Menú: en Android baja desde los tres puntitos; en iPhone sube la hoja de Compartir */}
+          {android ? (
+            <div className="idemo-menu absolute top-1.5 right-1.5 w-[124px] origin-top-right rounded-lg bg-white py-1 text-[8px] text-neutral-800 shadow-[0_4px_16px_rgb(0_0_0/0.2)]">
+              <div className="flex h-5 items-center px-2.5">Nueva pestaña</div>
+              <div className="flex h-5 items-center px-2.5">Historial</div>
+              <div className="flex h-5 items-center px-2.5">Compartir…</div>
+              <div className="idemo-row flex h-5 items-center px-2.5 font-semibold whitespace-nowrap">
+                Agregar a la pantalla principal
+              </div>
+              <div className="flex h-5 items-center px-2.5">Configuración</div>
+            </div>
+          ) : null}
+          <div className={`idemo-sheet absolute inset-x-0${android ? " hidden" : ""} bottom-0 h-[130px] rounded-t-2xl bg-[#f2f2f7] px-2 shadow-[0_-4px_14px_rgb(0_0_0/0.12)]`}>
             <p className="pt-2 text-center text-[8px] text-neutral-500">natumariel.vercel.app</p>
             <div className="mt-1.5 overflow-hidden rounded-xl bg-white text-[9px] text-neutral-800">
               <div className="flex h-[22px] items-center justify-between border-b border-neutral-200 px-2">
@@ -144,8 +166,10 @@ function InstallDemo({ browser }: { browser: Browser }) {
         </div>
       </div>
       <figcaption className="relative mt-3 h-5 w-full text-center text-sm font-bold">
-        <span className="idemo-cap1 absolute inset-0">1. Tocá Compartir</span>
-        <span className="idemo-cap2 absolute inset-0">2. Agregar a pantalla de inicio</span>
+        <span className="idemo-cap1 absolute inset-0">{android ? "1. Tocá los tres puntitos ⋮" : "1. Tocá Compartir"}</span>
+        <span className="idemo-cap2 absolute inset-0">
+          {android ? "2. Agregar a la pantalla principal" : "2. Agregar a pantalla de inicio"}
+        </span>
         <span className="idemo-cap3 absolute inset-0">3. ¡Listo! Ya tenés la app</span>
       </figcaption>
     </figure>
@@ -154,7 +178,7 @@ function InstallDemo({ browser }: { browser: Browser }) {
 
 /** Primer paso en iPhone: dónde está el botón Compartir depende del navegador. */
 function iosShareStep() {
-  const browser = iosBrowser();
+  const browser = detectBrowser();
   if (browser === "chrome") {
     return (
       <>
@@ -178,7 +202,10 @@ function iosShareStep() {
   );
 }
 
-/** Botón "Instalar app": en Android/Chrome abre el aviso del navegador; en iPhone muestra cómo hacerlo. */
+/**
+ * Botón "Instalar app": si el navegador lo permite (Chrome en Android, compus) abre su aviso de instalación;
+ * en iPhone, y en Android cuando no hay aviso, muestra cómo hacerlo con una mini animación.
+ */
 export function InstallAppButton({ className = "" }: { className?: string }) {
   const mode = useInstallMode();
   const [showHelp, setShowHelp] = useState(false);
@@ -213,7 +240,7 @@ export function InstallAppButton({ className = "" }: { className?: string }) {
         <Download className="size-4.5" aria-hidden="true" />
         Instalar app
       </button>
-      {mode === "ios" ? (
+      {mode === "ios" || mode === "android" ? (
         <dialog
           ref={dialogRef}
           onClose={() => setShowHelp(false)}
@@ -233,23 +260,46 @@ export function InstallAppButton({ className = "" }: { className?: string }) {
               <X className="size-5" aria-hidden="true" />
             </button>
           </div>
-          {showHelp ? <InstallDemo browser={iosBrowser()} /> : null}
+          {showHelp ? <InstallDemo browser={detectBrowser()} /> : null}
           <ol className="mt-4 flex flex-col gap-3">
-            <li className="flex items-center gap-3">
-              <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-sun">
-                <Share className="size-4.5" aria-hidden="true" />
-              </span>
-              <span>{iosShareStep()}</span>
-            </li>
-            <li className="flex items-center gap-3">
-              <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-sage">
-                <SquarePlus className="size-4.5" aria-hidden="true" />
-              </span>
-              <span>
-                Bajá un poco y elegí <strong>Agregar a pantalla de inicio</strong>. Si no aparece, tocá{" "}
-                <strong>Ver más</strong>.
-              </span>
-            </li>
+            {mode === "android" ? (
+              <>
+                <li className="flex items-center gap-3">
+                  <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-sun">
+                    <EllipsisVertical className="size-4.5" aria-hidden="true" />
+                  </span>
+                  <span>
+                    Tocá los <strong>tres puntitos ⋮</strong> del navegador, arriba a la derecha.
+                  </span>
+                </li>
+                <li className="flex items-center gap-3">
+                  <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-sage">
+                    <SquarePlus className="size-4.5" aria-hidden="true" />
+                  </span>
+                  <span>
+                    Elegí <strong>Agregar a la pantalla principal</strong> (o <strong>Instalar app</strong>) y confirmá.
+                  </span>
+                </li>
+              </>
+            ) : (
+              <>
+                <li className="flex items-center gap-3">
+                  <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-sun">
+                    <Share className="size-4.5" aria-hidden="true" />
+                  </span>
+                  <span>{iosShareStep()}</span>
+                </li>
+                <li className="flex items-center gap-3">
+                  <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-sage">
+                    <SquarePlus className="size-4.5" aria-hidden="true" />
+                  </span>
+                  <span>
+                    Bajá un poco y elegí <strong>Agregar a pantalla de inicio</strong>. Si no aparece, tocá{" "}
+                    <strong>Ver más</strong>.
+                  </span>
+                </li>
+              </>
+            )}
           </ol>
           <p className="mt-4 text-sm text-muted">La tienda queda como una app en tu pantalla de inicio.</p>
         </dialog>
