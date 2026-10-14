@@ -132,6 +132,10 @@ Cuando una clienta toca **Hacer pedido por WhatsApp**, el pedido queda guardado 
 
 Los precios del pedido los toma la base de datos, no el navegador. Las clientas no pueden ver ni modificar pedidos.
 
+### Inventario (cargar stock rápido)
+
+En **Inventario** está la lista de todos los productos con un casillero de cantidad. Escribí cuántos tenés y apretá **Enter**: se guarda y pasa al siguiente (también hay botones − / + para el celular). Con la opción **Publicar automáticamente** activada, cada producto al que le cargás stock se publica solo; los que quedan en 0 no cambian. Podés buscar por nombre, filtrar por categoría o ver solo los que están sin stock.
+
 ### Vencimientos
 
 En **Vencimientos** cargás las fechas por lote, rápido y con el teclado: escribí parte del nombre, Enter, el vencimiento como figura en el envase (`0129` = 01/29, vence a fin de enero de 2029), la cantidad y Enter. El cursor vuelve solo al buscador para el siguiente; si cargás dos veces el mismo producto con la misma fecha, se suman las unidades.

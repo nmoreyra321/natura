@@ -539,3 +539,31 @@ export async function deleteLot(lotId: string): Promise<ActionResult> {
     return fail(e, "No pudimos borrar el lote.");
   }
 }
+
+/* ----------------------------- Inventario ----------------------------- */
+
+/**
+ * Guarda el stock desde la pantalla de Inventario. Si `publishIfStock` está activo y el
+ * producto queda con stock, se publica (los que quedan en 0 no cambian de estado).
+ */
+export async function setInventoryStock(
+  productId: string,
+  stock: number,
+  publishIfStock: boolean,
+): Promise<ActionResult<{ status: "draft" | "published" }>> {
+  try {
+    const { supabase } = await assertAdmin();
+    if (!UUID_RE.test(productId)) return { ok: false, error: "Datos inválidos." };
+    if (!Number.isInteger(stock) || stock < 0 || stock > 100_000) {
+      return { ok: false, error: "La cantidad tiene que ser un número entero, 0 o más." };
+    }
+    const patch: { stock: number; status?: "published" } = { stock };
+    if (publishIfStock && stock > 0) patch.status = "published";
+    const { data, error } = await supabase.from("products").update(patch).eq("id", productId).select("status").single();
+    if (error) return fail(error, "No pudimos guardar la cantidad.");
+    refreshCatalog();
+    return { ok: true, data: { status: data.status === "published" ? "published" : "draft" } };
+  } catch (e) {
+    return fail(e, "No pudimos guardar la cantidad.");
+  }
+}
