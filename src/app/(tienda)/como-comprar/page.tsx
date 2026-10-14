@@ -48,7 +48,7 @@ const faqs = [
   },
   {
     q: "¿Cómo pago y cómo recibo el pedido?",
-    a: "En el carrito elegís cómo pagar: en efectivo, por transferencia (sin recargo: ves el alias ahí mismo y le mandás el comprobante a Mariel) o con Mercado Pago cuando esté disponible. La entrega la coordinan por WhatsApp.",
+    a: "En el carrito elegís cómo pagar: en efectivo o por transferencia (sin recargo: ves el alias ahí mismo, lo copiás con un toque y le mandás el comprobante a Mariel). La entrega la coordinan por WhatsApp.",
   },
   {
     q: "¿Qué es el precio de revista?",

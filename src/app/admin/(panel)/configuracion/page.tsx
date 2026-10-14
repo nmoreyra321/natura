@@ -58,24 +58,19 @@ export default async function SettingsPage() {
         />
       </section>
 
+      {/* Cobro con link de Mercado Pago: solo si se conecta la cuenta (MP_ACCESS_TOKEN). */}
+      {isMercadoPagoEnabled() ? (
       <section className="mt-4 rounded-3xl bg-warm-white p-5 shadow-soft">
         <h2 className="font-display text-xl font-bold">Cobrar con Mercado Pago</h2>
-        {isMercadoPagoEnabled() ? (
-          <p className="mt-1 text-sm text-muted">
-            Activo: en el carrito aparece <strong>Mercado Pago</strong>. Mercado Pago cobra una comisión por cada venta;
-            con el recargo la paga la clienta.
-          </p>
-        ) : (
-          <p className="mt-1 text-sm text-muted">
-            Todavía no está conectado. Para activarlo hay que cargar en Vercel la variable{" "}
-            <code className="font-mono">MP_ACCESS_TOKEN</code> (Access Token de producción de tu cuenta de Mercado Pago) y
-            volver a desplegar. Podés dejar el recargo listo desde ahora.
-          </p>
-        )}
+        <p className="mt-1 text-sm text-muted">
+          Activo: en el carrito aparece <strong>Mercado Pago</strong>. Mercado Pago cobra una comisión por cada venta;
+          con el recargo la paga la clienta.
+        </p>
         <div className="mt-4">
           <SurchargeForm defaultPercent={Number(settings?.mp_surcharge_percent ?? 0)} />
         </div>
       </section>
+      ) : null}
       <ul className="mt-6 flex flex-col gap-3">
         <Status ok={Boolean(whatsapp)} label="WhatsApp para pedidos">
           {whatsapp ? (

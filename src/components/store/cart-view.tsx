@@ -4,6 +4,7 @@ import { AlertCircle, ArrowLeftRight, Banknote, Check, Copy, CreditCard, Info, L
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 
 import { payWithMercadoPago, registerOrder, validateCart } from "@/app/(tienda)/carrito/actions";
 import { Button, LinkButton, buttonClasses } from "@/components/ui/button";
@@ -433,13 +434,26 @@ export function CartView({
 }
 
 /** Datos para transferir, con botón para copiar cada uno. */
+/** Monto como lo escriben las apps de transferencia: "20000" o "20000,50". */
+function plainAmount(cents: number): string {
+  const pesos = Math.floor(cents / 100);
+  const rest = cents % 100;
+  return rest ? `${pesos},${String(rest).padStart(2, "0")}` : String(pesos);
+}
+
+/**
+ * Datos para transferir. Ninguna app permite abrir una transferencia con el alias ya cargado,
+ * así que el botón principal copia el alias y abre Mercado Pago: la clienta solo pega.
+ */
 function TransferBox({ transfer, totalCents }: { transfer: TransferDetails; totalCents: number }) {
   const rows = [
     { label: "Alias", value: transfer.alias },
     { label: "CBU/CVU", value: transfer.cbu },
+    { label: "Monto", value: plainAmount(totalCents), display: formatARS(totalCents) },
     { label: "Titular", value: transfer.holder, noCopy: true },
     { label: "Banco", value: transfer.bank, noCopy: true },
   ].filter((r) => r.value);
+  const key = transfer.alias ?? transfer.cbu ?? "";
   return (
     <div className="rounded-2xl border-2 border-dashed border-botanical/60 bg-sage/40 p-3 text-sm">
       <p className="font-bold">
@@ -450,12 +464,35 @@ function TransferBox({ transfer, totalCents }: { transfer: TransferDetails; tota
           <div key={r.label} className="flex items-center justify-between gap-2">
             <dt className="shrink-0 text-muted">{r.label}</dt>
             <dd className="flex min-w-0 items-center gap-1 font-semibold">
-              <span className="truncate font-mono text-[0.85rem]">{r.value}</span>
+              <span className="truncate font-mono text-[0.85rem]">{r.display ?? r.value}</span>
               {r.noCopy ? null : <CopyButton text={r.value!} label={r.label} />}
             </dd>
           </div>
         ))}
       </dl>
+      {key ? (
+        <>
+          <button
+            type="button"
+            onClick={() => {
+              // Se copia y se abre en el mismo toque (si no, el navegador bloquea la ventana).
+              navigator.clipboard
+                ?.writeText(key)
+                .then(() => toast.success(`${transfer.alias ? "Alias" : "CBU"} copiado: pegalo en Mercado Pago.`))
+                .catch(() => toast.info(`Copiá el ${transfer.alias ? "alias" : "CBU"}: ${key}`));
+              window.open("https://www.mercadopago.com.ar/", "_blank", "noopener");
+            }}
+            className="mt-3 inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[#009ee3] px-5 font-bold text-white transition-colors hover:bg-[#0089c7]"
+          >
+            <Copy className="size-4.5" aria-hidden="true" />
+            Copiar {transfer.alias ? "alias" : "CBU"} y abrir Mercado Pago
+          </button>
+          <p className="mt-2 text-xs text-muted">
+            En Mercado Pago tocá <strong>Transferir</strong> y pegá el {transfer.alias ? "alias" : "CBU"}. ¿Usás otro banco
+            o billetera? Copiá el {transfer.alias ? "alias" : "CBU"} y pegalo en la app que uses.
+          </p>
+        </>
+      ) : null}
     </div>
   );
 }
