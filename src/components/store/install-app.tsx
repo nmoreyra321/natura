@@ -257,32 +257,6 @@ function InstallDemo({ browser }: { browser: Browser }) {
   );
 }
 
-/** Primer paso en iPhone: dónde está el botón Compartir depende del navegador. */
-function iosShareStep() {
-  const browser = detectBrowser();
-  if (browser === "chrome") {
-    return (
-      <>
-        Tocá el botón <strong>Compartir</strong> de Chrome: el cuadrado con la flecha, arriba a la derecha, al lado de
-        la dirección.
-      </>
-    );
-  }
-  if (browser === "other") {
-    return (
-      <>
-        Tocá el menú del navegador y elegí <strong>Compartir</strong>.
-      </>
-    );
-  }
-  return (
-    <>
-      Tocá el botón <strong>Compartir</strong> de Safari (el cuadrado con la flecha). Si no lo ves, tocá primero los{" "}
-      <strong>tres puntitos ⋯</strong>.
-    </>
-  );
-}
-
 /**
  * Botón "Instalar app": si el navegador lo permite (Chrome en Android, compus) abre su aviso de instalación;
  * en iPhone, y en Android cuando no hay aviso, muestra cómo hacerlo con una mini animación.
@@ -290,6 +264,8 @@ function iosShareStep() {
 export function InstallAppButton({ className = "" }: { className?: string }) {
   const mode = useInstallMode();
   const [showHelp, setShowHelp] = useState(false);
+  const [tab, setTab] = useState<"iphone" | "android">("iphone");
+  const [iosNav, setIosNav] = useState<"safari" | "chrome">("safari");
   const dialogRef = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
@@ -314,6 +290,9 @@ export function InstallAppButton({ className = "" }: { className?: string }) {
             deferred = null;
             emit();
           } else {
+            const detected = detectBrowser();
+            setTab(detected === "android" ? "android" : "iphone");
+            setIosNav(detected === "chrome" ? "chrome" : "safari");
             setShowHelp(true);
           }
         }}
@@ -341,58 +320,100 @@ export function InstallAppButton({ className = "" }: { className?: string }) {
               <X className="size-5" aria-hidden="true" />
             </button>
           </div>
-          {showHelp ? <InstallDemo browser={detectBrowser()} /> : null}
+          <div role="tablist" aria-label="Tipo de celular" className="mt-4 grid grid-cols-2 gap-1 rounded-full bg-cream p-1">
+            {(
+              [
+                ["iphone", "iPhone"],
+                ["android", "Android"],
+              ] as const
+            ).map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                role="tab"
+                aria-selected={tab === value}
+                onClick={() => setTab(value)}
+                className={`rounded-full py-2 text-sm font-bold ${tab === value ? "bg-forest text-white" : "hover:bg-sun"}`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          {tab === "iphone" ? (
+            <p className="mt-3 flex flex-wrap items-center justify-center gap-1.5 text-sm">
+              <span className="text-muted">Navegador:</span>
+              {(
+                [
+                  ["safari", "Safari"],
+                  ["chrome", "Chrome"],
+                ] as const
+              ).map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  aria-pressed={iosNav === value}
+                  onClick={() => setIosNav(value)}
+                  className={`rounded-full border px-3 py-1 font-semibold ${iosNav === value ? "border-forest bg-forest/10" : "border-line hover:bg-sun"}`}
+                >
+                  {label}
+                </button>
+              ))}
+            </p>
+          ) : null}
+
+          {showHelp ? (
+            <InstallDemo key={tab === "android" ? "android" : iosNav} browser={tab === "android" ? "android" : iosNav} />
+          ) : null}
+
           <ol className="mt-4 flex flex-col gap-3">
-            {mode === "android" ? (
-              <>
-                <li className="flex items-center gap-3">
-                  <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-sun">
-                    <EllipsisVertical className="size-4.5" aria-hidden="true" />
-                  </span>
-                  <span>
-                    Tocá los <strong>tres puntitos ⋮</strong> del navegador, arriba a la derecha.
-                  </span>
-                </li>
-                <li className="flex items-center gap-3">
-                  <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-sage">
-                    <SquarePlus className="size-4.5" aria-hidden="true" />
-                  </span>
-                  <span>
-                    Elegí <strong>Agregar a la pantalla principal</strong> (o <strong>Instalar app</strong>).
-                  </span>
-                </li>
-              </>
-            ) : (
-              <>
-                <li className="flex items-center gap-3">
-                  <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-sun">
-                    <Share className="size-4.5" aria-hidden="true" />
-                  </span>
-                  <span>{iosShareStep()}</span>
-                </li>
-                <li className="flex items-center gap-3">
-                  <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-sage">
-                    <SquarePlus className="size-4.5" aria-hidden="true" />
-                  </span>
-                  <span>
-                    {detectBrowser() === "chrome" ? (
-                      <>
-                        Tocá <strong>Ver más</strong>, bajá y elegí <strong>Añadir a pantalla de inicio</strong>.
-                      </>
-                    ) : (
-                      <>
-                        Bajá y elegí <strong>Agregar a pantalla de inicio</strong>. Si no aparece, tocá{" "}
-                        <strong>Ver más</strong>.
-                      </>
-                    )}
-                  </span>
-                </li>
-              </>
-            )}
             <li className="flex items-center gap-3">
-              <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-lilac font-bold">
-                3
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-sun">
+                {tab === "android" ? (
+                  <EllipsisVertical className="size-4.5" aria-hidden="true" />
+                ) : (
+                  <Share className="size-4.5" aria-hidden="true" />
+                )}
               </span>
+              <span>
+                {tab === "android" ? (
+                  <>
+                    Tocá los <strong>tres puntitos ⋮</strong> del navegador, arriba a la derecha.
+                  </>
+                ) : iosNav === "chrome" ? (
+                  <>
+                    Tocá <strong>Compartir</strong> (el cuadrado con la flecha), arriba a la derecha al lado de la
+                    dirección.
+                  </>
+                ) : (
+                  <>
+                    Tocá <strong>Compartir</strong> (el cuadrado con la flecha), abajo. Si no lo ves, tocá primero los{" "}
+                    <strong>tres puntitos ⋯</strong>.
+                  </>
+                )}
+              </span>
+            </li>
+            <li className="flex items-center gap-3">
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-sage">
+                <SquarePlus className="size-4.5" aria-hidden="true" />
+              </span>
+              <span>
+                {tab === "android" ? (
+                  <>
+                    Elegí <strong>Agregar a la pantalla principal</strong> (o <strong>Instalar app</strong>).
+                  </>
+                ) : iosNav === "chrome" ? (
+                  <>
+                    Tocá <strong>Ver más</strong>, bajá y elegí <strong>Añadir a pantalla de inicio</strong>.
+                  </>
+                ) : (
+                  <>
+                    Bajá y elegí <strong>Agregar a pantalla de inicio</strong>.
+                  </>
+                )}
+              </span>
+            </li>
+            <li className="flex items-center gap-3">
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-lilac font-bold">3</span>
               <span>
                 Tocá <strong>Agregar</strong> y listo: el ícono aparece en tu pantalla.
               </span>
