@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { aliasKey, codeKey, mergeReceiptItems, skuFromCode, titleCase } from "@/lib/receipt";
+import { aliasKey, cleanInvoiceNumber, codeKey, mergeReceiptItems, parseArDate, skuFromCode, titleCase } from "@/lib/receipt";
 
 describe("codeKey", () => {
   it("normaliza códigos con ceros y prefijo", () => {
@@ -56,5 +56,23 @@ describe("aliasKey", () => {
   it("normaliza la descripción para reconocerla la próxima vez", () => {
     expect(aliasKey("  Tododia  hid des fru v 400ml ")).toBe("TODODIA HID DES FRU V 400ML");
     expect(aliasKey("x".repeat(200))).toHaveLength(160);
+  });
+});
+
+describe("parseArDate", () => {
+  it("lee fechas argentinas", () => {
+    expect(parseArDate("22/02/2026")).toBe("2026-02-22");
+    expect(parseArDate("Fecha VTO: 28-02-26")).toBe("2026-02-28");
+  });
+  it("descarta fechas imposibles", () => {
+    expect(parseArDate("31/02/2026")).toBeNull();
+    expect(parseArDate("")).toBeNull();
+  });
+});
+
+describe("cleanInvoiceNumber", () => {
+  it("limpia el número de factura", () => {
+    expect(cleanInvoiceNumber(" N° 0028-32433058 ")).toBe("0028-32433058");
+    expect(cleanInvoiceNumber("")).toBeNull();
   });
 });

@@ -140,9 +140,14 @@ export default async function DashboardPage() {
         <section className="mt-6 rounded-3xl bg-warm-white p-4 shadow-soft" aria-labelledby="reponer">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <h2 id="reponer" className="font-display text-lg font-bold">Para reponer</h2>
-            <Link href="/admin/productos?vista=stock" className="text-sm font-semibold text-coral-deep hover:underline">
-              Cargar stock →
-            </Link>
+            <span className="flex gap-4">
+              <Link href="/admin/reponer" className="text-sm font-semibold text-coral-deep hover:underline">
+                Qué pedir →
+              </Link>
+              <Link href="/admin/productos?vista=stock" className="text-sm font-semibold text-coral-deep hover:underline">
+                Cargar stock →
+              </Link>
+            </span>
           </div>
           <ul className="mt-2 divide-y divide-line/70">
             {toRestock.map((p) => (

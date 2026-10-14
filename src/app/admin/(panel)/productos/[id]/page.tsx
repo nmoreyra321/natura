@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { ImageManager } from "@/components/admin/image-manager";
+import { NaturaPhoto } from "@/components/admin/natura-photo";
 import { ProductForm } from "@/components/admin/product-form";
 import { requireAdmin } from "@/lib/auth";
 import { formatDate } from "@/lib/format";
@@ -59,6 +60,14 @@ export default async function EditProductPage({
 
       <div className="flex flex-col gap-6">
         <ImageManager productId={product.id} productName={product.name} images={images ?? []} />
+        <section className="rounded-3xl bg-warm-white p-4 shadow-soft">
+          <h2 className="font-display text-lg font-bold">Traer foto de Natura</h2>
+          <p className="mb-3 text-sm text-muted">
+            {(images ?? []).length === 0 ? "Este producto todavía no tiene foto. " : ""}Escribí el código de Natura o pegá el enlace
+            del producto en naturacosmeticos.com.ar y se agrega la foto oficial.
+          </p>
+          <NaturaPhoto productId={product.id} sku={product.natura_sku} />
+        </section>
         <ProductForm
           key={product.updated_at}
           productId={product.id}

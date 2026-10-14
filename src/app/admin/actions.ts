@@ -14,7 +14,7 @@ import { toWhatsAppPhone } from "@/lib/debts";
 import { formatARS } from "@/lib/format";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isValidPrice, planMagazinePriceUpdate, salePriceFromDiscount, toCents } from "@/lib/pricing";
-import { aliasKey, codeKey, mergeReceiptItems, skuFromCode } from "@/lib/receipt";
+import { aliasKey, cleanInvoiceNumber, codeKey, mergeReceiptItems, parseArDate, skuFromCode } from "@/lib/receipt";
 import { nameSearchPatterns } from "@/lib/search";
 import { slugify } from "@/lib/slug";
 import { createSessionClient, CATALOG_TAG } from "@/lib/supabase/server";
@@ -953,6 +953,14 @@ export async function deleteRestockRequest(requestId: string): Promise<ActionRes
 
 /* ------------------------- Boleta de Natura (foto) ------------------------- */
 
+export type ReceiptInvoice = { number: string | null; date: string | null; dueDate: string | null; total: number | null };
+export type ReceiptRead = {
+  lines: ReceiptLine[];
+  invoice: ReceiptInvoice;
+  /** Si esta factura ya se cargó antes: cuándo y cuántas unidades. */
+  previous: { id: string; createdAt: string; units: number } | null;
+};
+
 export type ReceiptMatch = { id: string; name: string; size: string | null; stock: number; image: string | null; status: string };
 export type ReceiptLine = {
   code: string;
@@ -982,6 +990,10 @@ const ReceiptSchema = z.object({
       kit: z.string().catch(""),
     }),
   ),
+  invoice_number: z.string().catch(""),
+  invoice_date: z.string().catch(""),
+  due_date: z.string().catch(""),
+  invoice_total: z.number().nullable().catch(null),
 });
 
 /** El mismo formato en JSON Schema simple, para pedírselo a Gemini. */
@@ -1004,8 +1016,12 @@ const RECEIPT_JSON_SCHEMA = {
         required: ["code", "description", "quantity", "unit_price", "match", "match_sure", "kit"],
       },
     },
+    invoice_number: { type: "string", description: "Número de la factura (por ejemplo 0028-32433058). Vacío si no se ve." },
+    invoice_date: { type: "string", description: "Fecha de la factura como figura (dd/mm/aaaa). Vacío si no se ve." },
+    due_date: { type: "string", description: "Fecha de vencimiento para pagar (Fecha VTO), dd/mm/aaaa. Vacío si no figura." },
+    invoice_total: { type: ["number", "null"], description: "Total a pagar de la factura en pesos. Null si no se ve." },
   },
-  required: ["items"],
+  required: ["items", "invoice_number", "invoice_date", "due_date", "invoice_total"],
 };
 
 /**
@@ -1031,6 +1047,7 @@ Para cada producto:
 - unit_price: precio unitario en pesos si es mayor a cero; si no, null. Ojo: en Argentina "13.687,24" son trece mil seiscientos ochenta y siete con 24.
 - kit: descripción de la caja en la que vino, o vacío.
 - match y match_sure: buscá el producto en el CATÁLOGO DE LA TIENDA de abajo y poné en match el número de renglón del catálogo. Las descripciones vienen abreviadas, por ejemplo: TD o TDIA = Tododia, HID = hidratante o crema hidratante, MAOS = manos, SAB o SAB BAR = jabón en barra, DES = desodorante, PERF = perfumado, FR = frutas, COND = acondicionador, SH = shampoo, CR = crema, EDT/EDP/DEO COL = perfume, REF o REP = repuesto, CJ = caja, REG = regalo, AMS = muestra. match_sure = true solo si es claramente el mismo producto y la misma presentación (tamaño, repuesto o no). Si es parecido pero dudás, poné igual el número con match_sure = false. Si no está en el catálogo, match = null.
+Además, del encabezado y del pie: invoice_number (FACTURA N°), invoice_date (FECHA), due_date (Fecha VTO) e invoice_total (el Total final a pagar).
 No inventes renglones. Si algo está borroso, incluilo con lo que se pueda leer.
 
 CATÁLOGO DE LA TIENDA (número: nombre · presentación [código]):
@@ -1038,7 +1055,7 @@ ${catalog}`;
 }
 
 /** Lee la factura (PDF o fotos) con la inteligencia artificial de Google (Gemini) y la cruza con los productos de la tienda. */
-export async function readReceipt(formData: FormData): Promise<ActionResult<ReceiptLine[]>> {
+export async function readReceipt(formData: FormData): Promise<ActionResult<ReceiptRead>> {
   try {
     const { supabase } = await assertAdmin();
     const apiKey = process.env.GEMINI_API_KEY;
@@ -1128,9 +1145,17 @@ export async function readReceipt(formData: FormData): Promise<ActionResult<Rece
       .in("description", [...new Set(items.map((i) => aliasKey(i.description)))]);
     const learned = new Map((aliases ?? []).map((a) => [a.description, byId.get(a.product_id)]));
 
-    return {
-      ok: true,
-      data: items.map((i) => {
+    const invoice: ReceiptInvoice = {
+      number: cleanInvoiceNumber(parsed.invoice_number),
+      date: parseArDate(parsed.invoice_date),
+      dueDate: parseArDate(parsed.due_date),
+      total: parsed.invoice_total !== null && parsed.invoice_total > 0 ? Math.round(parsed.invoice_total * 100) / 100 : null,
+    };
+    const { data: previous } = invoice.number
+      ? await supabase.from("receipts").select("id, created_at, units").eq("invoice_number", invoice.number).maybeSingle()
+      : { data: null };
+
+    const lines: ReceiptLine[] = items.map((i) => {
         const key = codeKey(i.code);
         // 1) Mismo código de Natura. 2) Ya confirmado en otra factura. 3) Elegido por la IA: seguro o "revisar".
         const exact = key ? bySku.get(key) : undefined;
@@ -1140,7 +1165,14 @@ export async function readReceipt(formData: FormData): Promise<ActionResult<Rece
         if (known) return { ...base, match: known, unsure: false };
         const pick = aiPick.get(key ?? `sin-codigo:${i.description.toLowerCase()}`);
         return { ...base, match: pick?.match ?? null, unsure: pick ? !pick.sure : false };
-      }),
+    });
+    return {
+      ok: true,
+      data: {
+        lines,
+        invoice,
+        previous: previous ? { id: previous.id, createdAt: previous.created_at, units: previous.units } : null,
+      },
     };
   } catch (e) {
     if (e instanceof ApiError) {
@@ -1163,17 +1195,21 @@ export type ReceiptApplyInput = {
     | { kind: "new"; name: string; code: string; price: number; quantity: number; description?: string }
   )[];
   publish: boolean;
+  /** Factura a la que pertenecen (para el historial). El id lo genera la pantalla al leerla. */
+  receipt?: { id: string } & ReceiptInvoice;
 };
 
 /** Suma al stock lo confirmado de la boleta y crea (como borrador) los productos que no estaban. */
 export async function applyReceipt(
   input: ReceiptApplyInput,
-): Promise<ActionResult<{ units: number; updated: number; created: { id: string; name: string }[] }>> {
+): Promise<ActionResult<{ units: number; updated: number; created: { id: string; name: string; sku: string | null }[] }>> {
   try {
     const { supabase } = await assertAdmin();
     const lines = Array.isArray(input?.lines) ? input.lines.slice(0, 200) : [];
 
     const adds = new Map<string, number>();
+    const descriptions = new Map<string, string>();
+    const history: { product_id: string; product_name: string; quantity: number; description: string | null }[] = [];
     const news: { name: string; sku: string | null; price: number; quantity: number; alias: string }[] = [];
     // Descripciones de la factura confirmadas por la administradora: se recuerdan para la próxima.
     const learn = new Map<string, string>();
@@ -1184,7 +1220,10 @@ export async function applyReceipt(
         if (!UUID_RE.test(String(l.productId))) return { ok: false, error: "Hay un producto inválido en la lista." };
         adds.set(l.productId, (adds.get(l.productId) ?? 0) + qty);
         const alias = aliasKey(String(l.description ?? ""));
-        if (alias) learn.set(alias, l.productId);
+        if (alias) {
+          learn.set(alias, l.productId);
+          descriptions.set(l.productId, alias);
+        }
       } else if (l.kind === "new") {
         const name = String(l.name ?? "").trim().replace(/\s+/g, " ");
         if (name.length < 2 || name.length > 120) return { ok: false, error: "Poné un nombre (de 2 a 120 letras) a cada producto nuevo." };
@@ -1197,7 +1236,7 @@ export async function applyReceipt(
     let updated = 0;
     let units = 0;
     if (adds.size > 0) {
-      const { data: current, error } = await supabase.from("products").select("id, stock, status").in("id", [...adds.keys()]);
+      const { data: current, error } = await supabase.from("products").select("id, name, stock, status").in("id", [...adds.keys()]);
       if (error) return fail(error, "No pudimos leer los productos.");
       for (const p of current ?? []) {
         const qty = adds.get(p.id) ?? 0;
@@ -1210,10 +1249,11 @@ export async function applyReceipt(
         }
         updated++;
         units += qty;
+        history.push({ product_id: p.id, product_name: p.name, quantity: qty, description: descriptions.get(p.id) ?? null });
       }
     }
 
-    const created: { id: string; name: string }[] = [];
+    const created: { id: string; name: string; sku: string | null }[] = [];
     for (const n of news) {
       const base = slugify(n.name) || "producto";
       const { data, error } = await supabase
@@ -1227,7 +1267,7 @@ export async function applyReceipt(
           stock: n.quantity,
           status: "draft",
         })
-        .select("id, name")
+        .select("id, name, natura_sku")
         .single();
       if (error) {
         refreshCatalog();
@@ -1237,9 +1277,10 @@ export async function applyReceipt(
           error: `Se sumó el stock de ${updated} productos y se crearon ${created.length} nuevos, pero «${n.name}» dio error: ${res.ok ? "" : res.error}`,
         };
       }
-      created.push(data);
+      created.push({ id: data.id, name: data.name, sku: data.natura_sku });
       units += n.quantity;
       if (n.alias) learn.set(n.alias, data.id);
+      history.push({ product_id: data.id, product_name: data.name, quantity: n.quantity, description: n.alias || null });
     }
 
     if (learn.size > 0) {
@@ -1251,10 +1292,92 @@ export async function applyReceipt(
       if (learnError) console.error("[admin] receipt_aliases:", learnError.message);
     }
 
+    if (input.receipt && UUID_RE.test(String(input.receipt.id)) && history.length > 0) {
+      await recordReceipt(supabase, input.receipt, units, history);
+    }
+
     refreshCatalog();
     revalidatePath("/admin");
     return { ok: true, data: { units, updated, created } };
   } catch (e) {
     return fail(e, "No pudimos cargar la boleta.");
+  }
+}
+
+/**
+ * Guarda la factura y lo que se cargó de ella en el historial. Si la misma factura se carga en
+ * varias veces (de a uno), se acumula en el mismo registro. Un error acá no deshace el stock.
+ */
+async function recordReceipt(
+  supabase: Awaited<ReturnType<typeof assertAdmin>>["supabase"],
+  receipt: { id: string } & ReceiptInvoice,
+  units: number,
+  items: { product_id: string; product_name: string; quantity: number; description: string | null }[],
+) {
+  try {
+    const number = cleanInvoiceNumber(receipt.number);
+    const { data: existing } = await supabase.from("receipts").select("id, units").eq("id", receipt.id).maybeSingle();
+    const now = new Date().toISOString();
+    const { error } = existing
+      ? await supabase.from("receipts").update({ units: existing.units + units, updated_at: now }).eq("id", receipt.id)
+      : await supabase.from("receipts").insert({
+          id: receipt.id,
+          invoice_number: number,
+          invoice_date: receipt.date && /^\d{4}-\d{2}-\d{2}$/.test(receipt.date) ? receipt.date : null,
+          due_date: receipt.dueDate && /^\d{4}-\d{2}-\d{2}$/.test(receipt.dueDate) ? receipt.dueDate : null,
+          total: typeof receipt.total === "number" && receipt.total > 0 ? receipt.total : null,
+          units,
+        });
+    if (error) throw error;
+    const { error: itemsError } = await supabase
+      .from("receipt_items")
+      .insert(items.map((i) => ({ ...i, receipt_id: receipt.id, product_name: i.product_name.slice(0, 200) })));
+    if (itemsError) throw itemsError;
+    revalidatePath("/admin/productos");
+  } catch (e) {
+    console.error("[admin] historial de facturas:", (e as Error)?.message ?? e);
+  }
+}
+
+/* ------------------------- Fotos desde Natura ------------------------- */
+
+type NaturaPhotoResponse = {
+  status: "ok" | "not_found" | "no_images" | "full" | "blocked" | "bad_ref" | "error";
+  added?: number;
+  name?: string | null;
+  message?: string;
+};
+
+/**
+ * Trae la foto de un producto desde su ficha en Natura (por código o enlace) y la agrega al producto.
+ * La descarga la hace la función de Supabase `fotos-natura` (Natura rechaza los pedidos desde Vercel).
+ */
+export async function importNaturaPhotos(productId: string, ref: string): Promise<ActionResult<{ added: number; name: string | null }>> {
+  try {
+    const { supabase } = await assertAdmin();
+    if (!UUID_RE.test(productId)) return { ok: false, error: "Producto inválido." };
+    const clean = String(ref ?? "").trim().slice(0, 300);
+    if (!clean) return { ok: false, error: "Escribí el código de Natura o pegá el enlace del producto." };
+
+    const { data, error } = await supabase.functions.invoke<NaturaPhotoResponse>("fotos-natura", { body: { productId, ref: clean } });
+    if (error || !data) {
+      console.error("[admin] fotos-natura:", error?.message);
+      return { ok: false, error: "No pudimos consultar Natura. Probá de nuevo en un rato." };
+    }
+    const messages: Record<Exclude<NaturaPhotoResponse["status"], "ok">, string> = {
+      not_found: "No encontramos ese producto en Natura. Revisá el código o pegá el enlace de la ficha.",
+      no_images: "Ese producto no tiene fotos en Natura.",
+      full: "Este producto ya tiene el máximo de fotos.",
+      blocked: "Natura no nos dejó entrar en este momento. Probá más tarde.",
+      bad_ref: "Escribí el código de Natura (solo números) o pegá el enlace del producto.",
+      error: data.message ?? "No pudimos traer la foto.",
+    };
+    if (data.status !== "ok") return { ok: false, error: messages[data.status] ?? "No pudimos traer la foto." };
+
+    refreshCatalog();
+    revalidatePath(`/admin/productos/${productId}`);
+    return { ok: true, data: { added: data.added ?? 0, name: data.name ?? null } };
+  } catch (e) {
+    return fail(e, "No pudimos traer la foto.");
   }
 }

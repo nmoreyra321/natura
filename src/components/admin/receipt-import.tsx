@@ -3,6 +3,7 @@
 import { AlertTriangle, Camera, CheckCircle2, FileText, ImagePlus, Loader2, Minus, Plus, Search, Trash2, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
 
@@ -10,13 +11,16 @@ import {
   applyReceipt,
   readReceipt,
   searchProductsForSale,
+  type ReceiptInvoice,
   type ReceiptLine,
   type ReceiptMatch,
+  type ReceiptRead,
   type SaleProductOption,
 } from "@/app/admin/actions";
 import { buttonClasses } from "@/components/ui/button";
 import { inputClasses } from "@/components/ui/fields";
 import { ProductImageFallback } from "@/components/store/product-card";
+import { NaturaPhoto } from "./natura-photo";
 import { formatARS } from "@/lib/format";
 import { productImageUrl } from "@/lib/images";
 import { titleCase } from "@/lib/receipt";
@@ -45,7 +49,10 @@ type Row = {
   newPrice: string;
 };
 
-type Done = { units: number; updated: number; created: { id: string; name: string }[] };
+type Done = { units: number; updated: number; created: { id: string; name: string; sku: string | null }[] };
+
+const dateFmt = new Intl.DateTimeFormat("es-AR", { dateStyle: "short", timeZone: "UTC" });
+const showDate = (iso: string) => dateFmt.format(new Date(iso.length === 10 ? `${iso}T12:00:00Z` : iso));
 
 const EMPTY_DONE: Done = { units: 0, updated: 0, created: [] };
 
@@ -213,7 +220,12 @@ function Stepper({ value, onChange }: { value: number; onChange: (n: number) => 
 export function ReceiptImport() {
   const [photos, setPhotos] = useState<Upload[]>([]);
   const [preparing, setPreparing] = useState(false);
+  const router = useRouter();
   const [rows, setRows] = useState<Row[] | null>(null);
+  /** Datos de la factura leída y el registro del historial al que se suma lo cargado. */
+  const [invoice, setInvoice] = useState<ReceiptInvoice | null>(null);
+  const [receiptId, setReceiptId] = useState<string | null>(null);
+  const [previous, setPrevious] = useState<ReceiptRead["previous"]>(null);
   const [publish, setPublish] = useState(true);
   const [done, setDone] = useState<Done | null>(null);
   /** Lo que ya se cargó de a uno (antes de terminar la lista). */
@@ -264,7 +276,11 @@ export function ReceiptImport() {
         toast.error(res.error);
         return;
       }
-      setRows((res.data ?? []).map(toRow));
+      const data = res.data!;
+      setRows(data.lines.map(toRow));
+      setInvoice(data.invoice);
+      setPrevious(data.previous);
+      setReceiptId(data.previous?.id ?? crypto.randomUUID());
     });
 
   const update = (key: string, patch: Partial<Row>) => setRows((prev) => prev?.map((r) => (r.key === key ? { ...r, ...patch } : r)) ?? prev);
@@ -299,7 +315,13 @@ export function ReceiptImport() {
     setRows(null);
     setDone(null);
     setApplied(EMPTY_DONE);
+    setInvoice(null);
+    setPrevious(null);
+    setReceiptId(null);
   };
+
+  const receiptMeta = () =>
+    receiptId ? { id: receiptId, ...(invoice ?? { number: null, date: null, dueDate: null, total: null }) } : undefined;
 
   /** Carga un solo renglón y lo saca de la lista. */
   const confirmOne = async (r: Row) => {
@@ -310,7 +332,7 @@ export function ReceiptImport() {
     }
     setBusyKey(r.key);
     try {
-      const res = await applyReceipt({ publish, lines: [toLine(r)] });
+      const res = await applyReceipt({ publish, lines: [toLine(r)], receipt: receiptMeta() });
       if (!res.ok) {
         toast.error(res.error);
         return;
@@ -319,6 +341,7 @@ export function ReceiptImport() {
       const total = addDone(applied, result);
       setApplied(total);
       toast.success(`Listo: se sumaron ${r.quantity} al stock.`);
+      router.refresh();
       const rest = (rows ?? []).filter((x) => x.key !== r.key);
       if (rest.length === 0) {
         setDone(total);
@@ -339,12 +362,13 @@ export function ReceiptImport() {
         toast.error(reason);
         return;
       }
-      const res = await applyReceipt({ publish, lines: rows.map(toLine) });
+      const res = await applyReceipt({ publish, lines: rows.map(toLine), receipt: receiptMeta() });
       if (!res.ok) {
         toast.error(res.error);
         return;
       }
       setDone(addDone(applied, res.data ?? EMPTY_DONE));
+      router.refresh();
       setRows(null);
     });
 
@@ -364,13 +388,17 @@ export function ReceiptImport() {
               {done.created.length === 1 ? "Se creó 1 producto nuevo" : `Se crearon ${done.created.length} productos nuevos`} (todavía
               ocultos en la tienda):
             </p>
-            <p className="mt-1 text-sm text-muted">Agregales una foto y publicalos cuando quieras.</p>
-            <ul className="mt-3 flex flex-col gap-2">
+            <p className="mt-1 text-sm text-muted">
+              Traé la foto oficial de Natura con el código (o pegando el enlace del producto en naturacosmeticos.com.ar), y
+              publicalos cuando quieras.
+            </p>
+            <ul className="mt-3 flex flex-col gap-4">
               {done.created.map((p) => (
-                <li key={p.id}>
+                <li key={p.id} className="flex flex-col gap-2">
                   <Link href={`/admin/productos/${p.id}`} className="font-semibold text-coral-deep underline">
-                    {p.name} → agregar foto
+                    {p.name}
                   </Link>
+                  <NaturaPhoto productId={p.id} sku={p.sku} />
                 </li>
               ))}
             </ul>
@@ -392,6 +420,21 @@ export function ReceiptImport() {
       <div className="flex flex-col gap-4">
         <div className="rounded-3xl bg-warm-white p-4 shadow-soft">
           <h2 className="font-display text-xl font-bold">Revisá la lista</h2>
+          {invoice?.number || invoice?.date || invoice?.total ? (
+            <p className="text-sm text-muted">
+              {invoice.number ? `Factura N° ${invoice.number}` : "Factura"}
+              {invoice.date ? ` del ${showDate(invoice.date)}` : ""}
+              {invoice.total ? ` · total ${formatARS(Math.round(invoice.total * 100))}` : ""}
+              {invoice.dueDate ? ` · vence el ${showDate(invoice.dueDate)}` : ""}
+            </p>
+          ) : null}
+          {previous ? (
+            <p className="mt-2 flex items-start gap-2 rounded-2xl bg-coral-soft p-3 text-sm font-semibold">
+              <AlertTriangle className="mt-0.5 size-4 shrink-0 text-coral-deep" aria-hidden="true" />
+              Ojo: esta factura ya la cargaste el {showDate(previous.createdAt)} ({previous.units} unidades). Si la cargás de nuevo,
+              se suma otra vez al stock. Cargá solo lo que te faltó.
+            </p>
+          ) : null}
           <p className="mt-1 text-muted">
             Encontramos <strong className="text-forest">{rows.length}</strong> productos ({units} unidades). Compará con la caja: si
             llegó uno más, tocá <strong>+</strong>; si llegó uno menos, tocá <strong>−</strong>; si no vino, tocá el tachito.

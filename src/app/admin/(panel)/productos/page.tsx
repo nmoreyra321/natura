@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { BulkSelectionProvider, SelectAllCheckbox, SelectProductCheckbox } from "@/components/admin/bulk-selection";
 import { InventoryView } from "@/components/admin/inventory-view";
+import { ReceiptHistory } from "@/components/admin/receipt-history";
 import { ReceiptImport } from "@/components/admin/receipt-import";
 import { ProductRowActions } from "@/components/admin/product-row-actions";
 import { LinkButton, buttonClasses } from "@/components/ui/button";
@@ -79,6 +80,8 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
           ) : (
             <div className="mx-auto max-w-3xl">
               <ReceiptImport />
+              <h2 className="mt-10 mb-3 font-display text-xl font-bold">Facturas cargadas</h2>
+              <ReceiptHistory supabase={supabase} />
             </div>
           )}
         </div>

@@ -58,3 +58,21 @@ export function titleCase(text: string): string {
     .trim()
     .replace(/(^|\s)(\p{L})/gu, (_, sp: string, ch: string) => sp + ch.toUpperCase());
 }
+
+/** "22/02/2026" (o "22-02-26") → "2026-02-22". null si no es una fecha válida. */
+export function parseArDate(text: string | null | undefined): string | null {
+  const m = String(text ?? "").match(/(\d{1,2})[/.-](\d{1,2})[/.-](\d{2,4})/);
+  if (!m) return null;
+  const day = Number(m[1]);
+  const month = Number(m[2]);
+  const year = m[3].length === 2 ? 2000 + Number(m[3]) : Number(m[3]);
+  const d = new Date(Date.UTC(year, month - 1, day));
+  if (d.getUTCFullYear() !== year || d.getUTCMonth() !== month - 1 || d.getUTCDate() !== day || year < 2000 || year > 2100) return null;
+  return d.toISOString().slice(0, 10);
+}
+
+/** Número de factura sin espacios de más ("0028-32433058"). null si no parece un número. */
+export function cleanInvoiceNumber(text: string | null | undefined): string | null {
+  const t = String(text ?? "").replace(/\s+/g, "").replace(/^N[°º]?/i, "").slice(0, 60);
+  return /\d{4,}/.test(t) ? t : null;
+}

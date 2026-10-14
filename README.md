@@ -167,6 +167,16 @@ Cuando llega la caja de Natura: subí el PDF de la factura («Nota Fiscal») o s
 
 Cada producto tiene su botón **Cargar este** para sumarlo de a uno (los seguros primero), y al final **Cargar todos** suma lo que queda. Siempre se suma al stock (no se reemplaza). Necesita la variable `GEMINI_API_KEY` en Vercel (se crea gratis en aistudio.google.com/apikey). Se usa el nivel gratis de Google, que alcanza de sobra para algunas boletas por mes; en ese nivel Google puede usar las fotos para mejorar su servicio. Opcional: `GEMINI_MODEL` para elegir otro modelo (por defecto `gemini-flash-latest`).
 
+**Historial de facturas:** debajo del cargador está la lista de **Facturas cargadas** (número, fecha, total, vencimiento y qué llegó en cada una; tablas `receipts` y `receipt_items`). Si se lee una factura que ya se cargó, avisa antes de sumar de nuevo.
+
+### Foto de Natura (función `fotos-natura`)
+
+En cada producto (y al terminar de cargar una factura, en los productos nuevos) está **Traer foto de Natura**: con el código o el enlace de la ficha en naturacosmeticos.com.ar baja hasta 3 fotos oficiales y las agrega al producto. La descarga la hace la función de Supabase `fotos-natura` (Natura bloquea Vercel), con la sesión de la administradora. El buscador de Natura no se puede usar desde afuera, por eso hace falta el código o el enlace.
+
+### Qué pedir (Panel → Qué pedir)
+
+Sugiere cuántas unidades pedir de cada producto según lo vendido en los últimos 90 días (tienda, venta rápida y vivos) y las clientas que esperan un aviso de stock, para que alcance 2, 4, 6 u 8 semanas. Tiene **Copiar lista** y **Mandar por WhatsApp** para hacer el pedido. La cuenta está en `src/lib/reorder.ts`.
+
 ### Cargar stock rápido (Productos → pestaña «Cargar stock»)
 
 En **Productos**, pestaña **Cargar stock**, está la lista de todos los productos con un casillero de cantidad. Escribí cuántos tenés y apretá **Enter**: se guarda y pasa al siguiente (también hay botones − / + para el celular). Con la opción **Publicar automáticamente** activada, cada producto al que le cargás stock se publica solo; los que quedan en 0 no cambian. Podés buscar por nombre, filtrar por categoría o ver solo los que están sin stock.

@@ -140,6 +140,46 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"receipt_items": {
+                  Row: {
+                    "created_at": string,"description": string | null,"id": string,"product_id": string | null,"product_name": string,"quantity": number,"receipt_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"description"?: string | null,"id"?: string,"product_id"?: string | null,"product_name": string,"quantity": number,"receipt_id": string
+                  }
+                  Update: {
+                    "created_at"?: string,"description"?: string | null,"id"?: string,"product_id"?: string | null,"product_name"?: string,"quantity"?: number,"receipt_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "receipt_items_product_id_fkey"
+      columns: ["product_id"]
+isOneToOne: false
+      referencedRelation: "products"
+      referencedColumns: ["id"]
+    },
+                    {
+      foreignKeyName: "receipt_items_receipt_id_fkey"
+      columns: ["receipt_id"]
+isOneToOne: false
+      referencedRelation: "receipts"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"receipts": {
+                  Row: {
+                    "created_at": string,"due_date": string | null,"id": string,"invoice_date": string | null,"invoice_number": string | null,"total": number | null,"units": number,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"due_date"?: string | null,"id"?: string,"invoice_date"?: string | null,"invoice_number"?: string | null,"total"?: number | null,"units"?: number,"updated_at"?: string
+                  }
+                  Update: {
+                    "created_at"?: string,"due_date"?: string | null,"id"?: string,"invoice_date"?: string | null,"invoice_number"?: string | null,"total"?: number | null,"units"?: number,"updated_at"?: string
+                  }
+                  Relationships: [
+                  ]
                 },"restock_requests": {
                   Row: {
                     "created_at": string,"id": string,"name": string | null,"notified_at": string | null,"phone": string,"product_id": string
