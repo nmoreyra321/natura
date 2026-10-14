@@ -159,13 +159,13 @@ Los precios del pedido los toma la base de datos, no el navegador. Las clientas 
 
 ### Cargar stock con la foto de la boleta (Productos → pestaña «Foto de la boleta»)
 
-Cuando llega la caja de Natura: sacale una foto a la boleta (hasta 3 fotos si es larga) y tocá **Leer la boleta**. La inteligencia artificial de Anthropic (Claude) arma la lista con código, descripción y cantidad, y la cruza con los productos de la tienda por el código de Natura. En la lista se puede:
+Cuando llega la caja de Natura: sacale una foto a la boleta (hasta 3 fotos si es larga) y tocá **Leer la boleta**. La inteligencia artificial de Google (Gemini) arma la lista con código, descripción y cantidad, y la cruza con los productos de la tienda por el código de Natura. En la lista se puede:
 
 - Corregir cantidades con − / + (si llegó uno más o uno menos) o quitar un renglón con el tachito.
 - Agregar un producto que llegó y no figura en la lista.
 - Para los que **no están en la página**: crearlos como productos nuevos (nombre y precio de revista; quedan ocultos hasta que les pongas foto) o elegir a cuál producto existente corresponden.
 
-Al **Confirmar** se suma todo al stock (no se reemplaza). Necesita la variable `ANTHROPIC_API_KEY` en Vercel (se crea en console.anthropic.com); cada lectura cuesta aproximadamente entre 5 y 15 centavos de dólar.
+Al **Confirmar** se suma todo al stock (no se reemplaza). Necesita la variable `GEMINI_API_KEY` en Vercel (se crea gratis en aistudio.google.com/apikey). Se usa el nivel gratis de Google, que alcanza de sobra para algunas boletas por mes; en ese nivel Google puede usar las fotos para mejorar su servicio. Opcional: `GEMINI_MODEL` para elegir otro modelo (por defecto `gemini-flash-latest`).
 
 ### Cargar stock rápido (Productos → pestaña «Cargar stock»)
 

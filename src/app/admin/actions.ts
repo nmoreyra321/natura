@@ -1,7 +1,6 @@
 "use server";
 
-import Anthropic from "@anthropic-ai/sdk";
-import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
+import { ApiError, createPartFromBase64, GoogleGenAI } from "@google/genai";
 import { revalidatePath, updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -966,16 +965,41 @@ export type ReceiptLine = {
 const RECEIPT_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
 const MAX_RECEIPT_PHOTOS = 3;
 
+/** Lo que se espera de la respuesta (se valida antes de usarla). */
 const ReceiptSchema = z.object({
   items: z.array(
     z.object({
-      code: z.string().describe("Código de producto de Natura tal como figura (solo números). Vacío si no hay."),
-      description: z.string().describe("Descripción del producto tal como figura en la boleta."),
-      quantity: z.number().describe("Cantidad de unidades."),
-      unit_price: z.number().nullable().describe("Precio de lista (revista) por unidad, sin descuentos. Null si no figura."),
+      code: z.string().catch(""),
+      description: z.string(),
+      quantity: z.number(),
+      unit_price: z.number().nullable().catch(null),
     }),
   ),
 });
+
+/** El mismo formato en JSON Schema simple, para pedírselo a Gemini. */
+const RECEIPT_JSON_SCHEMA = {
+  type: "object",
+  properties: {
+    items: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          code: { type: "string", description: "Código de producto de Natura tal como figura (solo números). Vacío si no hay." },
+          description: { type: "string", description: "Descripción del producto tal como figura en la boleta." },
+          quantity: { type: "integer", description: "Cantidad de unidades." },
+          unit_price: { type: ["number", "null"], description: "Precio de lista (revista) por unidad, sin descuentos. Null si no figura." },
+        },
+        required: ["code", "description", "quantity", "unit_price"],
+      },
+    },
+  },
+  required: ["items"],
+};
+
+/** Modelo de Google que lee la boleta (con uso gratis). Se puede cambiar con GEMINI_MODEL. */
+const RECEIPT_MODEL = process.env.GEMINI_MODEL || "gemini-flash-latest";
 
 const RECEIPT_PROMPT = `Estas fotos son de una boleta, factura o remito de un pedido de Natura (Argentina) hecho por una consultora. Si hay varias fotos son partes de la misma boleta.
 Extraé cada renglón que sea un producto (perfumes, cremas, maquillaje, kits, repuestos, etc.):
@@ -985,37 +1009,44 @@ Extraé cada renglón que sea un producto (perfumes, cremas, maquillaje, kits, r
 - unit_price: el precio de lista o de revista por unidad (antes de descuentos), si figura; si no, null.
 No incluyas totales, subtotales, impuestos, envío, descuentos, puntos, folletos ni revistas. Si un renglón está borroso, igual incluilo con lo que se pueda leer; no inventes renglones.`;
 
-/** Lee la foto de la boleta con inteligencia artificial y la cruza con los productos de la tienda. */
+/** Lee la foto de la boleta con la inteligencia artificial de Google (Gemini) y la cruza con los productos de la tienda. */
 export async function readReceipt(formData: FormData): Promise<ActionResult<ReceiptLine[]>> {
   try {
     const { supabase } = await assertAdmin();
-    if (!process.env.ANTHROPIC_API_KEY) {
-      return { ok: false, error: "Falta activar la lectura de boletas (clave de Anthropic). Pedile a quien te armó la página que la configure." };
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      return { ok: false, error: "Falta activar la lectura de boletas (clave de Google). Pedile a quien te armó la página que la configure." };
     }
     const files = formData.getAll("foto").filter((f): f is File => f instanceof File && f.size > 0);
     if (files.length === 0) return { ok: false, error: "Sacá o elegí una foto de la boleta." };
     if (files.length > MAX_RECEIPT_PHOTOS) return { ok: false, error: `Podés subir hasta ${MAX_RECEIPT_PHOTOS} fotos por boleta.` };
 
-    const images: Anthropic.ImageBlockParam[] = [];
+    const images = [];
     for (const file of files) {
       const type = RECEIPT_IMAGE_TYPES.find((t) => t === file.type);
       if (!type || file.size > 4_000_000) return { ok: false, error: "La foto tiene que ser JPG, PNG o WEBP de menos de 4 MB." };
-      images.push({ type: "image", source: { type: "base64", media_type: type, data: Buffer.from(await file.arrayBuffer()).toString("base64") } });
+      images.push(createPartFromBase64(Buffer.from(await file.arrayBuffer()).toString("base64"), type));
     }
 
-    const client = new Anthropic();
-    const response = await client.messages.parse({
-      model: "claude-opus-5-5",
-      max_tokens: 16000,
-      messages: [{ role: "user", content: [...images, { type: "text", text: RECEIPT_PROMPT }] }],
-      output_config: { format: zodOutputFormat(ReceiptSchema) },
+    const ai = new GoogleGenAI({ apiKey });
+    const response = await ai.models.generateContent({
+      model: RECEIPT_MODEL,
+      contents: [{ role: "user", parts: [...images, { text: RECEIPT_PROMPT }] }],
+      config: { responseMimeType: "application/json", responseJsonSchema: RECEIPT_JSON_SCHEMA },
     });
-    if (response.stop_reason === "refusal" || !response.parsed_output) {
+    let parsed: z.infer<typeof ReceiptSchema> | null = null;
+    try {
+      const result = ReceiptSchema.safeParse(JSON.parse(response.text ?? ""));
+      if (result.success) parsed = result.data;
+    } catch {
+      parsed = null;
+    }
+    if (!parsed) {
       return { ok: false, error: "No pudimos leer la boleta. Probá con otra foto, con más luz y derecha." };
     }
 
     const items = mergeReceiptItems(
-      response.parsed_output.items.map((i) => ({ code: i.code, description: i.description, quantity: i.quantity, unitPrice: i.unit_price })),
+      parsed.items.map((i) => ({ code: i.code, description: i.description, quantity: i.quantity, unitPrice: i.unit_price })),
     );
     if (items.length === 0) return { ok: false, error: "No encontramos productos en la foto. Probá con otra, que se vea toda la lista." };
 
@@ -1046,15 +1077,15 @@ export async function readReceipt(formData: FormData): Promise<ActionResult<Rece
       data: items.map((i) => ({ ...i, match: bySku.get(codeKey(i.code) ?? "") ?? null })),
     };
   } catch (e) {
-    if (e instanceof Anthropic.AuthenticationError) {
-      return { ok: false, error: "La clave de Anthropic no es válida. Hay que revisarla en la configuración de Vercel." };
-    }
-    if (e instanceof Anthropic.RateLimitError || e instanceof Anthropic.InternalServerError) {
-      return { ok: false, error: "El lector de boletas está ocupado. Probá de nuevo en un minuto." };
-    }
-    if (e instanceof Anthropic.APIError) {
+    if (e instanceof ApiError) {
       console.error("[admin] readReceipt:", e.status, e.message);
-      return { ok: false, error: "No pudimos leer la boleta. Probá de nuevo en un rato." };
+      if (e.status === 401 || e.status === 403 || (e.status === 400 && /api key/i.test(e.message))) {
+        return { ok: false, error: "La clave de Google no es válida. Hay que revisarla en la configuración de Vercel." };
+      }
+      if (e.status === 429) {
+        return { ok: false, error: "Se usó mucho el lector gratis en poco tiempo. Probá de nuevo en un rato." };
+      }
+      return { ok: false, error: "El lector de boletas no respondió. Probá de nuevo en un minuto." };
     }
     return fail(e, "No pudimos leer la boleta.");
   }
