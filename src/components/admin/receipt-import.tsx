@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, Camera, CheckCircle2, ImagePlus, Loader2, Minus, Plus, Search, Trash2, X } from "lucide-react";
+import { AlertTriangle, Camera, CheckCircle2, FileText, ImagePlus, Loader2, Minus, Plus, Search, Trash2, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState, useTransition } from "react";
@@ -24,6 +24,10 @@ import { parseMoney } from "@/lib/validation";
 
 const MAX_PHOTOS = 3;
 const MAX_SIDE = 1800;
+const MAX_PDF_BYTES = 4_000_000;
+
+/** Foto ya achicada o PDF de la factura, listo para enviar. */
+type Upload = { blob: Blob; url: string; pdfName?: string };
 
 type Row = {
   key: string;
@@ -33,6 +37,10 @@ type Row = {
   /** Producto de la tienda al que se suma, o null si hay que crearlo. */
   match: ReceiptMatch | null;
   mode: "existing" | "new";
+  /** Elegido por parecido del nombre: hay que confirmar que es ese producto. */
+  unsure: boolean;
+  /** Caja o kit en el que vino, según la factura. */
+  kit: string;
   newName: string;
   newPrice: string;
 };
@@ -67,6 +75,8 @@ function toRow(line: ReceiptLine, i: number): Row {
     quantity: line.quantity,
     match: line.match,
     mode: line.match ? "existing" : "new",
+    unsure: line.unsure,
+    kit: line.kit,
     newName: titleCase(line.description),
     newPrice: line.unitPrice ? String(line.unitPrice).replace(".", ",") : "",
   };
@@ -181,7 +191,7 @@ function Stepper({ value, onChange }: { value: number; onChange: (n: number) => 
 
 /** Carga de stock desde la foto de la boleta de Natura: leer → revisar → confirmar. */
 export function ReceiptImport() {
-  const [photos, setPhotos] = useState<{ blob: Blob; url: string }[]>([]);
+  const [photos, setPhotos] = useState<Upload[]>([]);
   const [preparing, setPreparing] = useState(false);
   const [rows, setRows] = useState<Row[] | null>(null);
   const [publish, setPublish] = useState(true);
@@ -196,8 +206,13 @@ export function ReceiptImport() {
       const room = MAX_PHOTOS - photos.length;
       const picked = [...files].slice(0, room);
       if (files.length > room) toast.message(`Podés subir hasta ${MAX_PHOTOS} fotos por boleta.`);
-      const ready: { blob: Blob; url: string }[] = [];
+      const ready: Upload[] = [];
       for (const f of picked) {
+        if (f.type === "application/pdf") {
+          if (f.size > MAX_PDF_BYTES) toast.error("El PDF pesa demasiado (máximo 4 MB).");
+          else ready.push({ blob: f, url: URL.createObjectURL(f), pdfName: f.name });
+          continue;
+        }
         try {
           const blob = await shrinkPhoto(f);
           ready.push({ blob, url: URL.createObjectURL(blob) });
@@ -220,7 +235,7 @@ export function ReceiptImport() {
   const read = () =>
     startReading(async () => {
       const fd = new FormData();
-      photos.forEach((p, i) => fd.append("foto", p.blob, `boleta-${i + 1}.jpg`));
+      photos.forEach((p, i) => fd.append("foto", p.blob, p.pdfName ? `factura-${i + 1}.pdf` : `boleta-${i + 1}.jpg`));
       const res = await readReceipt(fd);
       if (!res.ok) {
         toast.error(res.error);
@@ -232,7 +247,7 @@ export function ReceiptImport() {
   const update = (key: string, patch: Partial<Row>) => setRows((prev) => prev?.map((r) => (r.key === key ? { ...r, ...patch } : r)) ?? prev);
   const remove = (key: string) => setRows((prev) => prev?.filter((r) => r.key !== key) ?? prev);
   const linkTo = (key: string, p: SaleProductOption) =>
-    update(key, { mode: "existing", match: { id: p.id, name: p.name, size: p.size, stock: p.stock, image: p.image, status: "" } });
+    update(key, { mode: "existing", unsure: false, match: { id: p.id, name: p.name, size: p.size, stock: p.stock, image: p.image, status: "" } });
   const addMissing = (p: SaleProductOption) =>
     setRows((prev) => {
       const list = prev ?? [];
@@ -247,6 +262,8 @@ export function ReceiptImport() {
           quantity: 1,
           match: { id: p.id, name: p.name, size: p.size, stock: p.stock, image: p.image, status: "" },
           mode: "existing",
+          unsure: false,
+          kit: "",
           newName: "",
           newPrice: "",
         },
@@ -263,6 +280,11 @@ export function ReceiptImport() {
   const confirm = () =>
     startSaving(async () => {
       if (!rows) return;
+      const unsure = rows.find((r) => r.mode === "existing" && r.match && r.unsure);
+      if (unsure) {
+        toast.error(`Confirmá si «${unsure.description}» es «${unsure.match!.name}» (tocá «Sí, es este» o «No»).`);
+        return;
+      }
       const pendingLink = rows.find((r) => r.mode === "existing" && !r.match);
       if (pendingLink) {
         toast.error(`Elegí a qué producto corresponde «${pendingLink.description}», o creálo como nuevo.`);
@@ -323,6 +345,7 @@ export function ReceiptImport() {
   if (rows) {
     const units = rows.reduce((s, r) => s + r.quantity, 0);
     const missing = rows.filter((r) => r.mode === "new").length;
+    const toCheck = rows.filter((r) => r.mode === "existing" && r.match && r.unsure).length;
     return (
       <div className="flex flex-col gap-4">
         <div className="rounded-3xl bg-warm-white p-4 shadow-soft">
@@ -331,6 +354,13 @@ export function ReceiptImport() {
             Encontramos <strong className="text-forest">{rows.length}</strong> productos ({units} unidades). Compará con la caja: si
             llegó uno más, tocá <strong>+</strong>; si llegó uno menos, tocá <strong>−</strong>; si no vino, tocá el tachito.
           </p>
+          {toCheck > 0 ? (
+            <p className="mt-2 flex items-start gap-2 rounded-2xl bg-sky-100 p-3 text-sm font-semibold">
+              <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+              {toCheck === 1 ? "Hay 1 producto" : `Hay ${toCheck} productos`} que reconocimos por el nombre abreviado: confirmá que
+              sea el correcto.
+            </p>
+          ) : null}
           {missing > 0 ? (
             <p className="mt-2 flex items-start gap-2 rounded-2xl bg-sun/50 p-3 text-sm font-semibold">
               <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
@@ -344,7 +374,7 @@ export function ReceiptImport() {
           {rows.map((r) => (
             <li
               key={r.key}
-              className={`rounded-3xl bg-warm-white p-4 shadow-soft ${r.mode === "new" ? "border-2 border-sun" : ""}`}
+              className={`rounded-3xl bg-warm-white p-4 shadow-soft ${r.mode === "new" ? "border-2 border-sun" : r.unsure && r.match ? "border-2 border-sky-300" : ""}`}
             >
               <div className="flex items-start gap-3">
                 {r.mode === "existing" && r.match ? <Thumb image={r.match.image} /> : null}
@@ -367,7 +397,27 @@ export function ReceiptImport() {
                     <p className="mt-1 text-xs text-muted">
                       En la boleta: {r.code ? `${r.code} · ` : ""}
                       {r.description}
+                      {r.kit ? ` (vino en ${r.kit})` : ""}
                     </p>
+                  ) : null}
+                  {r.mode === "existing" && r.match && r.unsure ? (
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <span className="text-sm font-bold">¿Es este producto?</span>
+                      <button
+                        type="button"
+                        onClick={() => update(r.key, { unsure: false })}
+                        className="rounded-full bg-forest px-3 py-1.5 text-sm font-bold text-white"
+                      >
+                        Sí, es este
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => update(r.key, { unsure: false, match: null })}
+                        className="rounded-full border-2 border-forest px-3 py-1 text-sm font-bold"
+                      >
+                        No
+                      </button>
+                    </div>
                   ) : null}
                 </div>
                 <button
@@ -470,20 +520,30 @@ export function ReceiptImport() {
   return (
     <div className="flex flex-col gap-4">
       <div className="rounded-3xl bg-warm-white p-5 shadow-soft">
-        <h2 className="font-display text-xl font-bold">Cargar stock con la foto de la boleta</h2>
+        <h2 className="font-display text-xl font-bold">Cargar stock con la factura de Natura</h2>
         <ol className="mt-2 list-decimal pl-5 text-muted">
-          <li>Sacale una foto a la boleta de Natura (si es larga, hasta {MAX_PHOTOS} fotos).</li>
+          <li>Subí el PDF de la factura (la «Nota Fiscal») o sacale fotos (si es larga, hasta {MAX_PHOTOS}).</li>
           <li>Revisá la lista que armamos y corregí lo que haga falta.</li>
           <li>Confirmá y se suma todo al stock.</li>
         </ol>
-        <p className="mt-2 text-sm text-muted">Consejo: con buena luz, la boleta derecha y que se vean bien los códigos y las cantidades.</p>
+        <p className="mt-2 text-sm text-muted">
+          Consejo: si tenés el PDF, usalo, que se lee mejor. Si sacás foto: con buena luz, la boleta derecha y que se vean bien las
+          cantidades.
+        </p>
 
         {photos.length > 0 ? (
           <ul className="mt-4 flex flex-wrap gap-3">
             {photos.map((p, i) => (
               <li key={p.url} className="relative">
-                {/* eslint-disable-next-line @next/next/no-img-element -- vista previa local */}
-                <img src={p.url} alt={`Foto ${i + 1} de la boleta`} className="h-32 w-24 rounded-2xl border border-line object-cover" />
+                {p.pdfName ? (
+                  <span className="flex h-32 w-24 flex-col items-center justify-center gap-1 rounded-2xl border border-line bg-white p-2 text-center">
+                    <FileText className="size-8 text-coral-deep" aria-hidden="true" />
+                    <span className="line-clamp-3 text-[10px] break-all text-muted">{p.pdfName}</span>
+                  </span>
+                ) : (
+                  /* eslint-disable-next-line @next/next/no-img-element -- vista previa local */
+                  <img src={p.url} alt={`Foto ${i + 1} de la boleta`} className="h-32 w-24 rounded-2xl border border-line object-cover" />
+                )}
                 <button
                   type="button"
                   onClick={() => removePhoto(i)}
@@ -499,8 +559,20 @@ export function ReceiptImport() {
         ) : null}
 
         {photos.length < MAX_PHOTOS && !reading ? (
-          <div className="mt-4 grid gap-2 sm:grid-cols-2">
+          <div className="mt-4 grid gap-2 sm:grid-cols-3">
             <label className={buttonClasses(photos.length ? "outline" : "primary", "lg", "cursor-pointer")}>
+              <FileText className="size-5" aria-hidden="true" /> Subir el PDF
+              <input
+                type="file"
+                accept="application/pdf"
+                className="sr-only"
+                onChange={(e) => {
+                  void addPhotos(e.target.files);
+                  e.target.value = "";
+                }}
+              />
+            </label>
+            <label className={buttonClasses("outline", "lg", "cursor-pointer")}>
               <Camera className="size-5" aria-hidden="true" /> {photos.length ? "Sacar otra foto" : "Sacar foto"}
               <input
                 type="file"
@@ -530,7 +602,7 @@ export function ReceiptImport() {
         ) : null}
         {preparing ? (
           <p className="mt-3 flex items-center gap-2 text-sm text-muted">
-            <Loader2 className="size-4 animate-spin" aria-hidden="true" /> Preparando la foto…
+            <Loader2 className="size-4 animate-spin" aria-hidden="true" /> Preparando el archivo…
           </p>
         ) : null}
       </div>
@@ -539,10 +611,10 @@ export function ReceiptImport() {
         <button type="button" onClick={read} disabled={reading || preparing} className={buttonClasses("primary", "lg")}>
           {reading ? (
             <>
-              <Loader2 className="size-5 animate-spin" aria-hidden="true" /> Leyendo la boleta… (puede tardar hasta un minuto)
+              <Loader2 className="size-5 animate-spin" aria-hidden="true" /> Leyendo la factura… (puede tardar hasta un minuto)
             </>
           ) : (
-            "Leer la boleta"
+            "Leer la factura"
           )}
         </button>
       ) : null}

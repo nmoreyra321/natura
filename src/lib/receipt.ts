@@ -11,13 +11,6 @@ export function codeKey(raw: string | null | undefined): string | null {
   return digits.length >= 2 && digits.length <= 8 ? digits : null;
 }
 
-/** Formas en que puede estar guardado un código en la base ("71" → NATARG-71, NATARG-071, … NATARG-000071). */
-export function skuVariants(key: string): string[] {
-  const out = new Set<string>();
-  for (let len = key.length; len <= Math.max(6, key.length); len++) out.add(SKU_PREFIX + key.padStart(len, "0"));
-  return [...out];
-}
-
 /** Código para guardar en un producto nuevo, tal como figura en la boleta. */
 export function skuFromCode(raw: string | null | undefined): string | null {
   const key = codeKey(raw);
@@ -26,7 +19,7 @@ export function skuFromCode(raw: string | null | undefined): string | null {
   return SKU_PREFIX + (printed.length >= key.length ? printed : key);
 }
 
-export type RawReceiptItem = { code: string; description: string; quantity: number; unitPrice: number | null };
+export type RawReceiptItem = { code: string; description: string; quantity: number; unitPrice: number | null; kit?: string };
 
 /** Junta los renglones repetidos (mismo código) y descarta los que no tienen sentido. */
 export function mergeReceiptItems(items: RawReceiptItem[]): RawReceiptItem[] {
@@ -43,6 +36,7 @@ export function mergeReceiptItems(items: RawReceiptItem[]): RawReceiptItem[] {
       description: prev?.description ?? description,
       quantity: (prev?.quantity ?? 0) + quantity,
       unitPrice: prev?.unitPrice ?? (Number.isFinite(price) && price > 0 ? Math.round(price * 100) / 100 : null),
+      kit: prev?.kit || String(it.kit ?? "").trim().slice(0, 160),
     });
   }
   return [...merged.values()];

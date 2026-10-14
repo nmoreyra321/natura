@@ -157,9 +157,9 @@ Cuando una clienta toca **Hacer pedido por WhatsApp**, el pedido queda guardado 
 
 Los precios del pedido los toma la base de datos, no el navegador. Las clientas no pueden ver ni modificar pedidos.
 
-### Cargar stock con la foto de la boleta (Productos → pestaña «Foto de la boleta»)
+### Cargar stock con la factura de Natura (Productos → pestaña «Cargar factura»)
 
-Cuando llega la caja de Natura: sacale una foto a la boleta (hasta 3 fotos si es larga) y tocá **Leer la boleta**. La inteligencia artificial de Google (Gemini) arma la lista con código, descripción y cantidad, y la cruza con los productos de la tienda por el código de Natura. En la lista se puede:
+Cuando llega la caja de Natura: subí el PDF de la factura («Nota Fiscal») o sacale fotos (hasta 3 si es larga) y tocá **Leer la factura**. Los kits o cajas de regalo se separan en los productos que traen adentro, y como en la factura vienen abreviados, la IA los busca por nombre en el catálogo: los que no reconoce con seguridad aparecen con «¿Es este producto?» para confirmar. La inteligencia artificial de Google (Gemini) arma la lista con código, descripción y cantidad, y la cruza con los productos de la tienda por el código de Natura. En la lista se puede:
 
 - Corregir cantidades con − / + (si llegó uno más o uno menos) o quitar un renglón con el tachito.
 - Agregar un producto que llegó y no figura en la lista.

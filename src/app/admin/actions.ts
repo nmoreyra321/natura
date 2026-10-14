@@ -14,7 +14,7 @@ import { toWhatsAppPhone } from "@/lib/debts";
 import { formatARS } from "@/lib/format";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isValidPrice, planMagazinePriceUpdate, salePriceFromDiscount, toCents } from "@/lib/pricing";
-import { codeKey, mergeReceiptItems, skuFromCode, skuVariants } from "@/lib/receipt";
+import { codeKey, mergeReceiptItems, skuFromCode } from "@/lib/receipt";
 import { nameSearchPatterns } from "@/lib/search";
 import { slugify } from "@/lib/slug";
 import { createSessionClient, CATALOG_TAG } from "@/lib/supabase/server";
@@ -960,9 +960,13 @@ export type ReceiptLine = {
   quantity: number;
   unitPrice: number | null;
   match: ReceiptMatch | null;
+  /** true cuando el producto se eligió por parecido del nombre y hay que confirmarlo. */
+  unsure: boolean;
+  /** Caja o kit de la boleta en el que vino (vacío si vino suelto). */
+  kit: string;
 };
 
-const RECEIPT_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
+const RECEIPT_FILE_TYPES = ["image/jpeg", "image/png", "image/webp", "application/pdf"] as const;
 const MAX_RECEIPT_PHOTOS = 3;
 
 /** Lo que se espera de la respuesta (se valida antes de usarla). */
@@ -973,6 +977,9 @@ const ReceiptSchema = z.object({
       description: z.string(),
       quantity: z.number(),
       unit_price: z.number().nullable().catch(null),
+      match: z.number().nullable().catch(null),
+      match_sure: z.boolean().catch(false),
+      kit: z.string().catch(""),
     }),
   ),
 });
@@ -989,9 +996,12 @@ const RECEIPT_JSON_SCHEMA = {
           code: { type: "string", description: "Código de producto de Natura tal como figura (solo números). Vacío si no hay." },
           description: { type: "string", description: "Descripción del producto tal como figura en la boleta." },
           quantity: { type: "integer", description: "Cantidad de unidades." },
-          unit_price: { type: ["number", "null"], description: "Precio de lista (revista) por unidad, sin descuentos. Null si no figura." },
+          unit_price: { type: ["number", "null"], description: "Precio de lista (revista) por unidad en pesos, sin descuentos. Null si no figura." },
+          match: { type: ["integer", "null"], description: "Número del producto del catálogo de la tienda que corresponde a este renglón. Null si ninguno." },
+          match_sure: { type: "boolean", description: "true solo si estás segura de que es exactamente ese producto (mismo producto y misma presentación)." },
+          kit: { type: "string", description: "Descripción de la caja o kit en el que vino este producto. Vacío si vino suelto." },
         },
-        required: ["code", "description", "quantity", "unit_price"],
+        required: ["code", "description", "quantity", "unit_price", "match", "match_sure", "kit"],
       },
     },
   },
@@ -1004,15 +1014,30 @@ const RECEIPT_JSON_SCHEMA = {
  */
 const RECEIPT_MODELS = [process.env.GEMINI_MODEL || "gemini-flash-latest", "gemini-flash-lite-latest"];
 
-const RECEIPT_PROMPT = `Estas fotos son de una boleta, factura o remito de un pedido de Natura (Argentina) hecho por una consultora. Si hay varias fotos son partes de la misma boleta.
-Extraé cada renglón que sea un producto (perfumes, cremas, maquillaje, kits, repuestos, etc.):
-- code: el código de producto de Natura (normalmente de 4 a 6 números). Vacío si no se ve.
-- description: la descripción tal como está escrita.
-- quantity: cuántas unidades llegaron de ese producto.
-- unit_price: el precio de lista o de revista por unidad (antes de descuentos), si figura; si no, null.
-No incluyas totales, subtotales, impuestos, envío, descuentos, puntos, folletos ni revistas. Si un renglón está borroso, igual incluilo con lo que se pueda leer; no inventes renglones.`;
+function receiptPrompt(catalog: string) {
+  return `Esto es una factura (nota fiscal) de un pedido de Natura Argentina hecho por una consultora: un PDF o fotos. Si hay varias páginas o fotos son partes de la misma factura.
+Columnas habituales: MARCA, CODIGO, CANT, DESCRIPCION, ORIGEN, ADUANA, DESPACHO, PRECIO UNIT., TOTAL.
 
-/** Lee la foto de la boleta con la inteligencia artificial de Google (Gemini) y la cruza con los productos de la tienda. */
+Cómo leerla:
+- Muchos renglones con CODIGO son CAJAS o KITS de regalo (en la descripción dicen "CJ", por ejemplo "TD CJ FRUTAS ROJAS CP REG 2026"). Debajo vienen sus componentes: renglones SIN código y con precio 0,00. La cantidad de cada componente ya es el total que llegó.
+- Lo que interesa para el stock son los PRODUCTOS que llegaron. Si un kit tiene componentes listados debajo, devolvé los componentes (cada uno con kit = la descripción de su caja) y NO devuelvas el renglón de la caja. Si un renglón con código no tiene componentes debajo, es un producto suelto: devolvelo con kit vacío.
+- No incluyas bolsas ("BOLSA ..."), "gift", totales, subtotales, impuestos, percepciones, envío, descuentos, puntos, folletos ni revistas.
+- Si el mismo producto aparece en varias cajas, devolvelo una vez por cada aparición (después se suman).
+
+Para cada producto:
+- code: el código de Natura del renglón (solo números). Vacío si el renglón no tiene código.
+- description: la descripción tal como está escrita (viene abreviada).
+- quantity: cuántas unidades llegaron.
+- unit_price: precio unitario en pesos si es mayor a cero; si no, null. Ojo: en Argentina "13.687,24" son trece mil seiscientos ochenta y siete con 24.
+- kit: descripción de la caja en la que vino, o vacío.
+- match y match_sure: buscá el producto en el CATÁLOGO DE LA TIENDA de abajo y poné en match el número de renglón del catálogo. Las descripciones vienen abreviadas, por ejemplo: TD o TDIA = Tododia, HID = hidratante o crema hidratante, MAOS = manos, SAB o SAB BAR = jabón en barra, DES = desodorante, PERF = perfumado, FR = frutas, COND = acondicionador, SH = shampoo, CR = crema, EDT/EDP/DEO COL = perfume, REF o REP = repuesto, CJ = caja, REG = regalo, AMS = muestra. match_sure = true solo si es claramente el mismo producto y la misma presentación (tamaño, repuesto o no). Si es parecido pero dudás, poné igual el número con match_sure = false. Si no está en el catálogo, match = null.
+No inventes renglones. Si algo está borroso, incluilo con lo que se pueda leer.
+
+CATÁLOGO DE LA TIENDA (número: nombre · presentación [código]):
+${catalog}`;
+}
+
+/** Lee la factura (PDF o fotos) con la inteligencia artificial de Google (Gemini) y la cruza con los productos de la tienda. */
 export async function readReceipt(formData: FormData): Promise<ActionResult<ReceiptLine[]>> {
   try {
     const { supabase } = await assertAdmin();
@@ -1021,21 +1046,45 @@ export async function readReceipt(formData: FormData): Promise<ActionResult<Rece
       return { ok: false, error: "Falta activar la lectura de boletas (clave de Google). Pedile a quien te armó la página que la configure." };
     }
     const files = formData.getAll("foto").filter((f): f is File => f instanceof File && f.size > 0);
-    if (files.length === 0) return { ok: false, error: "Sacá o elegí una foto de la boleta." };
+    if (files.length === 0) return { ok: false, error: "Subí el PDF de la factura o una foto de la boleta." };
     if (files.length > MAX_RECEIPT_PHOTOS) return { ok: false, error: `Podés subir hasta ${MAX_RECEIPT_PHOTOS} fotos por boleta.` };
 
     const images: Part[] = [];
     for (const file of files) {
-      const type = RECEIPT_IMAGE_TYPES.find((t) => t === file.type);
-      if (!type || file.size > 4_000_000) return { ok: false, error: "La foto tiene que ser JPG, PNG o WEBP de menos de 4 MB." };
+      const type = RECEIPT_FILE_TYPES.find((t) => t === file.type);
+      if (!type || file.size > 4_000_000) return { ok: false, error: "Subí el PDF de la factura o fotos (JPG, PNG o WEBP) de menos de 4 MB." };
       images.push(createPartFromBase64(Buffer.from(await file.arrayBuffer()).toString("base64"), type));
     }
+
+    // Catálogo completo (publicados y ocultos) para que la IA reconozca los nombres abreviados.
+    const { data: products, error: productsError } = await supabase
+      .from("products")
+      .select("id, name, size, stock, status, natura_sku, images:product_images(storage_path, position)")
+      .order("name")
+      .limit(3000);
+    if (productsError) return fail(productsError, "No pudimos leer los productos de la tienda.");
+    const catalog: ReceiptMatch[] = (products ?? []).map((p) => ({
+      id: p.id,
+      name: p.name,
+      size: p.size,
+      stock: p.stock,
+      status: p.status,
+      image: [...(p.images ?? [])].sort((a, b) => a.position - b.position)[0]?.storage_path ?? null,
+    }));
+    const catalogText = (products ?? [])
+      .map((p, i) => `${i + 1}: ${p.name}${p.size ? ` · ${p.size}` : ""}${p.natura_sku ? ` [${p.natura_sku.replace("NATARG-", "")}]` : ""}`)
+      .join("\n");
+    const bySku = new Map<string, ReceiptMatch>();
+    (products ?? []).forEach((p, i) => {
+      const key = codeKey(p.natura_sku);
+      if (key && !bySku.has(key)) bySku.set(key, catalog[i]);
+    });
 
     const ai = new GoogleGenAI({ apiKey });
     const ask = (model: string) =>
       ai.models.generateContent({
         model,
-        contents: [{ role: "user", parts: [...images, { text: RECEIPT_PROMPT }] }],
+        contents: [{ role: "user", parts: [...images, { text: receiptPrompt(catalogText) }] }],
         config: { responseMimeType: "application/json", responseJsonSchema: RECEIPT_JSON_SCHEMA },
       });
     let response;
@@ -1058,36 +1107,30 @@ export async function readReceipt(formData: FormData): Promise<ActionResult<Rece
       return { ok: false, error: "No pudimos leer la boleta. Probá con otra foto, con más luz y derecha." };
     }
 
-    const items = mergeReceiptItems(
-      parsed.items.map((i) => ({ code: i.code, description: i.description, quantity: i.quantity, unitPrice: i.unit_price })),
-    );
+    // Se juntan los renglones repetidos; el producto elegido por la IA viaja junto a cada uno.
+    const aiPick = new Map<string, { match: ReceiptMatch; sure: boolean }>();
+    const raw = parsed.items.map((i) => {
+      const picked = Number.isInteger(i.match) && i.match! >= 1 ? catalog[i.match! - 1] : undefined;
+      const key = codeKey(i.code) ?? `sin-codigo:${i.description.trim().slice(0, 160).toLowerCase()}`;
+      if (picked && !aiPick.has(key)) aiPick.set(key, { match: picked, sure: i.match_sure });
+      // Precios absurdos (menos de $100) se descartan: suele ser un error de lectura.
+      const price = i.unit_price !== null && i.unit_price >= 100 ? i.unit_price : null;
+      return { code: i.code, description: i.description, quantity: i.quantity, unitPrice: price, kit: i.kit };
+    });
+    const items = mergeReceiptItems(raw);
     if (items.length === 0) return { ok: false, error: "No encontramos productos en la foto. Probá con otra, que se vea toda la lista." };
-
-    // Cruce por código de Natura.
-    const keys = [...new Set(items.map((i) => codeKey(i.code)).filter((k): k is string => k !== null))];
-    const bySku = new Map<string, ReceiptMatch>();
-    if (keys.length > 0) {
-      const { data } = await supabase
-        .from("products")
-        .select("id, name, size, stock, status, natura_sku, images:product_images(storage_path, position)")
-        .in("natura_sku", keys.flatMap(skuVariants));
-      for (const p of data ?? []) {
-        const key = codeKey(p.natura_sku);
-        if (!key || bySku.has(key)) continue;
-        bySku.set(key, {
-          id: p.id,
-          name: p.name,
-          size: p.size,
-          stock: p.stock,
-          status: p.status,
-          image: [...(p.images ?? [])].sort((a, b) => a.position - b.position)[0]?.storage_path ?? null,
-        });
-      }
-    }
 
     return {
       ok: true,
-      data: items.map((i) => ({ ...i, match: bySku.get(codeKey(i.code) ?? "") ?? null })),
+      data: items.map((i) => {
+        const key = codeKey(i.code);
+        // 1) Mismo código de Natura: seguro. 2) Elegido por la IA por el nombre: seguro o "revisar".
+        const exact = key ? bySku.get(key) : undefined;
+        const base = { ...i, kit: i.kit ?? "" };
+        if (exact) return { ...base, match: exact, unsure: false };
+        const pick = aiPick.get(key ?? `sin-codigo:${i.description.toLowerCase()}`);
+        return { ...base, match: pick?.match ?? null, unsure: pick ? !pick.sure : false };
+      }),
     };
   } catch (e) {
     if (e instanceof ApiError) {

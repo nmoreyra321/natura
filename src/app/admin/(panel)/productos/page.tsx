@@ -52,7 +52,7 @@ function ProductTabs({ active }: { active: "lista" | "stock" | "boleta" }) {
         <Boxes className="size-4" aria-hidden="true" /> Cargar stock
       </Link>
       <Link href="/admin/productos?vista=boleta" aria-current={active === "boleta" ? "page" : undefined} className={tab(active === "boleta")}>
-        <Camera className="size-4" aria-hidden="true" /> Foto de la boleta
+        <Camera className="size-4" aria-hidden="true" /> Cargar factura
       </Link>
     </nav>
   );

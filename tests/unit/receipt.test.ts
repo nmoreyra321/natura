@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { codeKey, mergeReceiptItems, skuFromCode, skuVariants, titleCase } from "@/lib/receipt";
+import { codeKey, mergeReceiptItems, skuFromCode, titleCase } from "@/lib/receipt";
 
 describe("codeKey", () => {
   it("normaliza códigos con ceros y prefijo", () => {
@@ -12,14 +12,6 @@ describe("codeKey", () => {
     expect(codeKey("")).toBeNull();
     expect(codeKey("abc")).toBeNull();
     expect(codeKey("7")).toBeNull();
-  });
-});
-
-describe("skuVariants", () => {
-  it("incluye las formas con ceros adelante", () => {
-    expect(skuVariants("71")).toContain("NATARG-00071");
-    expect(skuVariants("71")).toContain("NATARG-71");
-    expect(skuVariants("240651")).toEqual(["NATARG-240651"]);
   });
 });
 
@@ -39,8 +31,17 @@ describe("mergeReceiptItems", () => {
       { code: "", description: "Sin código", quantity: 3, unitPrice: -1 },
     ]);
     expect(out).toEqual([
-      { code: "15826", description: "TOP COAT", quantity: 3, unitPrice: 16700 },
-      { code: "", description: "Sin código", quantity: 3, unitPrice: null },
+      { code: "15826", description: "TOP COAT", quantity: 3, unitPrice: 16700, kit: "" },
+      { code: "", description: "Sin código", quantity: 3, unitPrice: null, kit: "" },
+    ]);
+  });
+  it("suma el mismo producto que vino en cajas distintas y recuerda la primera caja", () => {
+    const out = mergeReceiptItems([
+      { code: "", description: "TODODIA HID DES FRU V 400ML", quantity: 3, unitPrice: null, kit: "TD CJ FRUTAS ROJAS CP" },
+      { code: "", description: "TODODIA HID DES FRU V 400ML", quantity: 1, unitPrice: null, kit: "TD CJ FRUTAS ROJAS EXC" },
+    ]);
+    expect(out).toEqual([
+      { code: "", description: "TODODIA HID DES FRU V 400ML", quantity: 4, unitPrice: null, kit: "TD CJ FRUTAS ROJAS CP" },
     ]);
   });
 });
