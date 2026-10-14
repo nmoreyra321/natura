@@ -294,8 +294,8 @@ export function ReceiptImport() {
         publish,
         lines: rows.map((r) =>
           r.mode === "existing" && r.match
-            ? { kind: "existing" as const, productId: r.match.id, quantity: r.quantity }
-            : { kind: "new" as const, name: r.newName, code: r.code, price: parseMoney(r.newPrice), quantity: r.quantity },
+            ? { kind: "existing" as const, productId: r.match.id, quantity: r.quantity, description: r.description }
+            : { kind: "new" as const, name: r.newName, code: r.code, price: parseMoney(r.newPrice), quantity: r.quantity, description: r.description },
         ),
       });
       if (!res.ok) {
@@ -354,6 +354,9 @@ export function ReceiptImport() {
             Encontramos <strong className="text-forest">{rows.length}</strong> productos ({units} unidades). Compará con la caja: si
             llegó uno más, tocá <strong>+</strong>; si llegó uno menos, tocá <strong>−</strong>; si no vino, tocá el tachito.
           </p>
+          <p className="mt-1 text-sm text-muted">
+            Lo que confirmes queda guardado: la próxima factura reconoce sola esos nombres abreviados.
+          </p>
           {toCheck > 0 ? (
             <p className="mt-2 flex items-start gap-2 rounded-2xl bg-sky-100 p-3 text-sm font-semibold">
               <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
@@ -385,6 +388,15 @@ export function ReceiptImport() {
                       <p className="text-sm text-muted tabular">
                         Hoy tenés {r.match.stock} → quedan <strong className="text-forest">{r.match.stock + r.quantity}</strong>
                       </p>
+                      {r.description && !r.unsure ? (
+                        <button
+                          type="button"
+                          onClick={() => update(r.key, { match: null })}
+                          className="text-xs font-bold text-coral-deep underline"
+                        >
+                          No es este, cambiar
+                        </button>
+                      ) : null}
                     </>
                   ) : r.mode === "new" ? (
                     <p className="inline-flex items-center gap-1.5 rounded-full bg-sun px-2.5 py-1 text-xs font-bold">

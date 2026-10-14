@@ -42,6 +42,14 @@ export function mergeReceiptItems(items: RawReceiptItem[]): RawReceiptItem[] {
   return [...merged.values()];
 }
 
+/**
+ * Forma fija de una descripción de factura para recordarla ("aprender"): mayúsculas,
+ * sin espacios de más. "Tododia  hid des fru v 400ml" → "TODODIA HID DES FRU V 400ML".
+ */
+export function aliasKey(description: string): string {
+  return description.toUpperCase().replace(/\s+/g, " ").trim().slice(0, 160);
+}
+
 /** "DES ROLL ON EKOS CASTANHA" → "Des Roll On Ekos Castanha" (punto de partida para crear el producto). */
 export function titleCase(text: string): string {
   return text

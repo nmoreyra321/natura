@@ -14,7 +14,7 @@ import { toWhatsAppPhone } from "@/lib/debts";
 import { formatARS } from "@/lib/format";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isValidPrice, planMagazinePriceUpdate, salePriceFromDiscount, toCents } from "@/lib/pricing";
-import { codeKey, mergeReceiptItems, skuFromCode } from "@/lib/receipt";
+import { aliasKey, codeKey, mergeReceiptItems, skuFromCode } from "@/lib/receipt";
 import { nameSearchPatterns } from "@/lib/search";
 import { slugify } from "@/lib/slug";
 import { createSessionClient, CATALOG_TAG } from "@/lib/supabase/server";
@@ -1120,14 +1120,24 @@ export async function readReceipt(formData: FormData): Promise<ActionResult<Rece
     const items = mergeReceiptItems(raw);
     if (items.length === 0) return { ok: false, error: "No encontramos productos en la foto. Probá con otra, que se vea toda la lista." };
 
+    // Lo aprendido de facturas anteriores: descripción abreviada → producto confirmado.
+    const byId = new Map(catalog.map((p) => [p.id, p]));
+    const { data: aliases } = await supabase
+      .from("receipt_aliases")
+      .select("description, product_id")
+      .in("description", [...new Set(items.map((i) => aliasKey(i.description)))]);
+    const learned = new Map((aliases ?? []).map((a) => [a.description, byId.get(a.product_id)]));
+
     return {
       ok: true,
       data: items.map((i) => {
         const key = codeKey(i.code);
-        // 1) Mismo código de Natura: seguro. 2) Elegido por la IA por el nombre: seguro o "revisar".
+        // 1) Mismo código de Natura. 2) Ya confirmado en otra factura. 3) Elegido por la IA: seguro o "revisar".
         const exact = key ? bySku.get(key) : undefined;
         const base = { ...i, kit: i.kit ?? "" };
         if (exact) return { ...base, match: exact, unsure: false };
+        const known = learned.get(aliasKey(i.description));
+        if (known) return { ...base, match: known, unsure: false };
         const pick = aiPick.get(key ?? `sin-codigo:${i.description.toLowerCase()}`);
         return { ...base, match: pick?.match ?? null, unsure: pick ? !pick.sure : false };
       }),
@@ -1149,8 +1159,8 @@ export async function readReceipt(formData: FormData): Promise<ActionResult<Rece
 
 export type ReceiptApplyInput = {
   lines: (
-    | { kind: "existing"; productId: string; quantity: number }
-    | { kind: "new"; name: string; code: string; price: number; quantity: number }
+    | { kind: "existing"; productId: string; quantity: number; description?: string }
+    | { kind: "new"; name: string; code: string; price: number; quantity: number; description?: string }
   )[];
   publish: boolean;
 };
@@ -1164,18 +1174,22 @@ export async function applyReceipt(
     const lines = Array.isArray(input?.lines) ? input.lines.slice(0, 200) : [];
 
     const adds = new Map<string, number>();
-    const news: { name: string; sku: string | null; price: number; quantity: number }[] = [];
+    const news: { name: string; sku: string | null; price: number; quantity: number; alias: string }[] = [];
+    // Descripciones de la factura confirmadas por la administradora: se recuerdan para la próxima.
+    const learn = new Map<string, string>();
     for (const l of lines) {
       const qty = Number(l?.quantity);
       if (!Number.isInteger(qty) || qty < 1 || qty > 1000) return { ok: false, error: "Revisá las cantidades: tienen que ser 1 o más." };
       if (l.kind === "existing") {
         if (!UUID_RE.test(String(l.productId))) return { ok: false, error: "Hay un producto inválido en la lista." };
         adds.set(l.productId, (adds.get(l.productId) ?? 0) + qty);
+        const alias = aliasKey(String(l.description ?? ""));
+        if (alias) learn.set(alias, l.productId);
       } else if (l.kind === "new") {
         const name = String(l.name ?? "").trim().replace(/\s+/g, " ");
         if (name.length < 2 || name.length > 120) return { ok: false, error: "Poné un nombre (de 2 a 120 letras) a cada producto nuevo." };
         if (!isValidPrice(l.price)) return { ok: false, error: `Poné el precio de revista de «${name}».` };
-        news.push({ name, sku: skuFromCode(l.code), price: toCents(l.price) / 100, quantity: qty });
+        news.push({ name, sku: skuFromCode(l.code), price: toCents(l.price) / 100, quantity: qty, alias: aliasKey(String(l.description ?? "")) });
       }
     }
     if (adds.size === 0 && news.length === 0) return { ok: false, error: "La lista está vacía." };
@@ -1225,6 +1239,16 @@ export async function applyReceipt(
       }
       created.push(data);
       units += n.quantity;
+      if (n.alias) learn.set(n.alias, data.id);
+    }
+
+    if (learn.size > 0) {
+      const now = new Date().toISOString();
+      const { error: learnError } = await supabase
+        .from("receipt_aliases")
+        .upsert([...learn].map(([description, product_id]) => ({ description, product_id, updated_at: now })));
+      // Si no se pudo recordar, el stock igual quedó cargado: solo se avisa en el registro.
+      if (learnError) console.error("[admin] receipt_aliases:", learnError.message);
     }
 
     refreshCatalog();

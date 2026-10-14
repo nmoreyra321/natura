@@ -159,7 +159,7 @@ Los precios del pedido los toma la base de datos, no el navegador. Las clientas 
 
 ### Cargar stock con la factura de Natura (Productos → pestaña «Cargar factura»)
 
-Cuando llega la caja de Natura: subí el PDF de la factura («Nota Fiscal») o sacale fotos (hasta 3 si es larga) y tocá **Leer la factura**. Los kits o cajas de regalo se separan en los productos que traen adentro, y como en la factura vienen abreviados, la IA los busca por nombre en el catálogo: los que no reconoce con seguridad aparecen con «¿Es este producto?» para confirmar. La inteligencia artificial de Google (Gemini) arma la lista con código, descripción y cantidad, y la cruza con los productos de la tienda por el código de Natura. En la lista se puede:
+Cuando llega la caja de Natura: subí el PDF de la factura («Nota Fiscal») o sacale fotos (hasta 3 si es larga) y tocá **Leer la factura**. Los kits o cajas de regalo se separan en los productos que traen adentro, y como en la factura vienen abreviados, la IA los busca por nombre en el catálogo: los que no reconoce con seguridad aparecen con «¿Es este producto?» para confirmar. **La página aprende:** cada renglón que se confirma (o se crea como producto nuevo) queda guardado en la tabla `receipt_aliases` (descripción abreviada → producto), así la próxima factura lo reconoce sola sin cambiar los nombres de la tienda. Si alguna vez aprendió mal, en la revisión está «No es este, cambiar». La inteligencia artificial de Google (Gemini) arma la lista con código, descripción y cantidad, y la cruza con los productos de la tienda por el código de Natura. En la lista se puede:
 
 - Corregir cantidades con − / + (si llegó uno más o uno menos) o quitar un renglón con el tachito.
 - Agregar un producto que llegó y no figura en la lista.

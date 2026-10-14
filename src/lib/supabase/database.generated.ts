@@ -120,6 +120,26 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"receipt_aliases": {
+                  Row: {
+                    "description": string,"product_id": string,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "description": string,"product_id": string,"updated_at"?: string
+                  }
+                  Update: {
+                    "description"?: string,"product_id"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "receipt_aliases_product_id_fkey"
+      columns: ["product_id"]
+isOneToOne: false
+      referencedRelation: "products"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"restock_requests": {
                   Row: {
                     "created_at": string,"id": string,"name": string | null,"notified_at": string | null,"phone": string,"product_id": string

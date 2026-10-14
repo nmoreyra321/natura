@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { codeKey, mergeReceiptItems, skuFromCode, titleCase } from "@/lib/receipt";
+import { aliasKey, codeKey, mergeReceiptItems, skuFromCode, titleCase } from "@/lib/receipt";
 
 describe("codeKey", () => {
   it("normaliza códigos con ceros y prefijo", () => {
@@ -49,5 +49,12 @@ describe("mergeReceiptItems", () => {
 describe("titleCase", () => {
   it("pasa a mayúscula inicial", () => {
     expect(titleCase("DES ROLL ON  EKOS")).toBe("Des Roll On Ekos");
+  });
+});
+
+describe("aliasKey", () => {
+  it("normaliza la descripción para reconocerla la próxima vez", () => {
+    expect(aliasKey("  Tododia  hid des fru v 400ml ")).toBe("TODODIA HID DES FRU V 400ML");
+    expect(aliasKey("x".repeat(200))).toHaveLength(160);
   });
 });
