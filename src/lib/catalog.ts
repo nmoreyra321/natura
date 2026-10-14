@@ -31,6 +31,8 @@ export type PublicProduct = Pick<
 
 export type PublicCategory = Pick<CategoryRow, "id" | "name" | "slug" | "description"> & {
   productCount: number;
+  /** Foto de un producto de la categoría (con stock y destacado primero), para mostrarla con imagen. */
+  image: string | null;
 };
 
 const PRODUCT_SELECT =
@@ -305,13 +307,23 @@ export const getActiveCategories = cache(async (): Promise<PublicCategory[]> => 
       .select("id, name, slug, description, position")
       .eq("is_visible", true)
       .order("position"),
-    supabase.from("products").select("category_id").eq("status", "published"),
+    supabase
+      .from("products")
+      .select("category_id, stock, is_featured, images:product_images(storage_path, position)")
+      .eq("status", "published"),
   ]);
   if (error || !categories) return [];
 
   const counts = new Map<string, number>();
+  const images = new Map<string, { path: string; score: number }>();
   for (const p of products ?? []) {
-    if (p.category_id) counts.set(p.category_id, (counts.get(p.category_id) ?? 0) + 1);
+    if (!p.category_id) continue;
+    counts.set(p.category_id, (counts.get(p.category_id) ?? 0) + 1);
+    const path = [...(p.images ?? [])].sort((a, b) => a.position - b.position)[0]?.storage_path;
+    if (!path) continue;
+    const score = (p.stock > 0 ? 2 : 0) + (p.is_featured ? 1 : 0);
+    const best = images.get(p.category_id);
+    if (!best || score > best.score) images.set(p.category_id, { path, score });
   }
   return categories
     .map((c) => ({
@@ -320,6 +332,7 @@ export const getActiveCategories = cache(async (): Promise<PublicCategory[]> => 
       slug: c.slug,
       description: c.description,
       productCount: counts.get(c.id) ?? 0,
+      image: images.get(c.id)?.path ?? null,
     }))
     .filter((c) => c.productCount > 0);
 });

@@ -46,12 +46,3 @@ export function HeroArt({ className = "" }: { className?: string }) {
     </svg>
   );
 }
-
-/** Onda decorativa para separar secciones. */
-export function Wave({ className = "", color = "var(--sun)" }: { className?: string; color?: string }) {
-  return (
-    <svg viewBox="0 0 1440 60" preserveAspectRatio="none" aria-hidden="true" className={`relative z-[1] -my-px block h-8 w-full sm:h-12 ${className}`}>
-      <path d="M0 30 C 120 0 240 60 360 30 S 600 0 720 30 S 960 60 1080 30 S 1320 0 1440 30 V60 H0 Z" fill={color} />
-    </svg>
-  );
-}
