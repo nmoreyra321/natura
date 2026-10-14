@@ -157,9 +157,9 @@ Cuando una clienta toca **Hacer pedido por WhatsApp**, el pedido queda guardado 
 
 Los precios del pedido los toma la base de datos, no el navegador. Las clientas no pueden ver ni modificar pedidos.
 
-### Inventario (cargar stock rápido)
+### Cargar stock rápido (Productos → pestaña «Cargar stock»)
 
-En **Inventario** está la lista de todos los productos con un casillero de cantidad. Escribí cuántos tenés y apretá **Enter**: se guarda y pasa al siguiente (también hay botones − / + para el celular). Con la opción **Publicar automáticamente** activada, cada producto al que le cargás stock se publica solo; los que quedan en 0 no cambian. Podés buscar por nombre, filtrar por categoría o ver solo los que están sin stock.
+En **Productos**, pestaña **Cargar stock**, está la lista de todos los productos con un casillero de cantidad. Escribí cuántos tenés y apretá **Enter**: se guarda y pasa al siguiente (también hay botones − / + para el celular). Con la opción **Publicar automáticamente** activada, cada producto al que le cargás stock se publica solo; los que quedan en 0 no cambian. Podés buscar por nombre, filtrar por categoría o ver solo los que están sin stock.
 
 ### Vencimientos
 

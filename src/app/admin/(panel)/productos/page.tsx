@@ -1,7 +1,8 @@
-import { Plus, Search } from "lucide-react";
+import { Boxes, List, Plus, Search } from "lucide-react";
 import Link from "next/link";
 
 import { BulkSelectionProvider, SelectAllCheckbox, SelectProductCheckbox } from "@/components/admin/bulk-selection";
+import { InventoryView } from "@/components/admin/inventory-view";
 import { ProductRowActions } from "@/components/admin/product-row-actions";
 import { LinkButton, buttonClasses } from "@/components/ui/button";
 import { inputClasses } from "@/components/ui/fields";
@@ -34,9 +35,43 @@ function pageHref(sp: Search, page: number) {
   return qs ? `/admin/productos?${qs}` : "/admin/productos";
 }
 
+/** Pestañas de Productos: lista/edición o carga rápida de stock. */
+function ProductTabs({ active }: { active: "lista" | "stock" }) {
+  const tab = (on: boolean) =>
+    `inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-bold ${on ? "bg-forest text-white" : "bg-warm-white shadow-soft hover:bg-sun"}`;
+  return (
+    <nav aria-label="Vista de productos" className="mt-4 flex flex-wrap gap-2">
+      <Link href="/admin/productos" aria-current={active === "lista" ? "page" : undefined} className={tab(active === "lista")}>
+        <List className="size-4" aria-hidden="true" /> Lista y edición
+      </Link>
+      <Link href="/admin/productos?vista=stock" aria-current={active === "stock" ? "page" : undefined} className={tab(active === "stock")}>
+        <Boxes className="size-4" aria-hidden="true" /> Cargar stock
+      </Link>
+    </nav>
+  );
+}
+
 export default async function AdminProductsPage({ searchParams }: { searchParams: Promise<Search> }) {
   const { supabase } = await requireAdmin();
   const sp = await searchParams;
+
+  if (one(sp.vista) === "stock") {
+    return (
+      <div className="mx-auto max-w-6xl">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <h1 className="font-display text-3xl font-bold">Productos</h1>
+          <LinkButton href="/admin/productos/nuevo">
+            <Plus className="size-5" aria-hidden="true" /> Nuevo producto
+          </LinkButton>
+        </div>
+        <ProductTabs active="stock" />
+        <div className="mt-5">
+          <InventoryView supabase={supabase} sp={sp} />
+        </div>
+      </div>
+    );
+  }
+
   const q = one(sp.q).trim().slice(0, 80);
   const estado = one(sp.estado);
   const stock = one(sp.stock);
@@ -91,7 +126,9 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
         </LinkButton>
       </div>
 
-      <form method="get" className="mt-6 grid grid-cols-2 gap-3 rounded-3xl bg-warm-white p-4 shadow-soft md:grid-cols-[1.4fr_1fr_1fr_1.1fr_auto]">
+      <ProductTabs active="lista" />
+
+      <form method="get" className="mt-5 grid grid-cols-2 gap-3 rounded-3xl bg-warm-white p-4 shadow-soft md:grid-cols-[1.4fr_1fr_1fr_1.1fr_auto]">
         <div className="col-span-2 md:col-span-1">
           <label htmlFor="aq" className="sr-only">Buscar por nombre</label>
           <input id="aq" name="q" type="search" defaultValue={q} placeholder="Buscar por nombre" className={`${inputClasses} h-11`} />

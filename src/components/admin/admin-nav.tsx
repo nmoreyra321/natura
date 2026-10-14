@@ -1,6 +1,6 @@
 "use client";
 
-import { BellRing, Boxes, CalendarClock, CirclePlus, HandCoins, ClipboardList, ExternalLink, LayoutDashboard, LogOut, Package, RefreshCw, Settings, Tags, TrendingUp } from "lucide-react";
+import { BellRing, CalendarClock, CirclePlus, HandCoins, ClipboardList, ExternalLink, LayoutDashboard, LogOut, Package, RefreshCw, Settings, Tags, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -14,7 +14,6 @@ const items = [
   { href: "/admin/deudas", label: "Quién me debe", icon: HandCoins },
   { href: "/admin/ventas", label: "Ventas", icon: TrendingUp },
   { href: "/admin/productos", label: "Productos", icon: Package },
-  { href: "/admin/inventario", label: "Inventario", icon: Boxes },
   { href: "/admin/vencimientos", label: "Vencimientos", icon: CalendarClock },
   { href: "/admin/avisos", label: "Avisos de stock", icon: BellRing },
   { href: "/admin/precios", label: "Precios Natura", icon: RefreshCw },
