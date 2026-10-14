@@ -221,9 +221,14 @@ export function CartView({
                       max={item.stock}
                       onChange={(n) => cart.setQuantity(item.productId, n)}
                     />
-                    <p className="font-bold tabular">
+                    <p className="text-right tabular">
                       <span className="sr-only">Subtotal: </span>
-                      {formatARS(unit * item.quantity)}
+                      <span className="font-bold">{formatARS(unit * item.quantity)}</span>
+                      {mag > unit ? (
+                        <span className="block text-xs font-semibold text-botanical-deep">
+                          Ahorrás {formatARS((mag - unit) * item.quantity)}
+                        </span>
+                      ) : null}
                     </p>
                   </div>
                   {item.quantity >= item.stock ? (
