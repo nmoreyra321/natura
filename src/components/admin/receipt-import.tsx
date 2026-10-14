@@ -365,7 +365,7 @@ export function ReceiptImport() {
             <p className="mt-2 flex items-start gap-2 rounded-2xl bg-sun/50 p-3 text-sm font-semibold">
               <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
               {missing === 1 ? "Hay 1 producto que no está en la página" : `Hay ${missing} productos que no están en la página`}: se van a
-              crear como nuevos (revisá el nombre y el precio) o elegí a cuál corresponden.
+              crear como nuevos (revisá el nombre y el precio), o buscá si ya están cargados con otro nombre.
             </p>
           ) : null}
         </div>
@@ -431,36 +431,38 @@ export function ReceiptImport() {
               </div>
 
               {r.mode === "new" ? (
-                <div className="mt-3 grid gap-3 sm:grid-cols-[2fr_1fr]">
-                  <label className="text-sm font-semibold">
-                    Nombre del producto nuevo
-                    <input
-                      value={r.newName}
-                      onChange={(e) => update(r.key, { newName: e.target.value })}
-                      maxLength={120}
-                      className={`${inputClasses} mt-1 h-11`}
-                    />
-                  </label>
-                  <label className="text-sm font-semibold">
-                    Precio de revista
-                    <input
-                      value={r.newPrice}
-                      onChange={(e) => update(r.key, { newPrice: e.target.value })}
-                      inputMode="decimal"
-                      placeholder="Ej.: 25000"
-                      className={`${inputClasses} mt-1 h-11`}
-                    />
-                  </label>
-                  {Number.isFinite(parseMoney(r.newPrice)) && parseMoney(r.newPrice) > 0 ? (
-                    <p className="text-xs text-muted sm:col-span-2">Se va a vender a {formatARS(Math.round(parseMoney(r.newPrice) * 100))}.</p>
-                  ) : null}
-                  <button
-                    type="button"
-                    onClick={() => update(r.key, { mode: "existing", match: null })}
-                    className="justify-self-start text-sm font-bold text-coral-deep underline sm:col-span-2"
-                  >
-                    No, ya está en la página con otro nombre
-                  </button>
+                <div className="mt-3 flex flex-col gap-3">
+                  <div className="rounded-2xl bg-cream p-3">
+                    <p className="text-sm font-semibold">¿Ya está en la página con otro nombre? Buscalo y tocalo:</p>
+                    <div className="mt-2">
+                      <ProductPicker placeholder="Buscá (ej.: pitanga)" onPick={(p) => linkTo(r.key, p)} />
+                    </div>
+                  </div>
+                  <p className="text-sm font-semibold">Si no está, se crea como producto nuevo:</p>
+                  <div className="grid gap-3 sm:grid-cols-[2fr_1fr]">
+                    <label className="text-sm font-semibold">
+                      Nombre del producto nuevo
+                      <input
+                        value={r.newName}
+                        onChange={(e) => update(r.key, { newName: e.target.value })}
+                        maxLength={120}
+                        className={`${inputClasses} mt-1 h-11`}
+                      />
+                    </label>
+                    <label className="text-sm font-semibold">
+                      Precio de revista
+                      <input
+                        value={r.newPrice}
+                        onChange={(e) => update(r.key, { newPrice: e.target.value })}
+                        inputMode="decimal"
+                        placeholder="Ej.: 25000"
+                        className={`${inputClasses} mt-1 h-11`}
+                      />
+                    </label>
+                    {Number.isFinite(parseMoney(r.newPrice)) && parseMoney(r.newPrice) > 0 ? (
+                      <p className="text-xs text-muted sm:col-span-2">Se va a vender a {formatARS(Math.round(parseMoney(r.newPrice) * 100))}.</p>
+                    ) : null}
+                  </div>
                 </div>
               ) : !r.match ? (
                 <div className="mt-3">
@@ -506,7 +508,7 @@ export function ReceiptImport() {
             className={buttonClasses("primary", "lg", "flex-1")}
           >
             {saving ? <Loader2 className="size-5 animate-spin" aria-hidden="true" /> : <CheckCircle2 className="size-5" aria-hidden="true" />}
-            Confirmar ({units} {units === 1 ? "unidad" : "unidades"})
+            Confirmar ({units}<span className="hidden sm:inline">&nbsp;{units === 1 ? "unidad" : "unidades"}</span>)
           </button>
           <button type="button" onClick={restart} disabled={saving} className={buttonClasses("outline", "lg")}>
             Cancelar
