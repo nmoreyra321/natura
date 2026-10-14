@@ -142,7 +142,14 @@ export function CartDrawer() {
               ) : null}
               <p className="mt-1 flex items-baseline justify-between tabular">
                 <span className="text-lg font-bold">Total</span>
-                <span className="text-2xl font-extrabold text-coral-deep">{formatARS(totals.totalCents)}</span>
+                <span className="flex items-baseline gap-2">
+                  {totals.savingsCents > 0 ? (
+                    <span className="text-base font-semibold text-muted line-through" aria-label="Precio de revista">
+                      {formatARS(totals.totalCents + totals.savingsCents)}
+                    </span>
+                  ) : null}
+                  <span className="text-2xl font-extrabold text-coral-deep">{formatARS(totals.totalCents)}</span>
+                </span>
               </p>
               <LinkButton href="/carrito" size="lg" className="mt-3 w-full">
                 Ver carrito y hacer pedido

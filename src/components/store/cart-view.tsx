@@ -244,14 +244,28 @@ export function CartView({
             <dd>{totals.units}</dd>
           </div>
           {totals.savingsCents > 0 ? (
-            <div className="flex justify-between font-semibold text-botanical-deep">
-              <dt>Ahorrás frente a revista</dt>
-              <dd>{formatARS(totals.savingsCents)}</dd>
-            </div>
+            <>
+              <div className="flex justify-between font-semibold text-botanical-deep">
+                <dt>Ahorrás frente a revista</dt>
+                <dd className="tabular">
+                  {formatARS(totals.savingsCents)}{" "}
+                  <span className="rounded-full bg-sage px-1.5 py-0.5 text-xs">
+                    −{Math.floor((totals.savingsCents * 100) / (totals.totalCents + totals.savingsCents))}%
+                  </span>
+                </dd>
+              </div>
+            </>
           ) : null}
-          <div className="mt-2 flex items-baseline justify-between border-t border-line pt-3">
+          <div className="mt-2 flex items-baseline justify-between gap-2 border-t border-line pt-3">
             <dt className="text-lg font-bold">Total</dt>
-            <dd className="text-2xl font-extrabold text-coral-deep">{formatARS(totals.totalCents)}</dd>
+            <dd className="flex flex-wrap items-baseline justify-end gap-x-2 text-right">
+              {totals.savingsCents > 0 ? (
+                <span className="text-base font-semibold text-muted line-through tabular" aria-label="Precio de revista">
+                  {formatARS(totals.totalCents + totals.savingsCents)}
+                </span>
+              ) : null}
+              <span className="text-2xl font-extrabold text-coral-deep tabular">{formatARS(totals.totalCents)}</span>
+            </dd>
           </div>
         </dl>
 
