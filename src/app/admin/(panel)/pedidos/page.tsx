@@ -6,6 +6,7 @@ import { OrderActions } from "@/components/admin/order-actions";
 import { buttonClasses } from "@/components/ui/button";
 import { requireAdmin } from "@/lib/auth";
 import { formatARS } from "@/lib/format";
+import { formatExpiry } from "@/lib/lots";
 import { toCents } from "@/lib/pricing";
 
 export const metadata = { title: "Pedidos" };
@@ -55,7 +56,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
   let query = supabase
     .from("orders")
     .select(
-      "id, number, status, customer_name, total, savings, created_at, items:order_items(id, name, size, quantity, unit_price)",
+      "id, number, status, customer_name, total, savings, created_at, items:order_items(id, product_id, name, size, quantity, unit_price), lots:order_lot_allocations(product_id, expires_on, quantity)",
       { count: "exact" },
     )
     .order("created_at", { ascending: false })
@@ -131,6 +132,15 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
                       <span className="min-w-0">
                         <span className="font-bold tabular">{i.quantity} ×</span> {i.name}
                         {i.size ? <span className="text-muted"> ({i.size})</span> : null}
+                        {o.lots.some((l) => l.product_id === i.product_id) ? (
+                          <span className="block text-xs text-muted">
+                            Salió de:{" "}
+                            {o.lots
+                              .filter((l) => l.product_id === i.product_id)
+                              .map((l) => `${l.quantity} u. vto. ${formatExpiry(l.expires_on)}`)
+                              .join(", ")}
+                          </span>
+                        ) : null}
                       </span>
                       <span className="shrink-0 tabular">{formatARS(toCents(i.unit_price) * i.quantity)}</span>
                     </li>

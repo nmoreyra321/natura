@@ -136,7 +136,7 @@ Los precios del pedido los toma la base de datos, no el navegador. Las clientas 
 
 En **Vencimientos** cargás las fechas por lote, rápido y con el teclado: escribí parte del nombre, Enter, el vencimiento como figura en el envase (`0129` = 01/29, vence a fin de enero de 2029), la cantidad y Enter. El cursor vuelve solo al buscador para el siguiente; si cargás dos veces el mismo producto con la misma fecha, se suman las unidades.
 
-La lista **Por vencer** muestra lo que vence en los próximos 3 meses (lo vencido, en rojo), y el inicio del panel avisa cuántos lotes hay. En cada lote podés **restar 1** cuando vendés una unidad o tocar **Ya no lo tengo**.
+La lista **Por vencer** muestra lo que vence en los próximos 3 meses (lo vencido, en rojo), y el inicio del panel avisa cuántos lotes hay. Al **confirmar un pedido** se descuentan solas las unidades de los lotes, empezando por el que vence primero (en el pedido figura de qué vencimiento salió cada una); si el pedido se cancela o vuelve a pendiente, vuelven a su lote. Para ventas fuera de la tienda, en cada lote podés **restar 1** o tocar **Ya no lo tengo**.
 
 ### Ventas
 

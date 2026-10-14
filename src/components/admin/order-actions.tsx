@@ -11,7 +11,7 @@ import { ConfirmDialog } from "./confirm-dialog";
 
 const SUCCESS: Record<OrderStatus, string> = {
   pending: "El pedido volvió a pendiente.",
-  confirmed: "Pedido confirmado. Descontamos el stock.",
+  confirmed: "Pedido confirmado. Descontamos el stock y los vencimientos (primero el que vence antes).",
   delivered: "Pedido marcado como entregado.",
   cancelled: "Pedido cancelado.",
 };
@@ -61,7 +61,7 @@ export function OrderActions({ id, number, status }: { id: string; number: numbe
         description={
           status === "pending"
             ? "El pedido queda como cancelado. No cambia el stock."
-            : "El pedido queda como cancelado y devolvemos al stock las unidades que se habían descontado."
+            : "El pedido queda como cancelado y devolvemos al stock y a sus vencimientos las unidades que se habían descontado."
         }
         confirmLabel="Cancelar pedido"
         onConfirm={() => {

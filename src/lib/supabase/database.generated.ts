@@ -52,6 +52,33 @@ export type Database = {
                   Relationships: [
                     
                   ]
+                },"order_lot_allocations": {
+                  Row: {
+                    "expires_on": string,"id": string,"order_id": string,"product_id": string,"quantity": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "expires_on": string,"id"?: string,"order_id": string,"product_id": string,"quantity": number
+                  }
+                  Update: {
+                    "expires_on"?: string,"id"?: string,"order_id"?: string,"product_id"?: string,"quantity"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "order_lot_allocations_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "orders"
+      referencedColumns: ["id"]
+    },
+                    {
+      foreignKeyName: "order_lot_allocations_product_id_fkey"
+      columns: ["product_id"]
+isOneToOne: false
+      referencedRelation: "products"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"order_items": {
                   Row: {
                     "id": string,"magazine_price": number,"name": string,"order_id": string,"product_id": string | null,"quantity": number,"size": string | null,"unit_price": number
