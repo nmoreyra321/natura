@@ -1,6 +1,6 @@
 "use server";
 
-import { ApiError, createPartFromBase64, GoogleGenAI } from "@google/genai";
+import { ApiError, createPartFromBase64, GoogleGenAI, type Part } from "@google/genai";
 import { revalidatePath, updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -998,8 +998,11 @@ const RECEIPT_JSON_SCHEMA = {
   required: ["items"],
 };
 
-/** Modelo de Google que lee la boleta (con uso gratis). Se puede cambiar con GEMINI_MODEL. */
-const RECEIPT_MODEL = process.env.GEMINI_MODEL || "gemini-flash-latest";
+/**
+ * Modelos de Google que leen la boleta (con uso gratis), en orden. Si el primero está saturado
+ * se prueba con el de repuesto. El principal se puede cambiar con GEMINI_MODEL.
+ */
+const RECEIPT_MODELS = [process.env.GEMINI_MODEL || "gemini-flash-latest", "gemini-flash-lite-latest"];
 
 const RECEIPT_PROMPT = `Estas fotos son de una boleta, factura o remito de un pedido de Natura (Argentina) hecho por una consultora. Si hay varias fotos son partes de la misma boleta.
 Extraé cada renglón que sea un producto (perfumes, cremas, maquillaje, kits, repuestos, etc.):
@@ -1021,7 +1024,7 @@ export async function readReceipt(formData: FormData): Promise<ActionResult<Rece
     if (files.length === 0) return { ok: false, error: "Sacá o elegí una foto de la boleta." };
     if (files.length > MAX_RECEIPT_PHOTOS) return { ok: false, error: `Podés subir hasta ${MAX_RECEIPT_PHOTOS} fotos por boleta.` };
 
-    const images = [];
+    const images: Part[] = [];
     for (const file of files) {
       const type = RECEIPT_IMAGE_TYPES.find((t) => t === file.type);
       if (!type || file.size > 4_000_000) return { ok: false, error: "La foto tiene que ser JPG, PNG o WEBP de menos de 4 MB." };
@@ -1029,11 +1032,21 @@ export async function readReceipt(formData: FormData): Promise<ActionResult<Rece
     }
 
     const ai = new GoogleGenAI({ apiKey });
-    const response = await ai.models.generateContent({
-      model: RECEIPT_MODEL,
-      contents: [{ role: "user", parts: [...images, { text: RECEIPT_PROMPT }] }],
-      config: { responseMimeType: "application/json", responseJsonSchema: RECEIPT_JSON_SCHEMA },
-    });
+    const ask = (model: string) =>
+      ai.models.generateContent({
+        model,
+        contents: [{ role: "user", parts: [...images, { text: RECEIPT_PROMPT }] }],
+        config: { responseMimeType: "application/json", responseJsonSchema: RECEIPT_JSON_SCHEMA },
+      });
+    let response;
+    try {
+      response = await ask(RECEIPT_MODELS[0]);
+    } catch (e) {
+      // Saturado o con límite: se prueba una vez con el modelo de repuesto.
+      if (!(e instanceof ApiError) || ![429, 500, 503, 504].includes(e.status)) throw e;
+      console.warn("[admin] readReceipt: modelo principal no disponible, uso el de repuesto", e.status);
+      response = await ask(RECEIPT_MODELS[1]);
+    }
     let parsed: z.infer<typeof ReceiptSchema> | null = null;
     try {
       const result = ReceiptSchema.safeParse(JSON.parse(response.text ?? ""));
