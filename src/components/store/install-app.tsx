@@ -50,6 +50,32 @@ function useInstallMode(): Mode {
   );
 }
 
+/** Primer paso en iPhone: dónde está el botón Compartir depende del navegador. */
+function iosShareStep() {
+  const ua = typeof navigator === "undefined" ? "" : navigator.userAgent;
+  if (/CriOS/.test(ua)) {
+    return (
+      <>
+        Tocá el botón <strong>Compartir</strong> de Chrome: el cuadrado con la flecha, arriba a la derecha, al lado de
+        la dirección.
+      </>
+    );
+  }
+  if (/FxiOS|EdgiOS|OPiOS/.test(ua)) {
+    return (
+      <>
+        Tocá el menú del navegador y elegí <strong>Compartir</strong>.
+      </>
+    );
+  }
+  return (
+    <>
+      Tocá el botón <strong>Compartir</strong> de Safari (el cuadrado con la flecha). Si no lo ves, tocá primero los{" "}
+      <strong>tres puntitos ⋯</strong>.
+    </>
+  );
+}
+
 /** Botón "Instalar app": en Android/Chrome abre el aviso del navegador; en iPhone muestra cómo hacerlo. */
 export function InstallAppButton({ className = "" }: { className?: string }) {
   const mode = useInstallMode();
@@ -110,13 +136,16 @@ export function InstallAppButton({ className = "" }: { className?: string }) {
               <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-sun">
                 <Share className="size-4.5" aria-hidden="true" />
               </span>
-              Tocá el botón <strong>Compartir</strong> de Safari.
+              <span>{iosShareStep()}</span>
             </li>
             <li className="flex items-center gap-3">
               <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-sage">
                 <SquarePlus className="size-4.5" aria-hidden="true" />
               </span>
-              Elegí <strong>Agregar a inicio</strong>.
+              <span>
+                Bajá un poco y elegí <strong>Agregar a pantalla de inicio</strong>. Si no aparece, tocá{" "}
+                <strong>Ver más</strong>.
+              </span>
             </li>
           </ol>
           <p className="mt-4 text-sm text-muted">La tienda queda como una app en tu pantalla de inicio.</p>
