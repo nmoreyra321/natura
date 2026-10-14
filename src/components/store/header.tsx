@@ -4,6 +4,7 @@ import { Menu, MessageCircle, Search, ShoppingBag, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 import { cartCount, cartDrawer, useCart } from "@/lib/cart-store";
 import { CartDrawer } from "./cart-drawer";
@@ -144,7 +145,9 @@ export function Header({ categories }: { categories: NavCategory[] }) {
         </div>
       ) : null}
 
-      {open ? (
+      {/* Portal: el backdrop-blur del header encierra a los hijos "fixed" dentro de su caja. */}
+      {open
+        ? createPortal(
         <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label="Menú">
           <button
             type="button"
@@ -206,8 +209,10 @@ export function Header({ categories }: { categories: NavCategory[] }) {
               </div>
             ) : null}
           </div>
-        </div>
-      ) : null}
+        </div>,
+            document.body,
+          )
+        : null}
     </header>
   );
 }
