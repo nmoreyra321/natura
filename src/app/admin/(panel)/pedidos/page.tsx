@@ -2,7 +2,7 @@ import { ClipboardList } from "lucide-react";
 import Link from "next/link";
 
 import type { OrderStatus } from "@/app/admin/actions";
-import { OrderActions } from "@/components/admin/order-actions";
+import { OrderActions, PaymentControl } from "@/components/admin/order-actions";
 import { buttonClasses } from "@/components/ui/button";
 import { requireAdmin } from "@/lib/auth";
 import { formatARS } from "@/lib/format";
@@ -30,12 +30,14 @@ const PAYMENT_LABELS: Record<string, { label: string; tone: string }> = {
   charged_back: { label: "Mercado Pago · Contracargo", tone: "bg-coral-soft text-coral-deep" },
 };
 
-function paymentBadge(method: string, status: string | null) {
+function paymentBadge(method: string, status: string | null, paidCents = 0, totalCents = 0) {
   if (method !== "mercadopago") {
     const label = method === "transferencia" ? "Transferencia" : "Efectivo";
-    return status === "approved"
-      ? { label: `${label} · Pagado ✓`, tone: "bg-botanical-deep text-white" }
-      : { label: `${label} · Sin cobrar`, tone: "bg-coral-soft text-coral-deep" };
+    if (status === "approved") return { label: `${label} · Pagado ✓`, tone: "bg-botanical-deep text-white" };
+    if (paidCents > 0) {
+      return { label: `${label} · Pagó una parte (falta ${formatARS(totalCents - paidCents)})`, tone: "bg-sun text-forest" };
+    }
+    return { label: `${label} · Sin cobrar`, tone: "bg-coral-soft text-coral-deep" };
   }
   return PAYMENT_LABELS[status ?? "pending"] ?? PAYMENT_LABELS.pending;
 }
@@ -77,7 +79,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
   let query = supabase
     .from("orders")
     .select(
-      "id, number, code, status, customer_name, total, savings, created_at, payment_method, payment_status, paid_at, items:order_items(id, product_id, name, size, quantity, unit_price), lots:order_lot_allocations(product_id, expires_on, quantity)",
+      "id, number, code, status, customer_name, total, savings, created_at, payment_method, payment_status, paid_at, amount_paid, payment_note, items:order_items(id, product_id, name, size, quantity, unit_price), lots:order_lot_allocations(product_id, expires_on, quantity)",
       { count: "exact" },
     )
     .order("created_at", { ascending: false })
@@ -141,9 +143,9 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
                         {STATUS_LABELS[status].label}
                       </span>
                       <span
-                        className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${paymentBadge(o.payment_method, o.payment_status).tone}`}
+                        className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${paymentBadge(o.payment_method, o.payment_status, toCents(o.amount_paid), toCents(o.total)).tone}`}
                       >
-                        {paymentBadge(o.payment_method, o.payment_status).label}
+                        {paymentBadge(o.payment_method, o.payment_status, toCents(o.amount_paid), toCents(o.total)).label}
                       </span>
                     </p>
                     <p className="text-sm text-muted">
@@ -179,14 +181,23 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
                     </li>
                   ))}
                 </ul>
+                {o.payment_note && o.payment_status !== "approved" ? (
+                  <p className="mt-3 rounded-2xl bg-sun/40 px-3 py-2 text-sm">
+                    <span className="font-semibold">Nota del cobro:</span> {o.payment_note}
+                  </p>
+                ) : null}
+                {o.payment_method !== "mercadopago" && status !== "cancelled" ? (
+                  <div className="mt-3">
+                    <PaymentControl
+                      key={`${o.amount_paid}-${o.total}`}
+                      id={o.id}
+                      totalCents={toCents(o.total)}
+                      paidCents={toCents(o.amount_paid)}
+                    />
+                  </div>
+                ) : null}
                 <div className="mt-3">
-                  <OrderActions
-                    id={o.id}
-                    code={o.code}
-                    status={status}
-                    manualPayment={o.payment_method !== "mercadopago"}
-                    paid={o.payment_status === "approved"}
-                  />
+                  <OrderActions id={o.id} code={o.code} status={status} />
                 </div>
               </li>
             );

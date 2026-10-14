@@ -1,11 +1,13 @@
 "use client";
 
 import { BadgeCheck, Check, PackageCheck, RotateCcw, Undo2, X } from "lucide-react";
+import { formatARS } from "@/lib/format";
+import { parseMoney } from "@/lib/validation";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 
-import { setOrderPaid, setOrderStatus, type OrderStatus } from "@/app/admin/actions";
+import { registerOrderPayment, resetOrderPayment, setOrderStatus, type OrderStatus } from "@/app/admin/actions";
 import { buttonClasses } from "@/components/ui/button";
 import { ConfirmDialog } from "./confirm-dialog";
 
@@ -21,15 +23,10 @@ export function OrderActions({
   id,
   code,
   status,
-  manualPayment = false,
-  paid = false,
 }: {
   id: string;
   code: string;
   status: OrderStatus;
-  /** true si es efectivo o transferencia (el pago se marca a mano). */
-  manualPayment?: boolean;
-  paid?: boolean;
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -46,35 +43,9 @@ export function OrderActions({
       }
     });
 
-  const togglePaid = (next: boolean) =>
-    start(async () => {
-      const res = await setOrderPaid(id, next);
-      if (res.ok) {
-        toast.success(res.message ?? "Listo.");
-        router.refresh();
-      } else {
-        toast.error(res.error);
-      }
-    });
-
   return (
     <div className="flex flex-wrap gap-2">
-      {manualPayment && status !== "cancelled" ? (
-        paid ? (
-          <button type="button" disabled={pending} onClick={() => togglePaid(false)} className={buttonClasses("ghost", "md")}>
-            <Undo2 className="size-4" aria-hidden="true" /> Desmarcar pago
-          </button>
-        ) : (
-          <button
-            type="button"
-            disabled={pending}
-            onClick={() => togglePaid(true)}
-            className={buttonClasses("secondary", "md")}
-          >
-            <BadgeCheck className="size-4" aria-hidden="true" /> Pago recibido
-          </button>
-        )
-      ) : null}
+
       {status === "pending" ? (
         <button type="button" disabled={pending} onClick={() => change("confirmed")} className={buttonClasses("primary", "md")}>
           <Check className="size-4" aria-hidden="true" /> Confirmar
@@ -111,5 +82,102 @@ export function OrderActions({
         onCancel={() => setConfirmCancel(false)}
       />
     </div>
+  );
+}
+
+/**
+ * Cobro de pedidos en efectivo o transferencia: se anota cada pago (seña y resto, o todo junto).
+ * Cuando lo pagado cubre el total, el pedido queda "Pagado".
+ */
+export function PaymentControl({
+  id,
+  totalCents,
+  paidCents,
+}: {
+  id: string;
+  totalCents: number;
+  paidCents: number;
+}) {
+  const router = useRouter();
+  const [pending, start] = useTransition();
+  const remainingCents = Math.max(totalCents - paidCents, 0);
+  const [amount, setAmount] = useState(String(remainingCents / 100).replace(".", ","));
+  const [note, setNote] = useState("");
+
+  const run = (fn: () => ReturnType<typeof resetOrderPayment>) =>
+    start(async () => {
+      const res = await fn();
+      if (res.ok) {
+        toast.success(res.message ?? "Listo.");
+        router.refresh();
+      } else {
+        toast.error(res.error);
+      }
+    });
+
+  if (remainingCents === 0) {
+    return (
+      <button type="button" disabled={pending} onClick={() => run(() => resetOrderPayment(id))} className={buttonClasses("ghost", "sm")}>
+        <Undo2 className="size-4" aria-hidden="true" /> Desmarcar pago
+      </button>
+    );
+  }
+
+  const value = parseMoney(amount);
+  return (
+    <form
+      className="flex flex-wrap items-end gap-2 rounded-2xl bg-cream/70 p-2.5"
+      onSubmit={(e) => {
+        e.preventDefault();
+        run(() => registerOrderPayment(id, value, value * 100 < remainingCents ? note : undefined));
+      }}
+    >
+      <label className="flex flex-col text-xs font-semibold">
+        Monto que pagó
+        <span className="mt-1 flex items-center gap-1">
+          <span className="text-sm">$</span>
+          <input
+            inputMode="decimal"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            className="h-10 w-28 rounded-xl border border-line bg-white px-2 text-sm tabular"
+          />
+        </span>
+      </label>
+      {Number.isFinite(value) && value > 0 && value * 100 < remainingCents ? (
+        <label className="flex min-w-40 flex-1 flex-col text-xs font-semibold">
+          Nota (opcional)
+          <input
+            value={note}
+            maxLength={120}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="Ej.: el resto el lunes"
+            className="mt-1 h-10 rounded-xl border border-line bg-white px-2 text-sm font-normal"
+          />
+        </label>
+      ) : null}
+      <button
+        type="submit"
+        disabled={pending || !Number.isFinite(value) || value <= 0}
+        className={buttonClasses("secondary", "sm", "h-10")}
+      >
+        <BadgeCheck className="size-4" aria-hidden="true" /> Registrar pago
+      </button>
+      {paidCents > 0 ? (
+        <button
+          type="button"
+          disabled={pending}
+          onClick={() => run(() => resetOrderPayment(id))}
+          className="h-10 px-2 text-xs font-semibold text-muted underline hover:text-coral-deep"
+        >
+          Borrar pagos
+        </button>
+      ) : null}
+      <p className="w-full text-xs text-muted">
+        {paidCents > 0
+          ? `Ya pagó ${formatARS(paidCents)} de ${formatARS(totalCents)}. Falta ${formatARS(remainingCents)}.`
+          : `Total del pedido: ${formatARS(totalCents)}. Si te pagó una parte, escribí solo esa parte.`}
+      </p>
+    </form>
   );
 }

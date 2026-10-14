@@ -8,7 +8,8 @@ import { PRODUCT_IMAGES_BUCKET } from "@/lib/config";
 import { isValidProductImagePath, MAX_IMAGES_PER_PRODUCT } from "@/lib/images";
 import type { NaturaLookup } from "@/lib/natura";
 import { parseExpiry } from "@/lib/lots";
-import { isValidPrice, planMagazinePriceUpdate, salePriceFromDiscount } from "@/lib/pricing";
+import { formatARS } from "@/lib/format";
+import { isValidPrice, planMagazinePriceUpdate, salePriceFromDiscount, toCents } from "@/lib/pricing";
 import { nameSearchPatterns } from "@/lib/search";
 import { slugify } from "@/lib/slug";
 import { createSessionClient, CATALOG_TAG } from "@/lib/supabase/server";
@@ -302,22 +303,63 @@ export async function setOrderStatus(orderId: string, status: OrderStatus): Prom
   }
 }
 
-/** Marca (o desmarca) que se recibió el pago de un pedido en efectivo o por transferencia. */
-export async function setOrderPaid(orderId: string, paid: boolean): Promise<ActionResult> {
+/**
+ * Anota un pago (total o parcial) de un pedido en efectivo o por transferencia.
+ * Suma el monto a lo ya pagado; cuando cubre el total, el pedido queda "Pagado".
+ */
+export async function registerOrderPayment(orderId: string, amount: number, note?: string): Promise<ActionResult> {
   try {
     const { supabase } = await assertAdmin();
-    if (!/^[0-9a-f-]{36}$/.test(orderId)) return { ok: false, error: "Datos inválidos." };
+    if (!UUID_RE.test(orderId) || !Number.isFinite(amount) || amount <= 0 || amount > 100_000_000) {
+      return { ok: false, error: "Escribí un monto válido." };
+    }
+    const { data: order, error: readError } = await supabase
+      .from("orders")
+      .select("total, amount_paid, payment_method")
+      .eq("id", orderId)
+      .maybeSingle();
+    if (readError) return fail(readError, "No pudimos leer el pedido.");
     // Los pagos de Mercado Pago los confirma Mercado Pago, no se tocan a mano.
+    if (!order || order.payment_method === "mercadopago") return { ok: false, error: "No encontramos ese pedido." };
+
+    const totalCents = toCents(order.total);
+    const paidCents = toCents(order.amount_paid) + toCents(amount);
+    const complete = paidCents >= totalCents;
+    const { error } = await supabase
+      .from("orders")
+      .update({
+        amount_paid: paidCents / 100,
+        payment_status: complete ? "approved" : null,
+        paid_at: complete ? new Date().toISOString() : null,
+        payment_note: complete ? null : note?.trim().slice(0, 120) || null,
+      })
+      .eq("id", orderId);
+    if (error) return fail(error, "No pudimos anotar el pago.");
+    revalidatePath("/admin/pedidos");
+    return {
+      ok: true,
+      message: complete ? "Pedido pagado por completo." : `Pago anotado. Falta ${formatARS(totalCents - paidCents)}.`,
+    };
+  } catch (e) {
+    return fail(e, "No pudimos anotar el pago.");
+  }
+}
+
+/** Borra los pagos anotados de un pedido (por si se cargó mal). */
+export async function resetOrderPayment(orderId: string): Promise<ActionResult> {
+  try {
+    const { supabase } = await assertAdmin();
+    if (!UUID_RE.test(orderId)) return { ok: false, error: "Datos inválidos." };
     const { data, error } = await supabase
       .from("orders")
-      .update(paid ? { payment_status: "approved", paid_at: new Date().toISOString() } : { payment_status: null, paid_at: null })
+      .update({ amount_paid: 0, payment_status: null, paid_at: null, payment_note: null })
       .eq("id", orderId)
       .neq("payment_method", "mercadopago")
       .select("id");
     if (error) return fail(error, "No pudimos actualizar el pago.");
     if (!data?.length) return { ok: false, error: "No encontramos ese pedido." };
     revalidatePath("/admin/pedidos");
-    return { ok: true, message: paid ? "Pago marcado como recibido." : "Pago marcado como pendiente." };
+    return { ok: true, message: "Pagos borrados: el pedido quedó sin cobrar." };
   } catch (e) {
     return fail(e, "No pudimos actualizar el pago.");
   }
