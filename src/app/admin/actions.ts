@@ -1,7 +1,10 @@
 "use server";
 
+import Anthropic from "@anthropic-ai/sdk";
+import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { revalidatePath, updateTag } from "next/cache";
 import { redirect } from "next/navigation";
+import { z } from "zod";
 
 import { assertAdmin, UnauthorizedError } from "@/lib/auth";
 import { PRODUCT_IMAGES_BUCKET } from "@/lib/config";
@@ -12,6 +15,7 @@ import { toWhatsAppPhone } from "@/lib/debts";
 import { formatARS } from "@/lib/format";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isValidPrice, planMagazinePriceUpdate, salePriceFromDiscount, toCents } from "@/lib/pricing";
+import { codeKey, mergeReceiptItems, skuFromCode, skuVariants } from "@/lib/receipt";
 import { nameSearchPatterns } from "@/lib/search";
 import { slugify } from "@/lib/slug";
 import { createSessionClient, CATALOG_TAG } from "@/lib/supabase/server";
@@ -945,5 +949,201 @@ export async function deleteRestockRequest(requestId: string): Promise<ActionRes
     return { ok: true, message: "Aviso borrado." };
   } catch (e) {
     return fail(e, "No pudimos borrar el aviso.");
+  }
+}
+
+/* ------------------------- Boleta de Natura (foto) ------------------------- */
+
+export type ReceiptMatch = { id: string; name: string; size: string | null; stock: number; image: string | null; status: string };
+export type ReceiptLine = {
+  code: string;
+  description: string;
+  quantity: number;
+  unitPrice: number | null;
+  match: ReceiptMatch | null;
+};
+
+const RECEIPT_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
+const MAX_RECEIPT_PHOTOS = 3;
+
+const ReceiptSchema = z.object({
+  items: z.array(
+    z.object({
+      code: z.string().describe("Código de producto de Natura tal como figura (solo números). Vacío si no hay."),
+      description: z.string().describe("Descripción del producto tal como figura en la boleta."),
+      quantity: z.number().describe("Cantidad de unidades."),
+      unit_price: z.number().nullable().describe("Precio de lista (revista) por unidad, sin descuentos. Null si no figura."),
+    }),
+  ),
+});
+
+const RECEIPT_PROMPT = `Estas fotos son de una boleta, factura o remito de un pedido de Natura (Argentina) hecho por una consultora. Si hay varias fotos son partes de la misma boleta.
+Extraé cada renglón que sea un producto (perfumes, cremas, maquillaje, kits, repuestos, etc.):
+- code: el código de producto de Natura (normalmente de 4 a 6 números). Vacío si no se ve.
+- description: la descripción tal como está escrita.
+- quantity: cuántas unidades llegaron de ese producto.
+- unit_price: el precio de lista o de revista por unidad (antes de descuentos), si figura; si no, null.
+No incluyas totales, subtotales, impuestos, envío, descuentos, puntos, folletos ni revistas. Si un renglón está borroso, igual incluilo con lo que se pueda leer; no inventes renglones.`;
+
+/** Lee la foto de la boleta con inteligencia artificial y la cruza con los productos de la tienda. */
+export async function readReceipt(formData: FormData): Promise<ActionResult<ReceiptLine[]>> {
+  try {
+    const { supabase } = await assertAdmin();
+    if (!process.env.ANTHROPIC_API_KEY) {
+      return { ok: false, error: "Falta activar la lectura de boletas (clave de Anthropic). Pedile a quien te armó la página que la configure." };
+    }
+    const files = formData.getAll("foto").filter((f): f is File => f instanceof File && f.size > 0);
+    if (files.length === 0) return { ok: false, error: "Sacá o elegí una foto de la boleta." };
+    if (files.length > MAX_RECEIPT_PHOTOS) return { ok: false, error: `Podés subir hasta ${MAX_RECEIPT_PHOTOS} fotos por boleta.` };
+
+    const images: Anthropic.ImageBlockParam[] = [];
+    for (const file of files) {
+      const type = RECEIPT_IMAGE_TYPES.find((t) => t === file.type);
+      if (!type || file.size > 4_000_000) return { ok: false, error: "La foto tiene que ser JPG, PNG o WEBP de menos de 4 MB." };
+      images.push({ type: "image", source: { type: "base64", media_type: type, data: Buffer.from(await file.arrayBuffer()).toString("base64") } });
+    }
+
+    const client = new Anthropic();
+    const response = await client.messages.parse({
+      model: "claude-opus-5-5",
+      max_tokens: 16000,
+      messages: [{ role: "user", content: [...images, { type: "text", text: RECEIPT_PROMPT }] }],
+      output_config: { format: zodOutputFormat(ReceiptSchema) },
+    });
+    if (response.stop_reason === "refusal" || !response.parsed_output) {
+      return { ok: false, error: "No pudimos leer la boleta. Probá con otra foto, con más luz y derecha." };
+    }
+
+    const items = mergeReceiptItems(
+      response.parsed_output.items.map((i) => ({ code: i.code, description: i.description, quantity: i.quantity, unitPrice: i.unit_price })),
+    );
+    if (items.length === 0) return { ok: false, error: "No encontramos productos en la foto. Probá con otra, que se vea toda la lista." };
+
+    // Cruce por código de Natura.
+    const keys = [...new Set(items.map((i) => codeKey(i.code)).filter((k): k is string => k !== null))];
+    const bySku = new Map<string, ReceiptMatch>();
+    if (keys.length > 0) {
+      const { data } = await supabase
+        .from("products")
+        .select("id, name, size, stock, status, natura_sku, images:product_images(storage_path, position)")
+        .in("natura_sku", keys.flatMap(skuVariants));
+      for (const p of data ?? []) {
+        const key = codeKey(p.natura_sku);
+        if (!key || bySku.has(key)) continue;
+        bySku.set(key, {
+          id: p.id,
+          name: p.name,
+          size: p.size,
+          stock: p.stock,
+          status: p.status,
+          image: [...(p.images ?? [])].sort((a, b) => a.position - b.position)[0]?.storage_path ?? null,
+        });
+      }
+    }
+
+    return {
+      ok: true,
+      data: items.map((i) => ({ ...i, match: bySku.get(codeKey(i.code) ?? "") ?? null })),
+    };
+  } catch (e) {
+    if (e instanceof Anthropic.AuthenticationError) {
+      return { ok: false, error: "La clave de Anthropic no es válida. Hay que revisarla en la configuración de Vercel." };
+    }
+    if (e instanceof Anthropic.RateLimitError || e instanceof Anthropic.InternalServerError) {
+      return { ok: false, error: "El lector de boletas está ocupado. Probá de nuevo en un minuto." };
+    }
+    if (e instanceof Anthropic.APIError) {
+      console.error("[admin] readReceipt:", e.status, e.message);
+      return { ok: false, error: "No pudimos leer la boleta. Probá de nuevo en un rato." };
+    }
+    return fail(e, "No pudimos leer la boleta.");
+  }
+}
+
+export type ReceiptApplyInput = {
+  lines: (
+    | { kind: "existing"; productId: string; quantity: number }
+    | { kind: "new"; name: string; code: string; price: number; quantity: number }
+  )[];
+  publish: boolean;
+};
+
+/** Suma al stock lo confirmado de la boleta y crea (como borrador) los productos que no estaban. */
+export async function applyReceipt(
+  input: ReceiptApplyInput,
+): Promise<ActionResult<{ units: number; updated: number; created: { id: string; name: string }[] }>> {
+  try {
+    const { supabase } = await assertAdmin();
+    const lines = Array.isArray(input?.lines) ? input.lines.slice(0, 200) : [];
+
+    const adds = new Map<string, number>();
+    const news: { name: string; sku: string | null; price: number; quantity: number }[] = [];
+    for (const l of lines) {
+      const qty = Number(l?.quantity);
+      if (!Number.isInteger(qty) || qty < 1 || qty > 1000) return { ok: false, error: "Revisá las cantidades: tienen que ser 1 o más." };
+      if (l.kind === "existing") {
+        if (!UUID_RE.test(String(l.productId))) return { ok: false, error: "Hay un producto inválido en la lista." };
+        adds.set(l.productId, (adds.get(l.productId) ?? 0) + qty);
+      } else if (l.kind === "new") {
+        const name = String(l.name ?? "").trim().replace(/\s+/g, " ");
+        if (name.length < 2 || name.length > 120) return { ok: false, error: "Poné un nombre (de 2 a 120 letras) a cada producto nuevo." };
+        if (!isValidPrice(l.price)) return { ok: false, error: `Poné el precio de revista de «${name}».` };
+        news.push({ name, sku: skuFromCode(l.code), price: toCents(l.price) / 100, quantity: qty });
+      }
+    }
+    if (adds.size === 0 && news.length === 0) return { ok: false, error: "La lista está vacía." };
+
+    let updated = 0;
+    let units = 0;
+    if (adds.size > 0) {
+      const { data: current, error } = await supabase.from("products").select("id, stock, status").in("id", [...adds.keys()]);
+      if (error) return fail(error, "No pudimos leer los productos.");
+      for (const p of current ?? []) {
+        const qty = adds.get(p.id) ?? 0;
+        const patch: { stock: number; status?: "published" } = { stock: Math.min(p.stock + qty, 100_000) };
+        if (input.publish && p.status !== "published") patch.status = "published";
+        const { error: upError } = await supabase.from("products").update(patch).eq("id", p.id);
+        if (upError) {
+          refreshCatalog();
+          return fail(upError, `Se cargaron ${updated} productos y después hubo un error. Revisá el stock antes de volver a confirmar.`);
+        }
+        updated++;
+        units += qty;
+      }
+    }
+
+    const created: { id: string; name: string }[] = [];
+    for (const n of news) {
+      const base = slugify(n.name) || "producto";
+      const { data, error } = await supabase
+        .from("products")
+        .insert({
+          name: n.name,
+          slug: `${base.slice(0, 120)}-${Math.random().toString(36).slice(2, 7)}`,
+          natura_sku: n.sku,
+          magazine_price: n.price,
+          sale_price: n.price,
+          stock: n.quantity,
+          status: "draft",
+        })
+        .select("id, name")
+        .single();
+      if (error) {
+        refreshCatalog();
+        const res = fail(error, "No pudimos crear un producto nuevo.");
+        return {
+          ok: false,
+          error: `Se sumó el stock de ${updated} productos y se crearon ${created.length} nuevos, pero «${n.name}» dio error: ${res.ok ? "" : res.error}`,
+        };
+      }
+      created.push(data);
+      units += n.quantity;
+    }
+
+    refreshCatalog();
+    revalidatePath("/admin");
+    return { ok: true, data: { units, updated, created } };
+  } catch (e) {
+    return fail(e, "No pudimos cargar la boleta.");
   }
 }

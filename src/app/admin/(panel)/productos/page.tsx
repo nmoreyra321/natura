@@ -1,8 +1,9 @@
-import { Boxes, List, Plus, Search } from "lucide-react";
+import { Boxes, Camera, List, Plus, Search } from "lucide-react";
 import Link from "next/link";
 
 import { BulkSelectionProvider, SelectAllCheckbox, SelectProductCheckbox } from "@/components/admin/bulk-selection";
 import { InventoryView } from "@/components/admin/inventory-view";
+import { ReceiptImport } from "@/components/admin/receipt-import";
 import { ProductRowActions } from "@/components/admin/product-row-actions";
 import { LinkButton, buttonClasses } from "@/components/ui/button";
 import { inputClasses } from "@/components/ui/fields";
@@ -15,6 +16,9 @@ import { getPriceInfo } from "@/lib/pricing";
 import { nameSearchPatterns } from "@/lib/search";
 
 export const metadata = { title: "Productos" };
+
+/** Leer la foto de la boleta puede tardar (la acción corre en esta página). */
+export const maxDuration = 120;
 
 const PAGE_SIZE = 50;
 /** Valor del filtro de categoría para ver los productos sin categoría. */
@@ -36,7 +40,7 @@ function pageHref(sp: Search, page: number) {
 }
 
 /** Pestañas de Productos: lista/edición o carga rápida de stock. */
-function ProductTabs({ active }: { active: "lista" | "stock" }) {
+function ProductTabs({ active }: { active: "lista" | "stock" | "boleta" }) {
   const tab = (on: boolean) =>
     `inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-bold ${on ? "bg-forest text-white" : "bg-warm-white shadow-soft hover:bg-sun"}`;
   return (
@@ -47,6 +51,9 @@ function ProductTabs({ active }: { active: "lista" | "stock" }) {
       <Link href="/admin/productos?vista=stock" aria-current={active === "stock" ? "page" : undefined} className={tab(active === "stock")}>
         <Boxes className="size-4" aria-hidden="true" /> Cargar stock
       </Link>
+      <Link href="/admin/productos?vista=boleta" aria-current={active === "boleta" ? "page" : undefined} className={tab(active === "boleta")}>
+        <Camera className="size-4" aria-hidden="true" /> Foto de la boleta
+      </Link>
     </nav>
   );
 }
@@ -55,7 +62,8 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
   const { supabase } = await requireAdmin();
   const sp = await searchParams;
 
-  if (one(sp.vista) === "stock") {
+  const vista = one(sp.vista);
+  if (vista === "stock" || vista === "boleta") {
     return (
       <div className="mx-auto max-w-6xl">
         <div className="flex flex-wrap items-end justify-between gap-4">
@@ -64,9 +72,15 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
             <Plus className="size-5" aria-hidden="true" /> Nuevo producto
           </LinkButton>
         </div>
-        <ProductTabs active="stock" />
+        <ProductTabs active={vista} />
         <div className="mt-5">
-          <InventoryView supabase={supabase} sp={sp} />
+          {vista === "stock" ? (
+            <InventoryView supabase={supabase} sp={sp} />
+          ) : (
+            <div className="mx-auto max-w-3xl">
+              <ReceiptImport />
+            </div>
+          )}
         </div>
       </div>
     );

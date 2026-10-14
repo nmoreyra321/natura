@@ -28,6 +28,10 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  experimental: {
+    // Las fotos de la boleta de Natura viajan en una acción del panel (ya achicadas en el teléfono).
+    serverActions: { bodySizeLimit: "4mb" },
+  },
   images: {
     remotePatterns,
     formats: ["image/avif", "image/webp"],
