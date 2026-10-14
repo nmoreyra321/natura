@@ -12,6 +12,7 @@ import { formatARS } from "@/lib/format";
 import { productImageUrl } from "@/lib/images";
 import { toCents } from "@/lib/pricing";
 import { getOrderTotals } from "@/lib/whatsapp";
+import { SavingsCelebration } from "./savings-celebration";
 import { QuantityInput } from "./add-to-cart";
 import { ProductImageFallback } from "./product-card";
 
@@ -134,13 +135,8 @@ export function CartDrawer() {
             </ul>
 
             <div className="border-t-2 border-forest bg-cream px-5 py-4">
-              {totals.savingsCents > 0 ? (
-                <p className="flex justify-between text-sm font-semibold text-botanical-deep tabular">
-                  <span>Ahorrás frente a revista</span>
-                  <span>{formatARS(totals.savingsCents)}</span>
-                </p>
-              ) : null}
-              <p className="mt-1 flex items-baseline justify-between tabular">
+              <SavingsCelebration savingsCents={totals.savingsCents} totalCents={totals.totalCents} />
+              <p className="mt-2 flex items-baseline justify-between tabular">
                 <span className="text-lg font-bold">Total</span>
                 <span className="flex items-baseline gap-2">
                   {totals.savingsCents > 0 ? (

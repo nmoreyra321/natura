@@ -15,6 +15,7 @@ import { surchargeCents, toCents } from "@/lib/pricing";
 import { buildOrderMessage, buildWhatsAppUrl, getOrderTotals, type OrderLine } from "@/lib/whatsapp";
 import type { TransferDetails } from "@/lib/store-settings";
 import { QuantityInput } from "./add-to-cart";
+import { SavingsCelebration } from "./savings-celebration";
 import { ProductImageFallback } from "./product-card";
 
 type Status = "idle" | "checking" | "ok" | "error";
@@ -249,17 +250,12 @@ export function CartView({
             <dd>{totals.units}</dd>
           </div>
           {totals.savingsCents > 0 ? (
-            <>
-              <div className="flex justify-between font-semibold text-botanical-deep">
-                <dt>Ahorrás frente a revista</dt>
-                <dd className="tabular">
-                  {formatARS(totals.savingsCents)}{" "}
-                  <span className="rounded-full bg-sage px-1.5 py-0.5 text-xs">
-                    −{Math.floor((totals.savingsCents * 100) / (totals.totalCents + totals.savingsCents))}%
-                  </span>
-                </dd>
-              </div>
-            </>
+            <div className="my-1">
+              <dt className="sr-only">Ahorro frente a revista</dt>
+              <dd>
+                <SavingsCelebration savingsCents={totals.savingsCents} totalCents={totals.totalCents} />
+              </dd>
+            </div>
           ) : null}
           <div className="mt-2 flex items-baseline justify-between gap-2 border-t border-line pt-3">
             <dt className="text-lg font-bold">Total</dt>
