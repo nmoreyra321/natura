@@ -302,6 +302,27 @@ export async function setOrderStatus(orderId: string, status: OrderStatus): Prom
   }
 }
 
+/** Marca (o desmarca) que se recibió el pago de un pedido en efectivo o por transferencia. */
+export async function setOrderPaid(orderId: string, paid: boolean): Promise<ActionResult> {
+  try {
+    const { supabase } = await assertAdmin();
+    if (!/^[0-9a-f-]{36}$/.test(orderId)) return { ok: false, error: "Datos inválidos." };
+    // Los pagos de Mercado Pago los confirma Mercado Pago, no se tocan a mano.
+    const { data, error } = await supabase
+      .from("orders")
+      .update(paid ? { payment_status: "approved", paid_at: new Date().toISOString() } : { payment_status: null, paid_at: null })
+      .eq("id", orderId)
+      .neq("payment_method", "mercadopago")
+      .select("id");
+    if (error) return fail(error, "No pudimos actualizar el pago.");
+    if (!data?.length) return { ok: false, error: "No encontramos ese pedido." };
+    revalidatePath("/admin/pedidos");
+    return { ok: true, message: paid ? "Pago marcado como recibido." : "Pago marcado como pendiente." };
+  } catch (e) {
+    return fail(e, "No pudimos actualizar el pago.");
+  }
+}
+
 /* --------------------------- Precios de Natura --------------------------- */
 
 export type NaturaPriceCheck = {

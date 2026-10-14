@@ -31,8 +31,12 @@ const PAYMENT_LABELS: Record<string, { label: string; tone: string }> = {
 };
 
 function paymentBadge(method: string, status: string | null) {
-  if (method === "transferencia") return { label: "Transferencia", tone: "bg-lilac text-grape" };
-  if (method !== "mercadopago") return { label: "Efectivo", tone: "bg-sage text-botanical-deep" };
+  if (method !== "mercadopago") {
+    const label = method === "transferencia" ? "Transferencia" : "Efectivo";
+    return status === "approved"
+      ? { label: `${label} · Pagado ✓`, tone: "bg-botanical-deep text-white" }
+      : { label: `${label} · Sin cobrar`, tone: "bg-coral-soft text-coral-deep" };
+  }
   return PAYMENT_LABELS[status ?? "pending"] ?? PAYMENT_LABELS.pending;
 }
 
@@ -42,6 +46,7 @@ const FILTERS: { value: string; label: string }[] = [
   { value: "confirmed", label: "Confirmados" },
   { value: "delivered", label: "Entregados" },
   { value: "cancelled", label: "Cancelados" },
+  { value: "sin-cobrar", label: "Sin cobrar" },
 ];
 
 const dateFormatter = new Intl.DateTimeFormat("es-AR", {
@@ -64,7 +69,7 @@ function href(estado: string, page: number) {
 export default async function OrdersPage({ searchParams }: { searchParams: Promise<Search> }) {
   const { supabase } = await requireAdmin();
   const sp = await searchParams;
-  const estado = one(sp.estado) in STATUS_LABELS ? one(sp.estado) : "";
+  const estado = one(sp.estado) in STATUS_LABELS || one(sp.estado) === "sin-cobrar" ? one(sp.estado) : "";
   const pageRaw = Number(one(sp.pagina) || "1");
   const page = Number.isInteger(pageRaw) && pageRaw >= 1 && pageRaw <= 10000 ? pageRaw : 1;
   const from = (page - 1) * PAGE_SIZE;
@@ -72,12 +77,17 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
   let query = supabase
     .from("orders")
     .select(
-      "id, number, code, status, customer_name, total, savings, created_at, payment_method, payment_status, items:order_items(id, product_id, name, size, quantity, unit_price), lots:order_lot_allocations(product_id, expires_on, quantity)",
+      "id, number, code, status, customer_name, total, savings, created_at, payment_method, payment_status, paid_at, items:order_items(id, product_id, name, size, quantity, unit_price), lots:order_lot_allocations(product_id, expires_on, quantity)",
       { count: "exact" },
     )
     .order("created_at", { ascending: false })
     .order("id");
-  if (estado) query = query.eq("status", estado);
+  if (estado === "sin-cobrar") {
+    // Pedidos vigentes cuyo pago todavía no se marcó (o Mercado Pago no aprobó).
+    query = query.neq("status", "cancelled").or("payment_status.is.null,payment_status.neq.approved");
+  } else if (estado) {
+    query = query.eq("status", estado);
+  }
   const { data, count, error } = await query.range(from, from + PAGE_SIZE - 1);
   const orders = error?.code === "PGRST103" ? [] : (data ?? []);
   const total = count ?? 0;
@@ -139,6 +149,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
                     <p className="text-sm text-muted">
                       {dateFormatter.format(new Date(o.created_at))}
                       {o.customer_name ? ` · ${o.customer_name}` : ""} · {units} {units === 1 ? "unidad" : "unidades"}
+                      {o.paid_at ? ` · Cobrado el ${dateFormatter.format(new Date(o.paid_at))}` : ""}
                     </p>
                   </div>
                   <p className="text-right tabular">
@@ -169,7 +180,13 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
                   ))}
                 </ul>
                 <div className="mt-3">
-                  <OrderActions id={o.id} code={o.code} status={status} />
+                  <OrderActions
+                    id={o.id}
+                    code={o.code}
+                    status={status}
+                    manualPayment={o.payment_method !== "mercadopago"}
+                    paid={o.payment_status === "approved"}
+                  />
                 </div>
               </li>
             );

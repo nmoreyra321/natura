@@ -1,11 +1,11 @@
 "use client";
 
-import { Check, PackageCheck, RotateCcw, X } from "lucide-react";
+import { BadgeCheck, Check, PackageCheck, RotateCcw, Undo2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 
-import { setOrderStatus, type OrderStatus } from "@/app/admin/actions";
+import { setOrderPaid, setOrderStatus, type OrderStatus } from "@/app/admin/actions";
 import { buttonClasses } from "@/components/ui/button";
 import { ConfirmDialog } from "./confirm-dialog";
 
@@ -17,7 +17,20 @@ const SUCCESS: Record<OrderStatus, string> = {
 };
 
 /** Botones para avanzar el pedido. Confirmar descuenta stock; cancelar o volver a pendiente lo devuelve. */
-export function OrderActions({ id, code, status }: { id: string; code: string; status: OrderStatus }) {
+export function OrderActions({
+  id,
+  code,
+  status,
+  manualPayment = false,
+  paid = false,
+}: {
+  id: string;
+  code: string;
+  status: OrderStatus;
+  /** true si es efectivo o transferencia (el pago se marca a mano). */
+  manualPayment?: boolean;
+  paid?: boolean;
+}) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [confirmCancel, setConfirmCancel] = useState(false);
@@ -33,8 +46,35 @@ export function OrderActions({ id, code, status }: { id: string; code: string; s
       }
     });
 
+  const togglePaid = (next: boolean) =>
+    start(async () => {
+      const res = await setOrderPaid(id, next);
+      if (res.ok) {
+        toast.success(res.message ?? "Listo.");
+        router.refresh();
+      } else {
+        toast.error(res.error);
+      }
+    });
+
   return (
     <div className="flex flex-wrap gap-2">
+      {manualPayment && status !== "cancelled" ? (
+        paid ? (
+          <button type="button" disabled={pending} onClick={() => togglePaid(false)} className={buttonClasses("ghost", "md")}>
+            <Undo2 className="size-4" aria-hidden="true" /> Desmarcar pago
+          </button>
+        ) : (
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() => togglePaid(true)}
+            className={buttonClasses("secondary", "md")}
+          >
+            <BadgeCheck className="size-4" aria-hidden="true" /> Pago recibido
+          </button>
+        )
+      ) : null}
       {status === "pending" ? (
         <button type="button" disabled={pending} onClick={() => change("confirmed")} className={buttonClasses("primary", "md")}>
           <Check className="size-4" aria-hidden="true" /> Confirmar
