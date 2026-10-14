@@ -390,3 +390,61 @@ export async function applyNaturaPrices(
     return fail(e, "No pudimos aplicar los precios.");
   }
 }
+
+/* ------------------------- Acciones en grupo ------------------------- */
+
+const MAX_BULK = 200;
+
+function cleanIds(ids: string[]): string[] {
+  return [...new Set(ids)].filter((id) => UUID_RE.test(id)).slice(0, MAX_BULK);
+}
+
+/** Publica, pasa a borrador o cambia la categoría de varios productos a la vez. */
+export async function bulkUpdateProducts(
+  productIds: string[],
+  patch: { status?: "draft" | "published"; category_id?: string | null },
+): Promise<ActionResult<{ updated: number }>> {
+  try {
+    const { supabase } = await assertAdmin();
+    const ids = cleanIds(productIds);
+    if (ids.length === 0) return { ok: false, error: "No elegiste productos." };
+
+    const clean: { status?: "draft" | "published"; category_id?: string | null } = {};
+    if (patch.status === "draft" || patch.status === "published") clean.status = patch.status;
+    if (patch.category_id === null || (typeof patch.category_id === "string" && UUID_RE.test(patch.category_id))) {
+      clean.category_id = patch.category_id;
+    }
+    if (Object.keys(clean).length === 0) return { ok: false, error: "Nada para actualizar." };
+
+    const { data, error } = await supabase.from("products").update(clean).in("id", ids).select("id");
+    if (error) return fail(error, "No pudimos actualizar los productos.");
+    refreshCatalog();
+    const updated = data?.length ?? 0;
+    return { ok: true, data: { updated }, message: `${updated} ${updated === 1 ? "producto actualizado" : "productos actualizados"}.` };
+  } catch (e) {
+    return fail(e, "No pudimos actualizar los productos.");
+  }
+}
+
+/** Elimina varios productos con sus fotos. */
+export async function bulkDeleteProducts(productIds: string[]): Promise<ActionResult<{ deleted: number }>> {
+  try {
+    const { supabase } = await assertAdmin();
+    const ids = cleanIds(productIds);
+    if (ids.length === 0) return { ok: false, error: "No elegiste productos." };
+
+    const { data: images } = await supabase.from("product_images").select("storage_path").in("product_id", ids);
+    const { data, error } = await supabase.from("products").delete().in("id", ids).select("id");
+    if (error) return fail(error, "No pudimos eliminar los productos.");
+    const paths = (images ?? []).map((i) => i.storage_path);
+    for (let i = 0; i < paths.length; i += 100) {
+      const { error: storageError } = await supabase.storage.from(PRODUCT_IMAGES_BUCKET).remove(paths.slice(i, i + 100));
+      if (storageError) console.error("[admin] Fotos huérfanas:", storageError.message);
+    }
+    refreshCatalog();
+    const deleted = data?.length ?? 0;
+    return { ok: true, data: { deleted }, message: `${deleted} ${deleted === 1 ? "producto eliminado" : "productos eliminados"}.` };
+  } catch (e) {
+    return fail(e, "No pudimos eliminar los productos.");
+  }
+}

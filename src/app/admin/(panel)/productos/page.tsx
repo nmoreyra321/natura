@@ -1,6 +1,7 @@
 import { Plus, Search } from "lucide-react";
 import Link from "next/link";
 
+import { BulkSelectionProvider, SelectAllCheckbox, SelectProductCheckbox } from "@/components/admin/bulk-selection";
 import { ProductRowActions } from "@/components/admin/product-row-actions";
 import { LinkButton, buttonClasses } from "@/components/ui/button";
 import { inputClasses } from "@/components/ui/fields";
@@ -158,54 +159,65 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
           ) : null}
         </div>
       ) : (
-        <ul className="mt-6 flex flex-col gap-3">
-          {products.map((p) => {
-            const img = [...(p.images ?? [])].sort((a, b) => a.position - b.position)[0];
-            const src = img ? productImageUrl(img.storage_path) : null;
-            const info = getPriceInfo(p.magazine_price, p.sale_price);
-            const category = (p.category as unknown as { name: string } | null)?.name;
-            return (
-              <li key={p.id} className="flex flex-col gap-3 rounded-3xl bg-warm-white p-3 shadow-soft sm:flex-row sm:items-center sm:p-4">
-                <div className="flex min-w-0 flex-1 items-center gap-3">
-                  <div className="relative size-16 shrink-0 overflow-hidden rounded-2xl bg-white">
-                    {src ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={src} alt="" className="size-full object-cover" loading="lazy" />
-                    ) : (
-                      <ProductImageFallback className="size-full" />
-                    )}
-                  </div>
-                  <div className="min-w-0">
-                    <Link href={`/admin/productos/${p.id}`} className="font-semibold hover:text-coral-deep">
-                      {p.name}
-                    </Link>
-                    <p className="text-sm text-muted">
-                      {[category ?? "Sin categoría", p.size].filter(Boolean).join(" · ")}
-                    </p>
-                    <p className="text-sm tabular">
-                      <span className="font-bold">{formatARS(info.saleCents)}</span>
-                      {info.hasDiscount ? (
-                        <>
-                          <span className="ml-2 text-muted line-through">{formatARS(info.magazineCents)}</span>
-                          <span className="ml-2 font-semibold text-coral-deep">−{info.discountPercent}%</span>
-                        </>
-                      ) : null}
-                    </p>
-                    <div className="mt-1 flex flex-wrap gap-1.5 text-xs font-bold">
-                      <span className={`rounded-full px-2 py-0.5 ${p.status === "published" ? "bg-sage text-botanical-deep" : "bg-cream text-muted"}`}>
-                        {p.status === "published" ? "Publicado" : "Borrador"}
-                      </span>
-                      {p.is_featured ? <span className="rounded-full bg-pink px-2 py-0.5">Destacado</span> : null}
-                      {p.is_offer ? <span className="rounded-full bg-coral-soft px-2 py-0.5 text-coral-deep">Oferta</span> : null}
-                      {p.stock === 0 ? <span className="rounded-full bg-coral-deep px-2 py-0.5 text-white">Sin stock</span> : null}
+        <BulkSelectionProvider
+          key={`${page}|${q}|${estado}|${stock}|${categoria}|${oferta}`}
+          products={products.map((p) => ({ id: p.id, stock: p.stock }))}
+          categories={categories ?? []}
+        >
+          <div className="mt-6 flex flex-wrap items-center justify-between gap-2 px-1">
+            <SelectAllCheckbox />
+            <p className="text-sm text-muted">Elegí varios para publicarlos, pasarlos a borrador o cambiarles la categoría.</p>
+          </div>
+          <ul className="mt-3 flex flex-col gap-3 pb-28">
+            {products.map((p) => {
+              const img = [...(p.images ?? [])].sort((a, b) => a.position - b.position)[0];
+              const src = img ? productImageUrl(img.storage_path) : null;
+              const info = getPriceInfo(p.magazine_price, p.sale_price);
+              const category = (p.category as unknown as { name: string } | null)?.name;
+              return (
+                <li key={p.id} className="flex flex-col gap-3 rounded-3xl bg-warm-white p-3 shadow-soft sm:flex-row sm:items-center sm:p-4">
+                  <div className="flex min-w-0 flex-1 items-center gap-3">
+                    <SelectProductCheckbox id={p.id} name={p.name} />
+                    <div className="relative size-16 shrink-0 overflow-hidden rounded-2xl bg-white">
+                      {src ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={src} alt="" className="size-full object-cover" loading="lazy" />
+                      ) : (
+                        <ProductImageFallback className="size-full" />
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <Link href={`/admin/productos/${p.id}`} className="font-semibold hover:text-coral-deep">
+                        {p.name}
+                      </Link>
+                      <p className="text-sm text-muted">
+                        {[category ?? "Sin categoría", p.size].filter(Boolean).join(" · ")}
+                      </p>
+                      <p className="text-sm tabular">
+                        <span className="font-bold">{formatARS(info.saleCents)}</span>
+                        {info.hasDiscount ? (
+                          <>
+                            <span className="ml-2 text-muted line-through">{formatARS(info.magazineCents)}</span>
+                            <span className="ml-2 font-semibold text-coral-deep">−{info.discountPercent}%</span>
+                          </>
+                        ) : null}
+                      </p>
+                      <div className="mt-1 flex flex-wrap gap-1.5 text-xs font-bold">
+                        <span className={`rounded-full px-2 py-0.5 ${p.status === "published" ? "bg-sage text-botanical-deep" : "bg-cream text-muted"}`}>
+                          {p.status === "published" ? "Publicado" : "Borrador"}
+                        </span>
+                        {p.is_featured ? <span className="rounded-full bg-pink px-2 py-0.5">Destacado</span> : null}
+                        {p.is_offer ? <span className="rounded-full bg-coral-soft px-2 py-0.5 text-coral-deep">Oferta</span> : null}
+                        {p.stock === 0 ? <span className="rounded-full bg-coral-deep px-2 py-0.5 text-white">Sin stock</span> : null}
+                      </div>
                     </div>
                   </div>
-                </div>
-                <ProductRowActions id={p.id} name={p.name} slug={p.slug} status={p.status as "draft" | "published"} stock={p.stock} />
-              </li>
-            );
-          })}
-        </ul>
+                  <ProductRowActions id={p.id} name={p.name} slug={p.slug} status={p.status as "draft" | "published"} stock={p.stock} />
+                </li>
+              );
+            })}
+          </ul>
+        </BulkSelectionProvider>
       )}
 
       {pageCount > 1 && products && products.length > 0 ? (
