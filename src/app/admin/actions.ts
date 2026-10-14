@@ -1341,43 +1341,80 @@ async function recordReceipt(
 
 /* ------------------------- Fotos desde Natura ------------------------- */
 
-type NaturaPhotoResponse = {
-  status: "ok" | "not_found" | "no_images" | "full" | "blocked" | "bad_ref" | "error";
-  added?: number;
-  name?: string | null;
-  message?: string;
+export type NaturaPhotoStatus = "ok" | "same" | "not_found" | "no_images" | "full" | "blocked" | "bad_ref" | "no_code" | "own_photos" | "error";
+type NaturaPhotoResponse = { status: NaturaPhotoStatus; added?: number; replaced?: number; name?: string | null; message?: string };
+
+const NATURA_PHOTO_MESSAGES: Record<Exclude<NaturaPhotoStatus, "ok" | "same">, string> = {
+  not_found: "No encontramos ese producto en Natura. Revisá el código o pegá el enlace de la ficha.",
+  no_images: "Ese producto no tiene fotos en Natura.",
+  full: "Este producto ya tiene el máximo de fotos propias.",
+  blocked: "Natura no nos dejó entrar en este momento. Probá más tarde.",
+  bad_ref: "Escribí el código de Natura (solo números) o pegá el enlace del producto.",
+  no_code: "Este producto no tiene código de Natura: escribilo o pegá el enlace.",
+  own_photos: "Este producto tiene fotos tuyas: no se cambian.",
+  error: "No pudimos traer la foto.",
 };
 
+async function callNaturaPhotos(
+  supabase: Awaited<ReturnType<typeof assertAdmin>>["supabase"],
+  body: { productId: string; ref?: string; skipOwn?: boolean },
+): Promise<NaturaPhotoResponse> {
+  const { data, error } = await supabase.functions.invoke<NaturaPhotoResponse>("fotos-natura", { body });
+  if (error || !data) {
+    console.error("[admin] fotos-natura:", error?.message);
+    return { status: "error", message: "No pudimos consultar Natura. Probá de nuevo en un rato." };
+  }
+  return data;
+}
+
 /**
- * Trae la foto de un producto desde su ficha en Natura (por código o enlace) y la agrega al producto.
+ * Trae las fotos de un producto desde su ficha en Natura (por código o enlace). Reemplaza solo las
+ * fotos que vinieron de Natura; las que subió la administradora no se tocan.
  * La descarga la hace la función de Supabase `fotos-natura` (Natura rechaza los pedidos desde Vercel).
  */
-export async function importNaturaPhotos(productId: string, ref: string): Promise<ActionResult<{ added: number; name: string | null }>> {
+export async function importNaturaPhotos(
+  productId: string,
+  ref: string,
+): Promise<ActionResult<{ added: number; same: boolean; name: string | null }>> {
   try {
     const { supabase } = await assertAdmin();
     if (!UUID_RE.test(productId)) return { ok: false, error: "Producto inválido." };
     const clean = String(ref ?? "").trim().slice(0, 300);
     if (!clean) return { ok: false, error: "Escribí el código de Natura o pegá el enlace del producto." };
 
-    const { data, error } = await supabase.functions.invoke<NaturaPhotoResponse>("fotos-natura", { body: { productId, ref: clean } });
-    if (error || !data) {
-      console.error("[admin] fotos-natura:", error?.message);
-      return { ok: false, error: "No pudimos consultar Natura. Probá de nuevo en un rato." };
-    }
-    const messages: Record<Exclude<NaturaPhotoResponse["status"], "ok">, string> = {
-      not_found: "No encontramos ese producto en Natura. Revisá el código o pegá el enlace de la ficha.",
-      no_images: "Ese producto no tiene fotos en Natura.",
-      full: "Este producto ya tiene el máximo de fotos.",
-      blocked: "Natura no nos dejó entrar en este momento. Probá más tarde.",
-      bad_ref: "Escribí el código de Natura (solo números) o pegá el enlace del producto.",
-      error: data.message ?? "No pudimos traer la foto.",
-    };
-    if (data.status !== "ok") return { ok: false, error: messages[data.status] ?? "No pudimos traer la foto." };
+    const data = await callNaturaPhotos(supabase, { productId, ref: clean });
+    if (data.status === "same") return { ok: true, data: { added: 0, same: true, name: data.name ?? null } };
+    if (data.status !== "ok") return { ok: false, error: data.message ?? NATURA_PHOTO_MESSAGES[data.status] ?? "No pudimos traer la foto." };
 
     refreshCatalog();
     revalidatePath(`/admin/productos/${productId}`);
-    return { ok: true, data: { added: data.added ?? 0, name: data.name ?? null } };
+    return { ok: true, data: { added: data.added ?? 0, same: false, name: data.name ?? null } };
   } catch (e) {
     return fail(e, "No pudimos traer la foto.");
+  }
+}
+
+/**
+ * Un paso de la actualización general de fotos: usa el código guardado del producto y no toca los
+ * productos que solo tienen fotos propias. No refresca la tienda (se hace una vez al final).
+ */
+export async function updateNaturaPhotosStep(productId: string): Promise<NaturaPhotoStatus> {
+  try {
+    const { supabase } = await assertAdmin();
+    if (!UUID_RE.test(productId)) return "error";
+    return (await callNaturaPhotos(supabase, { productId, skipOwn: true })).status;
+  } catch {
+    return "error";
+  }
+}
+
+/** Al terminar la actualización general: refresca la tienda una sola vez. */
+export async function finishNaturaPhotos(): Promise<ActionResult> {
+  try {
+    await assertAdmin();
+    refreshCatalog();
+    return { ok: true };
+  } catch (e) {
+    return fail(e, "No pudimos refrescar la tienda.");
   }
 }

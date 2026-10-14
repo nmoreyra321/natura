@@ -63,8 +63,9 @@ export default async function EditProductPage({
         <section className="rounded-3xl bg-warm-white p-4 shadow-soft">
           <h2 className="font-display text-lg font-bold">Traer foto de Natura</h2>
           <p className="mb-3 text-sm text-muted">
-            {(images ?? []).length === 0 ? "Este producto todavía no tiene foto. " : ""}Escribí el código de Natura o pegá el enlace
-            del producto en naturacosmeticos.com.ar y se agrega la foto oficial.
+            {(images ?? []).length === 0 ? "Este producto todavía no tiene foto. " : ""}Con el código de Natura (o el enlace del
+            producto en naturacosmeticos.com.ar) se ponen las fotos oficiales actuales. Reemplaza solo las fotos que vinieron de
+            Natura: las que subiste vos quedan.
           </p>
           <NaturaPhoto productId={product.id} sku={product.natura_sku} />
         </section>

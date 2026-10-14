@@ -236,14 +236,14 @@ isOneToOne: false
                   ]
                 },"product_images": {
                   Row: {
-                    "alt": string | null,"created_at": string,"id": string,"position": number,"product_id": string,"storage_path": string
+                    "alt": string | null,"created_at": string,"id": string,"position": number,"product_id": string,"source_url": string | null,"storage_path": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "alt"?: string | null,"created_at"?: string,"id"?: string,"position"?: number,"product_id": string,"storage_path": string
+                    "alt"?: string | null,"created_at"?: string,"id"?: string,"position"?: number,"product_id": string,"source_url"?: string | null,"storage_path": string
                   }
                   Update: {
-                    "alt"?: string | null,"created_at"?: string,"id"?: string,"position"?: number,"product_id"?: string,"storage_path"?: string
+                    "alt"?: string | null,"created_at"?: string,"id"?: string,"position"?: number,"product_id"?: string,"source_url"?: string | null,"storage_path"?: string
                   }
                   Relationships: [
                     {

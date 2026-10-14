@@ -10,8 +10,9 @@ import { buttonClasses } from "@/components/ui/button";
 import { inputClasses } from "@/components/ui/fields";
 
 /**
- * "Traer foto de Natura": con el código (o el enlace de la ficha) baja la foto oficial y la agrega
- * al producto. Si el producto ya tiene código de Natura, viene escrito.
+ * "Traer foto de Natura": con el código (o el enlace de la ficha) baja las fotos oficiales y
+ * reemplaza las que habían venido de Natura (las fotos propias quedan). Si el producto ya tiene
+ * código de Natura, viene escrito.
  */
 export function NaturaPhoto({ productId, sku, onDone }: { productId: string; sku: string | null; onDone?: () => void }) {
   const router = useRouter();
@@ -26,7 +27,8 @@ export function NaturaPhoto({ productId, sku, onDone }: { productId: string; sku
         return;
       }
       const n = res.data?.added ?? 0;
-      toast.success(n === 1 ? "Listo: se agregó la foto de Natura." : `Listo: se agregaron ${n} fotos de Natura.`);
+      if (res.data?.same) toast.success("Ya tiene las fotos actuales de Natura.");
+      else toast.success(n === 1 ? "Listo: se puso la foto de Natura." : `Listo: se pusieron ${n} fotos de Natura.`);
       onDone?.();
       router.refresh();
     });

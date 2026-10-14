@@ -1,4 +1,7 @@
-// Trae la foto de un producto desde su ficha en naturacosmeticos.com.ar y la guarda en la tienda.
+// Trae las fotos de un producto desde su ficha en naturacosmeticos.com.ar y las guarda en la tienda.
+// Reemplaza solo las fotos que vinieron de Natura (product_images.source_url no nulo); las que
+// subió la administradora (source_url nulo) nunca se tocan. Si las fotos de Natura no cambiaron,
+// no hace nada.
 // Corre en Supabase porque Natura rechaza los pedidos que salen de los servidores de Vercel.
 // Solo la pueden usar administradoras con sesión iniciada: todo se hace con su sesión (RLS).
 import { createClient } from "npm:@supabase/supabase-js@2";
@@ -101,12 +104,24 @@ Deno.serve(async (req) => {
 
   const body = await req.json().catch(() => ({}));
   const productId = String(body.productId ?? "");
-  const sku = skuFrom(String(body.ref ?? "").slice(0, 300));
+  // En la actualización general no se agregan fotos de Natura a productos que solo tienen fotos propias.
+  const skipOwn = body.skipOwn === true;
   if (!UUID.test(productId)) return json({ status: "error", message: "Producto inválido." });
-  if (!sku) return json({ status: "bad_ref" });
 
   const { data: product } = await supabase.from("products").select("id, name, natura_sku").eq("id", productId).maybeSingle();
   if (!product) return json({ status: "error", message: "El producto no existe." });
+  const ref = String(body.ref ?? "").slice(0, 300).trim();
+  const sku = ref ? skuFrom(ref) : product.natura_sku;
+  if (!sku) return json({ status: ref ? "bad_ref" : "no_code" });
+
+  const { data: existing } = await supabase
+    .from("product_images")
+    .select("id, storage_path, source_url, position")
+    .eq("product_id", productId)
+    .order("position");
+  const own = (existing ?? []).filter((i) => !i.source_url);
+  const fromNatura = (existing ?? []).filter((i) => i.source_url);
+  if (skipOwn && own.length > 0 && fromNatura.length === 0) return json({ status: "own_photos" });
 
   let res: Response;
   try {
@@ -119,14 +134,18 @@ Deno.serve(async (req) => {
   if (!res.ok) return json({ status: "error", message: `Natura respondió ${res.status}` });
   const ficha = parseFicha(await res.text());
   if (!ficha) return json({ status: "not_found", sku });
-  if (ficha.images.length === 0) return json({ status: "no_images", sku, name: ficha.name });
 
-  const { count } = await supabase.from("product_images").select("id", { count: "exact", head: true }).eq("product_id", productId);
-  const room = Math.min(MAX_NEW, MAX_IMAGES_PER_PRODUCT - (count ?? 0));
-  if (room <= 0) return json({ status: "full" });
+  const room = Math.min(MAX_NEW, MAX_IMAGES_PER_PRODUCT - own.length);
+  const wanted = ficha.images.slice(0, Math.max(room, 0));
+  if (wanted.length === 0) return json({ status: ficha.images.length === 0 ? "no_images" : "full", sku });
 
-  let added = 0;
-  for (const url of ficha.images.slice(0, room)) {
+  // Mismas fotos que ya tiene: no se hace nada.
+  const current = fromNatura.map((i) => i.source_url).join("\n");
+  if (current === wanted.join("\n")) return json({ status: "same", sku });
+
+  // 1) Se bajan y guardan las fotos nuevas.
+  const added: { id: string; path: string }[] = [];
+  for (const [n, url] of wanted.entries()) {
     try {
       const img = await fetch(url, { headers: { "User-Agent": HEADERS["User-Agent"] }, signal: AbortSignal.timeout(20_000) });
       const type = (img.headers.get("content-type") ?? "").split(";")[0].trim();
@@ -136,22 +155,42 @@ Deno.serve(async (req) => {
       const path = `products/${productId}/${crypto.randomUUID()}.${ext}`;
       const up = await supabase.storage.from(BUCKET).upload(path, bytes, { contentType: type, upsert: false });
       if (up.error) continue;
-      const { error } = await supabase
+      const { data: row, error } = await supabase
         .from("product_images")
-        .insert({ product_id: productId, storage_path: path, alt: (ficha.name ?? product.name).slice(0, 200), position: (count ?? 0) + added });
-      if (error) {
+        .insert({
+          product_id: productId,
+          storage_path: path,
+          alt: (ficha.name ?? product.name).slice(0, 200),
+          position: 60 + n,
+          source_url: url,
+        })
+        .select("id")
+        .single();
+      if (error || !row) {
         await supabase.storage.from(BUCKET).remove([path]);
         continue;
       }
-      added++;
+      added.push({ id: row.id, path });
     } catch {
       // Una foto que no se pudo bajar no frena las demás.
     }
   }
+  if (added.length === 0) return json({ status: "error", message: "No pudimos bajar las fotos de Natura." });
+
+  // 2) Se borran las fotos de Natura anteriores (las propias quedan).
+  if (fromNatura.length > 0) {
+    await supabase.from("product_images").delete().in("id", fromNatura.map((i) => i.id));
+    await supabase.storage.from(BUCKET).remove(fromNatura.map((i) => i.storage_path));
+  }
+
+  // 3) Orden: primero las de Natura, después las propias.
+  const order = [...added.map((a) => a.id), ...own.map((i) => i.id)];
+  for (const [position, id] of order.entries()) {
+    await supabase.from("product_images").update({ position }).eq("id", id);
+  }
 
   // Si el producto no tenía código de Natura, se le guarda (sirve para actualizar precios).
-  if (added > 0 && !product.natura_sku) {
-    await supabase.from("products").update({ natura_sku: sku }).eq("id", productId);
-  }
-  return json({ status: added > 0 ? "ok" : "error", added, sku, name: ficha.name, magazinePrice: ficha.magazinePrice, message: added ? undefined : "No pudimos bajar las fotos." });
+  if (!product.natura_sku) await supabase.from("products").update({ natura_sku: sku }).eq("id", productId);
+
+  return json({ status: "ok", added: added.length, replaced: fromNatura.length, sku, name: ficha.name, magazinePrice: ficha.magazinePrice });
 });

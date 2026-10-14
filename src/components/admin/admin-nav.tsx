@@ -19,7 +19,7 @@ const items = [
   { href: "/admin/reponer", label: "Qué pedir", icon: ShoppingBasket },
   { href: "/admin/vencimientos", label: "Vencimientos", icon: CalendarClock },
   { href: "/admin/avisos", label: "Avisos de stock", icon: BellRing },
-  { href: "/admin/precios", label: "Precios Natura", icon: RefreshCw },
+  { href: "/admin/precios", label: "Precios y fotos Natura", icon: RefreshCw },
   { href: "/admin/categorias", label: "Categorías", icon: Tags },
   { href: "/admin/configuracion", label: "Configuración", icon: Settings },
 ];

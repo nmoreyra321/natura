@@ -171,7 +171,9 @@ Cada producto tiene su botón **Cargar este** para sumarlo de a uno (los seguros
 
 ### Foto de Natura (función `fotos-natura`)
 
-En cada producto (y al terminar de cargar una factura, en los productos nuevos) está **Traer foto de Natura**: con el código o el enlace de la ficha en naturacosmeticos.com.ar baja hasta 3 fotos oficiales y las agrega al producto. La descarga la hace la función de Supabase `fotos-natura` (Natura bloquea Vercel), con la sesión de la administradora. El buscador de Natura no se puede usar desde afuera, por eso hace falta el código o el enlace.
+En cada producto (y al terminar de cargar una factura, en los productos nuevos) está **Traer foto de Natura**: con el código o el enlace de la ficha en naturacosmeticos.com.ar baja hasta 3 fotos oficiales. Reemplaza solo las fotos que vinieron de Natura (`product_images.source_url` no nulo); las que subió la administradora (`source_url` nulo) nunca se tocan, y si la foto de Natura no cambió no hace nada.
+
+En **Precios y fotos Natura** está la **actualización general de fotos**: recorre todos los productos con código (o solo los que no tienen foto), de a 3 a la vez, con barra de progreso y botón para frenar. Los productos que solo tienen fotos propias se saltean. La descarga la hace la función de Supabase `fotos-natura` (Natura bloquea Vercel), con la sesión de la administradora. El buscador de Natura no se puede usar desde afuera, por eso hace falta el código o el enlace.
 
 ### Qué pedir (Panel → Qué pedir)
 
