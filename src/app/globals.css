@@ -196,3 +196,69 @@ h3,
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Mini animación "cómo instalar la app" en iPhone (7 s en bucle). */
+.idemo {
+  --idemo-t: 7s;
+}
+.idemo * {
+  animation-duration: var(--idemo-t);
+  animation-iteration-count: infinite;
+  animation-timing-function: ease-in-out;
+}
+@keyframes idemo-finger {
+  0% { opacity: 0; transform: translate(100px, 190px) scale(1); }
+  6% { opacity: 0.9; transform: translate(100px, 190px) scale(1); }
+  18% { transform: translate(var(--sx), var(--sy)) scale(1); }
+  22% { transform: translate(var(--sx), var(--sy)) scale(0.7); }
+  26%, 34% { opacity: 0.9; transform: translate(var(--sx), var(--sy)) scale(1); }
+  46% { transform: translate(58px, 188px) scale(1); }
+  50% { transform: translate(58px, 188px) scale(0.7); }
+  54% { opacity: 0.9; transform: translate(58px, 188px) scale(1); }
+  60%, 100% { opacity: 0; transform: translate(58px, 188px) scale(1); }
+}
+@keyframes idemo-store {
+  0%, 62% { opacity: 1; }
+  66%, 100% { opacity: 0; }
+}
+@keyframes idemo-sheet {
+  0%, 28% { transform: translateY(105%); }
+  36%, 62% { transform: none; opacity: 1; }
+  66%, 100% { transform: none; opacity: 0; }
+}
+@keyframes idemo-row {
+  0%, 49% { background: transparent; }
+  51%, 100% { background: var(--sun); }
+}
+@keyframes idemo-home {
+  0%, 63% { opacity: 0; }
+  67%, 95% { opacity: 1; }
+  100% { opacity: 0; }
+}
+@keyframes idemo-icon {
+  0%, 70% { transform: scale(0); }
+  77% { transform: scale(1.18); }
+  82%, 100% { transform: scale(1); }
+}
+@keyframes idemo-cap1 {
+  0%, 30% { opacity: 1; }
+  33%, 100% { opacity: 0; }
+}
+@keyframes idemo-cap2 {
+  0%, 31% { opacity: 0; }
+  34%, 63% { opacity: 1; }
+  66%, 100% { opacity: 0; }
+}
+@keyframes idemo-cap3 {
+  0%, 64% { opacity: 0; }
+  68%, 100% { opacity: 1; }
+}
+.idemo-finger { animation-name: idemo-finger; }
+.idemo-store { animation-name: idemo-store; }
+.idemo-sheet { animation-name: idemo-sheet; }
+.idemo-row { animation-name: idemo-row; }
+.idemo-home { animation-name: idemo-home; }
+.idemo-icon { animation-name: idemo-icon; }
+.idemo-cap1 { animation-name: idemo-cap1; }
+.idemo-cap2 { animation-name: idemo-cap2; }
+.idemo-cap3 { animation-name: idemo-cap3; }
