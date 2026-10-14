@@ -43,3 +43,15 @@ describe("mensaje de pedido", () => {
     expect(text).toBe(buildOrderMessage(lines));
   });
 });
+
+describe("buildOrderMessage con número de pedido", () => {
+  it("incluye el número y el nombre cuando están", () => {
+    const msg = buildOrderMessage(
+      [{ name: "Crema", quantity: 1, unitCents: 100000, magazineUnitCents: 100000 }],
+      undefined,
+      { orderNumber: 42, customerName: "  Ana " },
+    );
+    expect(msg.startsWith("¡Hola Mariel! Soy Ana y quiero hacer este pedido:")).toBe(true);
+    expect(msg).toContain("*Pedido N.º 42*");
+  });
+});

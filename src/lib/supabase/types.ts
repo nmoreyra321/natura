@@ -29,6 +29,8 @@ export type ProductRow = {
   status: ProductStatus;
   is_featured: boolean;
   is_offer: boolean;
+  /** Código del producto en naturacosmeticos.com.ar (por ejemplo NATARG-2821). */
+  natura_sku: string | null;
   /** Columna generada por la base: solo lectura. */
   discount_percent: number;
   created_at: string;

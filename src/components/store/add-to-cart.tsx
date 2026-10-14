@@ -2,12 +2,11 @@
 
 import { Minus, Plus, ShoppingBag } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { cart, useCart, type CartItem } from "@/lib/cart-store";
+import { cart, cartDrawer, useCart, type CartItem } from "@/lib/cart-store";
 
 export function QuantityInput({
   value,
@@ -61,7 +60,6 @@ export function QuantityInput({
 }
 
 export function AddToCart({ product }: { product: Omit<CartItem, "quantity"> }) {
-  const router = useRouter();
   const items = useCart();
   const inCart = items.find((i) => i.productId === product.productId)?.quantity ?? 0;
   const available = Math.max(product.stock - inCart, 0);
@@ -90,9 +88,7 @@ export function AddToCart({ product }: { product: Omit<CartItem, "quantity"> }) 
             if (res.capped) {
               toast.warning(`Agregamos el máximo disponible: ${res.quantity} en tu carrito.`);
             } else {
-              toast.success("¡Listo! Lo agregamos a tu carrito.", {
-                action: { label: "Ver carrito", onClick: () => router.push("/carrito") },
-              });
+              cartDrawer.open();
             }
             setQty(1);
           }}

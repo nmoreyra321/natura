@@ -1,5 +1,6 @@
-import { MessageCircle, PackageCheck, ShoppingBag, Sparkles } from "lucide-react";
+import { MessageCircle, Sparkles } from "lucide-react";
 import type { Metadata } from "next";
+import Link from "next/link";
 
 import { buttonClasses } from "@/components/ui/button";
 import { buildWhatsAppUrl, getWhatsAppNumber } from "@/lib/whatsapp";
@@ -9,14 +10,6 @@ export const metadata: Metadata = {
   description: "Escribile a Mariel por WhatsApp para consultas y pedidos de productos Natura.",
   alternates: { canonical: "/contacto" },
 };
-
-const STEP_COLORS = ["bg-pink", "bg-sun", "bg-sage"];
-
-const steps = [
-  { icon: ShoppingBag, title: "Armá tu carrito", text: "Elegí tus productos y cantidades. No hace falta crear una cuenta." },
-  { icon: MessageCircle, title: "Enviá el pedido por WhatsApp", text: "Se abre un mensaje con el detalle, los precios y el total." },
-  { icon: PackageCheck, title: "Mariel te confirma", text: "Te responde con la disponibilidad, la forma de pago y la entrega." },
-];
 
 export default function ContactPage() {
   const number = getWhatsAppNumber();
@@ -48,20 +41,12 @@ export default function ContactPage() {
         )}
       </div>
 
-      <section id="como-comprar" className="mt-14 scroll-mt-24" aria-labelledby="como">
-        <h2 id="como" className="font-display text-3xl font-bold">Cómo comprar</h2>
-        <ol className="mt-6 grid gap-4 sm:grid-cols-3">
-          {steps.map((s, i) => (
-            <li key={s.title} className={`rounded-3xl border-2 border-forest p-5 shadow-[4px_4px_0_var(--forest)] ${STEP_COLORS[i % STEP_COLORS.length]}`}>
-              <div className="flex size-11 items-center justify-center rounded-full bg-white text-coral-deep">
-                <s.icon className="size-5" aria-hidden="true" />
-              </div>
-              <p className="mt-4 text-sm font-extrabold text-forest/70">Paso {i + 1}</p>
-              <h3 className="font-display text-lg font-bold">{s.title}</h3>
-              <p className="mt-1 font-semibold text-forest/80">{s.text}</p>
-            </li>
-          ))}
-        </ol>
+      <section id="como-comprar" className="mt-14 scroll-mt-24 rounded-3xl bg-sun p-6" aria-labelledby="como">
+        <h2 id="como" className="font-display text-2xl font-bold">¿Primera vez que comprás?</h2>
+        <p className="mt-1 font-semibold text-forest/80">Te contamos paso a paso cómo hacer tu pedido y respondemos las dudas más comunes.</p>
+        <Link href="/como-comprar" className={buttonClasses("outline", "md", "mt-4")}>
+          Ver cómo comprar
+        </Link>
       </section>
     </div>
   );

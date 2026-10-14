@@ -2,73 +2,47 @@
 
 import { Menu, MessageCircle, Search, ShoppingBag, X } from "lucide-react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useId, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 
-import { cartCount, useCart } from "@/lib/cart-store";
+import { cartCount, cartDrawer, useCart } from "@/lib/cart-store";
+import { CartDrawer } from "./cart-drawer";
 import { Logo } from "./logo";
+import { InstallAppButton } from "./install-app";
+import { SearchBox } from "./search-box";
 
 type NavCategory = { name: string; slug: string };
 
 function CartLink() {
   const items = useCart();
+  const pathname = usePathname();
   const count = cartCount(items);
-  return (
-    <Link
-      href="/carrito"
-      className="relative inline-flex size-11 items-center justify-center rounded-full text-forest transition-colors hover:bg-forest/5"
-      aria-label={count > 0 ? `Carrito: ${count} ${count === 1 ? "producto" : "productos"}` : "Carrito vacío"}
-    >
-      <ShoppingBag className="size-6" aria-hidden="true" />
-      {count > 0 ? (
-        <span
-          className="absolute -top-0.5 -right-0.5 flex min-w-5 items-center justify-center rounded-full bg-coral-deep px-1.5 text-[0.7rem] leading-5 font-bold text-white tabular ring-2 ring-cream"
-          aria-hidden="true"
-        >
-          {count > 99 ? "99+" : count}
-        </span>
-      ) : null}
-    </Link>
-  );
-}
-
-function SearchForm({ onDone, autoFocus = false }: { onDone?: () => void; autoFocus?: boolean }) {
-  const router = useRouter();
-  const id = useId();
-  const [q, setQ] = useState("");
-  return (
-    <form
-      role="search"
-      className="relative w-full"
-      onSubmit={(e) => {
-        e.preventDefault();
-        const term = q.trim();
-        router.push(term ? `/productos?q=${encodeURIComponent(term)}` : "/productos");
-        onDone?.();
-      }}
-    >
-      <label htmlFor={id} className="sr-only">
-        Buscar productos
-      </label>
-      <input
-        id={id}
-        type="search"
-        value={q}
-        onChange={(e) => setQ(e.target.value)}
-        placeholder="Buscar perfumes, cremas, kits…"
-        autoFocus={autoFocus}
-        maxLength={80}
-        enterKeyHint="search"
-        className="h-11 w-full rounded-full border border-line bg-white pr-12 pl-4 text-base text-forest placeholder:text-muted/70 focus:border-botanical focus:ring-3 focus:ring-botanical/20 focus:outline-none"
-      />
-      <button
-        type="submit"
-        className="absolute top-1 right-1 inline-flex size-9 items-center justify-center rounded-full bg-botanical-deep text-white transition-colors hover:bg-[#146347]"
-        aria-label="Buscar"
+  const label = count > 0 ? `Carrito: ${count} ${count === 1 ? "producto" : "productos"}` : "Carrito vacío";
+  const badge =
+    count > 0 ? (
+      <span
+        className="absolute -top-0.5 -right-0.5 flex min-w-5 items-center justify-center rounded-full bg-coral-deep px-1.5 text-[0.7rem] leading-5 font-bold text-white tabular ring-2 ring-cream"
+        aria-hidden="true"
       >
-        <Search className="size-4.5" aria-hidden="true" />
-      </button>
-    </form>
+        {count > 99 ? "99+" : count}
+      </span>
+    ) : null;
+  const classes =
+    "relative inline-flex size-11 items-center justify-center rounded-full text-forest transition-colors hover:bg-forest/5";
+  // En la página del carrito el ícono no abre el panel: ya está todo a la vista.
+  if (pathname === "/carrito") {
+    return (
+      <Link href="/carrito" className={classes} aria-label={label}>
+        <ShoppingBag className="size-6" aria-hidden="true" />
+        {badge}
+      </Link>
+    );
+  }
+  return (
+    <button type="button" className={classes} aria-label={label} aria-haspopup="dialog" onClick={() => cartDrawer.open()}>
+      <ShoppingBag className="size-6" aria-hidden="true" />
+      {badge}
+    </button>
   );
 }
 
@@ -139,7 +113,7 @@ export function Header({ categories }: { categories: NavCategory[] }) {
         </nav>
 
         <div className="ml-auto hidden w-full max-w-xs md:block">
-          <SearchForm />
+          <SearchBox />
         </div>
 
         <div className="ml-auto flex items-center md:ml-0">
@@ -162,10 +136,11 @@ export function Header({ categories }: { categories: NavCategory[] }) {
           <CartLink />
         </div>
       </div>
+      <CartDrawer />
 
       {searchOpen ? (
         <div className="border-t border-line/70 px-4 py-3 md:hidden">
-          <SearchForm autoFocus onDone={() => setSearchOpen(false)} />
+          <SearchBox autoFocus onDone={() => setSearchOpen(false)} />
         </div>
       ) : null}
 
@@ -196,7 +171,12 @@ export function Header({ categories }: { categories: NavCategory[] }) {
             </div>
             <nav aria-label="Menú móvil">
               <ul className="flex flex-col gap-1">
-                {[...links, { href: "/contacto", label: "Contacto" }, { href: "/carrito", label: "Mi carrito" }].map(
+                {[
+                  ...links,
+                  { href: "/como-comprar", label: "Cómo comprar" },
+                  { href: "/contacto", label: "Contacto" },
+                  { href: "/carrito", label: "Mi carrito" },
+                ].map(
                   (l) => (
                     <li key={l.href}>
                       <Link
@@ -210,6 +190,7 @@ export function Header({ categories }: { categories: NavCategory[] }) {
                 )}
               </ul>
             </nav>
+            <InstallAppButton className="flex min-h-12 items-center gap-3 rounded-2xl bg-sun/60 px-4 text-lg font-semibold hover:bg-sun" />
             {categories.length > 4 ? (
               <div>
                 <p className="px-4 pb-2 text-xs font-bold tracking-[0.14em] text-muted uppercase">Más categorías</p>

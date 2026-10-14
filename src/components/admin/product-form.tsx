@@ -20,6 +20,7 @@ export type ProductFormValues = {
   description: string;
   category_id: string;
   size: string;
+  natura_sku: string;
   magazine_price: string;
   sale_price: string;
   stock: string;
@@ -109,6 +110,14 @@ export function ProductForm({
         </Field>
         <Field label="Presentación o tamaño" htmlFor="size" error={err("size")} hint="Ej.: 100 ml, 200 g, kit x3">
           <Input id="size" autoComplete="off" {...register("size")} />
+        </Field>
+        <Field
+          label="Código de Natura (opcional)"
+          htmlFor="natura_sku"
+          error={err("natura_sku")}
+          hint="Ej.: NATARG-2821. Sirve para actualizar el precio de revista desde «Precios Natura»."
+        >
+          <Input id="natura_sku" autoComplete="off" placeholder="NATARG-" {...register("natura_sku")} />
         </Field>
         <Field label="Descripción" htmlFor="description" error={err("description")} className="sm:col-span-2">
           <Textarea id="description" rows={6} {...register("description")} />

@@ -6,6 +6,8 @@ import { redirect } from "next/navigation";
 import { assertAdmin, UnauthorizedError } from "@/lib/auth";
 import { PRODUCT_IMAGES_BUCKET } from "@/lib/config";
 import { isValidProductImagePath, MAX_IMAGES_PER_PRODUCT } from "@/lib/images";
+import { fetchNaturaMagazinePrice, type NaturaLookup } from "@/lib/natura";
+import { isValidPrice, planMagazinePriceUpdate } from "@/lib/pricing";
 import { slugify } from "@/lib/slug";
 import { createSessionClient, CATALOG_TAG } from "@/lib/supabase/server";
 import { categorySchema, fieldErrors, loginSchema, productSchema } from "@/lib/validation";
@@ -24,6 +26,9 @@ function fail(error: unknown, fallback: string): ActionResult<never> {
     return { ok: false, error: "Tu sesión venció o no tenés permisos. Volvé a iniciar sesión." };
   }
   const code = (error as { code?: string } | null)?.code;
+  if (code === "23505" && String((error as { message?: string }).message).includes("natura_sku")) {
+    return { ok: false, error: "Ese código de Natura ya está cargado en otro producto.", fields: { natura_sku: "Código repetido." } };
+  }
   if (code === "23505") return { ok: false, error: "Ya existe otro registro con esa URL (slug).", fields: { slug: "Esta URL ya está en uso." } };
   if (code === "23514") return { ok: false, error: "Algún dato no cumple las reglas (precios, stock u oferta)." };
   if (code === "42501") return { ok: false, error: "No tenés permisos para esta acción." };
@@ -270,5 +275,113 @@ export async function deleteCategory(categoryId: string): Promise<ActionResult> 
     return { ok: true, message: "Categoría eliminada. Sus productos quedaron sin categoría." };
   } catch (e) {
     return fail(e, "No pudimos eliminar la categoría.");
+  }
+}
+
+/* ------------------------------ Pedidos ------------------------------ */
+
+const ORDER_STATUSES = ["pending", "confirmed", "delivered", "cancelled"] as const;
+export type OrderStatus = (typeof ORDER_STATUSES)[number];
+
+/** Cambia el estado de un pedido. Confirmar/entregar descuenta stock; cancelar lo devuelve. */
+export async function setOrderStatus(orderId: string, status: OrderStatus): Promise<ActionResult> {
+  try {
+    const { supabase } = await assertAdmin();
+    if (!ORDER_STATUSES.includes(status) || !/^[0-9a-f-]{36}$/.test(orderId)) {
+      return { ok: false, error: "Datos inválidos." };
+    }
+    const { error } = await supabase.rpc("set_order_status", { order_id: orderId, new_status: status });
+    if (error) return fail(error, "No pudimos actualizar el pedido.");
+    refreshCatalog();
+    revalidatePath("/admin/pedidos");
+    return { ok: true };
+  } catch (e) {
+    return fail(e, "No pudimos actualizar el pedido.");
+  }
+}
+
+/* --------------------------- Precios de Natura --------------------------- */
+
+export type NaturaPriceCheck = {
+  id: string;
+  name: string;
+  sku: string;
+  magazinePrice: number;
+  salePrice: number;
+  isOffer: boolean;
+  result: NaturaLookup;
+};
+
+const UUID_RE = /^[0-9a-f-]{36}$/;
+const MAX_CHECK_BATCH = 20;
+
+/** Consulta en Natura el precio de revista vigente de un grupo de productos (no cambia nada). */
+export async function checkNaturaPrices(productIds: string[]): Promise<ActionResult<NaturaPriceCheck[]>> {
+  try {
+    const { supabase } = await assertAdmin();
+    const ids = [...new Set(productIds)].filter((id) => UUID_RE.test(id)).slice(0, MAX_CHECK_BATCH);
+    if (ids.length === 0) return { ok: true, data: [] };
+    const { data: products, error } = await supabase
+      .from("products")
+      .select("id, name, natura_sku, magazine_price, sale_price, is_offer")
+      .in("id", ids)
+      .not("natura_sku", "is", null);
+    if (error) return fail(error, "No pudimos leer los productos.");
+
+    const results: NaturaPriceCheck[] = [];
+    // De a 4 consultas a la vez, para no saturar el sitio de Natura.
+    const queue = [...(products ?? [])];
+    await Promise.all(
+      Array.from({ length: 4 }, async () => {
+        for (let p = queue.shift(); p; p = queue.shift()) {
+          results.push({
+            id: p.id,
+            name: p.name,
+            sku: p.natura_sku!,
+            magazinePrice: Number(p.magazine_price),
+            salePrice: Number(p.sale_price),
+            isOffer: p.is_offer,
+            result: await fetchNaturaMagazinePrice(p.natura_sku!),
+          });
+        }
+      }),
+    );
+    return { ok: true, data: results };
+  } catch (e) {
+    return fail(e, "No pudimos consultar los precios de Natura.");
+  }
+}
+
+/** Aplica los precios de revista nuevos que eligió la administradora. */
+export async function applyNaturaPrices(
+  changes: { id: string; magazinePrice: number }[],
+): Promise<ActionResult<{ updated: number }>> {
+  try {
+    const { supabase } = await assertAdmin();
+    const valid = changes
+      .filter((c) => UUID_RE.test(c.id) && isValidPrice(c.magazinePrice))
+      .slice(0, 1000);
+    if (valid.length === 0) return { ok: false, error: "No hay cambios para aplicar." };
+
+    const { data: products, error } = await supabase
+      .from("products")
+      .select("id, magazine_price, sale_price, is_offer")
+      .in("id", valid.map((c) => c.id));
+    if (error) return fail(error, "No pudimos leer los productos.");
+
+    const byId = new Map((products ?? []).map((p) => [p.id, p]));
+    let updated = 0;
+    for (const change of valid) {
+      const product = byId.get(change.id);
+      if (!product) continue;
+      const patch = planMagazinePriceUpdate(product, change.magazinePrice);
+      const { error: updateError } = await supabase.from("products").update(patch).eq("id", change.id);
+      if (updateError) return fail(updateError, `No pudimos actualizar todos los precios (se aplicaron ${updated}).`);
+      updated++;
+    }
+    refreshCatalog();
+    return { ok: true, data: { updated }, message: `Actualizamos ${updated} ${updated === 1 ? "precio" : "precios"}.` };
+  } catch (e) {
+    return fail(e, "No pudimos aplicar los precios.");
   }
 }

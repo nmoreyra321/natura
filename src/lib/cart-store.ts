@@ -186,3 +186,29 @@ export const cart = {
 export function cartCount(list: CartItem[]): number {
   return list.reduce((sum, i) => sum + i.quantity, 0);
 }
+
+/* Panel lateral del carrito (abierto/cerrado), compartido entre el header y "Agregar al carrito". */
+let drawerOpen = false;
+const drawerListeners = new Set<() => void>();
+
+export const cartDrawer = {
+  open() {
+    drawerOpen = true;
+    drawerListeners.forEach((l) => l());
+  },
+  close() {
+    drawerOpen = false;
+    drawerListeners.forEach((l) => l());
+  },
+};
+
+export function useCartDrawerOpen(): boolean {
+  return useSyncExternalStore(
+    (cb) => {
+      drawerListeners.add(cb);
+      return () => drawerListeners.delete(cb);
+    },
+    () => drawerOpen,
+    () => false,
+  );
+}

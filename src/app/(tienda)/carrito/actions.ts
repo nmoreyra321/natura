@@ -1,8 +1,9 @@
 "use server";
 
 import { getProductsForCart } from "@/lib/catalog";
+import { createPublicClient } from "@/lib/supabase/server";
 import { toCents } from "@/lib/pricing";
-import { cartRequestSchema } from "@/lib/validation";
+import { cartRequestSchema, orderRequestSchema } from "@/lib/validation";
 
 export type CartValidationLine = {
   productId: string;
@@ -48,4 +49,29 @@ export async function validateCart(input: unknown): Promise<CartValidationResult
     })),
     missing: ids.filter((id) => !found.has(id)),
   };
+}
+
+export type RegisterOrderResult = { ok: true; number: number } | { ok: false; error: string };
+
+/**
+ * Registra el pedido para el panel de Mariel justo antes de abrir WhatsApp.
+ * La base toma los precios vigentes; el navegador solo indica productos y cantidades.
+ */
+export async function registerOrder(input: unknown): Promise<RegisterOrderResult> {
+  const parsed = orderRequestSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "El pedido tiene datos inválidos." };
+
+  const supabase = createPublicClient({ cached: false });
+  if (!supabase) return { ok: false, error: "La tienda no está configurada." };
+
+  const { data, error } = await supabase.rpc("create_order", {
+    items: parsed.data.items,
+    customer_name: parsed.data.customerName || undefined,
+  });
+  const row = data?.[0];
+  if (error || !row) {
+    console.error("[pedido] No se pudo registrar:", error?.message);
+    return { ok: false, error: "No pudimos registrar el pedido." };
+  }
+  return { ok: true, number: row.number };
 }

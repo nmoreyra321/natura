@@ -52,6 +52,47 @@ export type Database = {
                   Relationships: [
                     
                   ]
+                },"order_items": {
+                  Row: {
+                    "id": string,"magazine_price": number,"name": string,"order_id": string,"product_id": string | null,"quantity": number,"size": string | null,"unit_price": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "id"?: string,"magazine_price": number,"name": string,"order_id": string,"product_id"?: string | null,"quantity": number,"size"?: string | null,"unit_price": number
+                  }
+                  Update: {
+                    "id"?: string,"magazine_price"?: number,"name"?: string,"order_id"?: string,"product_id"?: string | null,"quantity"?: number,"size"?: string | null,"unit_price"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "order_items_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "orders"
+      referencedColumns: ["id"]
+    },
+                    {
+      foreignKeyName: "order_items_product_id_fkey"
+      columns: ["product_id"]
+isOneToOne: false
+      referencedRelation: "products"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"orders": {
+                  Row: {
+                    "created_at": string,"customer_name": string | null,"id": string,"number": number,"savings": number,"status": string,"stock_applied": boolean,"total": number,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"customer_name"?: string | null,"id"?: string,"number"?: never,"savings"?: number,"status"?: string,"stock_applied"?: boolean,"total": number,"updated_at"?: string
+                  }
+                  Update: {
+                    "created_at"?: string,"customer_name"?: string | null,"id"?: string,"number"?: never,"savings"?: number,"status"?: string,"stock_applied"?: boolean,"total"?: number,"updated_at"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"product_images": {
                   Row: {
                     "alt": string | null,"created_at": string,"id": string,"position": number,"product_id": string,"storage_path": string
@@ -74,14 +115,14 @@ isOneToOne: false
                   ]
                 },"products": {
                   Row: {
-                    "category_id": string | null,"created_at": string,"description": string,"discount_percent": number | null,"id": string,"is_featured": boolean,"is_offer": boolean,"magazine_price": number,"name": string,"sale_price": number,"size": string | null,"slug": string,"status": string,"stock": number,"updated_at": string
+                    "category_id": string | null,"created_at": string,"description": string,"discount_percent": number | null,"id": string,"is_featured": boolean,"is_offer": boolean,"magazine_price": number,"name": string,"natura_sku": string | null,"sale_price": number,"size": string | null,"slug": string,"status": string,"stock": number,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "category_id"?: string | null,"created_at"?: string,"description"?: string,"discount_percent"?: never,"id"?: string,"is_featured"?: boolean,"is_offer"?: boolean,"magazine_price": number,"name": string,"sale_price": number,"size"?: string | null,"slug": string,"status"?: string,"stock"?: number,"updated_at"?: string
+                    "category_id"?: string | null,"created_at"?: string,"description"?: string,"discount_percent"?: never,"id"?: string,"is_featured"?: boolean,"is_offer"?: boolean,"magazine_price": number,"name": string,"natura_sku"?: string | null,"sale_price": number,"size"?: string | null,"slug": string,"status"?: string,"stock"?: number,"updated_at"?: string
                   }
                   Update: {
-                    "category_id"?: string | null,"created_at"?: string,"description"?: string,"discount_percent"?: never,"id"?: string,"is_featured"?: boolean,"is_offer"?: boolean,"magazine_price"?: number,"name"?: string,"sale_price"?: number,"size"?: string | null,"slug"?: string,"status"?: string,"stock"?: number,"updated_at"?: string
+                    "category_id"?: string | null,"created_at"?: string,"description"?: string,"discount_percent"?: never,"id"?: string,"is_featured"?: boolean,"is_offer"?: boolean,"magazine_price"?: number,"name"?: string,"natura_sku"?: string | null,"sale_price"?: number,"size"?: string | null,"slug"?: string,"status"?: string,"stock"?: number,"updated_at"?: string
                   }
                   Relationships: [
                     {
@@ -98,8 +139,14 @@ isOneToOne: false
             [_ in never]: never
           }
           Functions: {
+            "create_order":
+{ Args: { "customer_name"?: string; "items": Json }; Returns: { "id": string; "number": number; "total": number }[]
+                           },
             "is_admin":
 { Args: Record<PropertyKey, never>; Returns: boolean
+                           },
+            "set_order_status":
+{ Args: { "new_status": string; "order_id": string }; Returns: undefined
                            }
           }
           Enums: {

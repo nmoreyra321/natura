@@ -1,6 +1,6 @@
 "use client";
 
-import { ExternalLink, LayoutDashboard, LogOut, Package, Settings, Tags } from "lucide-react";
+import { ClipboardList, ExternalLink, LayoutDashboard, LogOut, Package, RefreshCw, Settings, Tags } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -9,7 +9,9 @@ import { LeafMark } from "@/components/store/logo";
 
 const items = [
   { href: "/admin", label: "Inicio", icon: LayoutDashboard, exact: true },
+  { href: "/admin/pedidos", label: "Pedidos", icon: ClipboardList },
   { href: "/admin/productos", label: "Productos", icon: Package },
+  { href: "/admin/precios", label: "Precios Natura", icon: RefreshCw },
   { href: "/admin/categorias", label: "Categorías", icon: Tags },
   { href: "/admin/configuracion", label: "Configuración", icon: Settings },
 ];

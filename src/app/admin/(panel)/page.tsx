@@ -1,4 +1,4 @@
-import { AlertTriangle, Eye, FileEdit, PackageX, Percent, Plus, Settings, Tags, TrendingDown } from "lucide-react";
+import { AlertTriangle, ClipboardList, Eye, FileEdit, PackageX, Percent, Plus, Settings, Tags, TrendingDown } from "lucide-react";
 import Link from "next/link";
 
 import { LinkButton } from "@/components/ui/button";
@@ -10,9 +10,10 @@ export const metadata = { title: "Inicio" };
 
 export default async function DashboardPage() {
   const { supabase } = await requireAdmin();
-  const { data: products, error } = await supabase
-    .from("products")
-    .select("status, stock, is_offer, discount_percent");
+  const [{ data: products, error }, { count: pendingOrders }] = await Promise.all([
+    supabase.from("products").select("status, stock, is_offer, discount_percent"),
+    supabase.from("orders").select("id", { count: "exact", head: true }).eq("status", "pending"),
+  ]);
 
   const list = products ?? [];
   const stats = [
@@ -35,6 +36,16 @@ export default async function DashboardPage() {
           <Plus className="size-5" aria-hidden="true" /> Nuevo producto
         </LinkButton>
       </div>
+
+      {pendingOrders ? (
+        <Link
+          href="/admin/pedidos?estado=pending"
+          className="mt-6 flex items-center gap-3 rounded-3xl border-2 border-forest bg-sun p-4 font-semibold shadow-[3px_3px_0_var(--forest)] hover:bg-sun/80"
+        >
+          <ClipboardList className="size-6 shrink-0" aria-hidden="true" />
+          Tenés {pendingOrders} {pendingOrders === 1 ? "pedido pendiente" : "pedidos pendientes"} de confirmar. Ver pedidos →
+        </Link>
+      ) : null}
 
       {!whatsapp ? (
         <div className="mt-6 flex gap-3 rounded-3xl border border-coral/40 bg-coral-soft p-4" role="status">

@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { validateCart } from "@/app/(tienda)/carrito/actions";
+import { registerOrder, validateCart } from "@/app/(tienda)/carrito/actions";
 import { Button, LinkButton, buttonClasses } from "@/components/ui/button";
 import { cart, useCart, useCartHydrated } from "@/lib/cart-store";
 import { formatARS } from "@/lib/format";
@@ -17,6 +17,16 @@ import { ProductImageFallback } from "./product-card";
 
 type Status = "idle" | "checking" | "ok" | "error";
 
+const NAME_KEY = "natu-mariel:nombre";
+
+function readSavedName(): string {
+  try {
+    return typeof window === "undefined" ? "" : (window.localStorage.getItem(NAME_KEY) ?? "");
+  } catch {
+    return "";
+  }
+}
+
 export function CartView({ whatsappNumber, siteUrl }: { whatsappNumber: string | null; siteUrl: string }) {
   const items = useCart();
   const hydrated = useCartHydrated();
@@ -24,6 +34,8 @@ export function CartView({ whatsappNumber, siteUrl }: { whatsappNumber: string |
   const [notices, setNotices] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const requestId = useRef(0);
+  const [customerName, setCustomerName] = useState(readSavedName);
+  const [sending, setSending] = useState(false);
 
   // Clave estable: cambia solo si cambian productos o cantidades.
   const key = items.map((i) => `${i.productId}:${i.quantity}`).join("|");
@@ -231,10 +243,66 @@ export function CartView({ whatsappNumber, siteUrl }: { whatsappNumber: string |
               </p>
             </>
           ) : whatsappUrl ? (
-            <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className={buttonClasses("whatsapp", "lg")}>
-              <MessageCircle className="size-5" aria-hidden="true" />
-              Hacer pedido por WhatsApp
-            </a>
+            <>
+              <div>
+                <label htmlFor="nombre-pedido" className="text-sm font-semibold">
+                  Tu nombre <span className="font-normal text-muted">(opcional)</span>
+                </label>
+                <input
+                  id="nombre-pedido"
+                  type="text"
+                  autoComplete="given-name"
+                  maxLength={80}
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                  placeholder="Para que Mariel sepa quién sos"
+                  className="mt-1 h-11 w-full rounded-full border border-line bg-white px-4 text-base focus:border-botanical focus:ring-3 focus:ring-botanical/20 focus:outline-none"
+                />
+              </div>
+              <a
+                href={whatsappUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-disabled={sending}
+                className={buttonClasses("whatsapp", "lg", sending ? "pointer-events-none opacity-70" : "")}
+                onClick={async (e) => {
+                  if (!whatsappNumber || sending) return;
+                  e.preventDefault();
+                  // La pestaña se abre ya (durante el clic) para que el navegador no la bloquee.
+                  const win = window.open("", "_blank");
+                  setSending(true);
+                  const name = customerName.trim();
+                  try {
+                    window.localStorage.setItem(NAME_KEY, name);
+                  } catch {
+                    // Sin almacenamiento: no pasa nada.
+                  }
+                  const res = await registerOrder({
+                    items: items.map((i) => ({ productId: i.productId, quantity: i.quantity })),
+                    customerName: name || undefined,
+                  }).catch(() => null);
+                  const message = buildOrderMessage(lines, siteUrl, {
+                    orderNumber: res?.ok ? res.number : null,
+                    customerName: name,
+                  });
+                  const url = buildWhatsAppUrl(whatsappNumber, message);
+                  if (win) {
+                    win.opener = null;
+                    win.location.href = url;
+                  } else {
+                    window.location.href = url;
+                  }
+                  setSending(false);
+                }}
+              >
+                {sending ? (
+                  <Loader2 className="size-5 animate-spin" aria-hidden="true" />
+                ) : (
+                  <MessageCircle className="size-5" aria-hidden="true" />
+                )}
+                Hacer pedido por WhatsApp
+              </a>
+            </>
           ) : (
             <Button variant="whatsapp" size="lg" disabled>
               {status === "error" ? (

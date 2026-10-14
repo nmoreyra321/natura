@@ -25,6 +25,7 @@ export default async function NewProductPage() {
           description: "",
           category_id: "",
           size: "",
+          natura_sku: "",
           magazine_price: "",
           sale_price: "",
           stock: "0",

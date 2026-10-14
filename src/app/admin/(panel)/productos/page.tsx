@@ -10,6 +10,7 @@ import { LOW_STOCK_THRESHOLD } from "@/lib/config";
 import { formatARS } from "@/lib/format";
 import { productImageUrl } from "@/lib/images";
 import { getPriceInfo } from "@/lib/pricing";
+import { nameSearchPatterns } from "@/lib/search";
 
 export const metadata = { title: "Productos" };
 
@@ -53,7 +54,7 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
     .order("updated_at", { ascending: false })
     // Desempate estable: sin esto, productos con la misma fecha podrían repetirse o saltearse entre páginas.
     .order("id");
-  if (q) query = query.ilike("name", `%${q.replace(/[\\%_]/g, (m) => `\\${m}`)}%`);
+  for (const pattern of nameSearchPatterns(q)) query = query.ilike("name", pattern);
   if (estado === "published" || estado === "draft") query = query.eq("status", estado);
   if (stock === "sin") query = query.eq("stock", 0);
   if (stock === "bajo") query = query.gt("stock", 0).lte("stock", LOW_STOCK_THRESHOLD);

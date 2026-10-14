@@ -67,6 +67,7 @@ export default async function EditProductPage({
             description: product.description,
             category_id: product.category_id ?? "",
             size: product.size ?? "",
+            natura_sku: product.natura_sku ?? "",
             magazine_price: String(product.magazine_price),
             sale_price: String(product.sale_price),
             stock: String(product.stock),

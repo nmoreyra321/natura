@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { formatARS } from "@/lib/format";
-import { getPriceInfo, toCents } from "@/lib/pricing";
+import { getPriceInfo, planMagazinePriceUpdate, toCents } from "@/lib/pricing";
 
 describe("getPriceInfo", () => {
   it("calcula descuento, ahorro y porcentaje", () => {
@@ -45,5 +45,27 @@ describe("formatARS", () => {
     expect(formatARS(1250000)).toBe("$ 12.500,00");
     expect(formatARS(99)).toBe("$ 0,99");
     expect(formatARS(123456789)).toBe("$ 1.234.567,89");
+  });
+});
+
+describe("planMagazinePriceUpdate", () => {
+  it("si el especial era igual al de revista, acompaña el precio nuevo", () => {
+    expect(planMagazinePriceUpdate({ magazine_price: "16300.00", sale_price: "16300.00", is_offer: false }, 17900)).toEqual({
+      magazine_price: 17900,
+      sale_price: 17900,
+      is_offer: false,
+    });
+  });
+
+  it("mantiene un precio especial propio", () => {
+    expect(planMagazinePriceUpdate({ magazine_price: 20000, sale_price: 15000, is_offer: true }, 22000)).toEqual({
+      magazine_price: 22000,
+      sale_price: 15000,
+      is_offer: true,
+    });
+  });
+
+  it("deja de ser oferta si el especial ya no es menor que el de revista", () => {
+    expect(planMagazinePriceUpdate({ magazine_price: 20000, sale_price: 15000, is_offer: true }, 14000).is_offer).toBe(false);
   });
 });

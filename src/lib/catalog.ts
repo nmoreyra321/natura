@@ -2,6 +2,7 @@ import "server-only";
 
 import { cache } from "react";
 
+import { nameSearchPatterns } from "@/lib/search";
 import { createPublicClient } from "@/lib/supabase/server";
 import type { CategoryRow, ProductImageRow, ProductRow } from "@/lib/supabase/types";
 
@@ -67,10 +68,6 @@ function sortImages<T extends { images: { position: number }[] }>(p: T): T {
   return { ...p, images: [...p.images].sort((a, b) => a.position - b.position) };
 }
 
-function escapeLike(value: string): string {
-  return value.replace(/[\\%_]/g, (m) => `\\${m}`);
-}
-
 /** Lee parámetros de la URL de forma tolerante. */
 export function parseCatalogFilters(
   params: Record<string, string | string[] | undefined>,
@@ -115,7 +112,7 @@ export async function getCatalog(filters: CatalogFilters): Promise<CatalogResult
     .select(PRODUCT_SELECT, { count: "exact" })
     .eq("status", "published");
 
-  if (filters.q) query = query.ilike("name", `%${escapeLike(filters.q)}%`);
+  for (const pattern of nameSearchPatterns(filters.q ?? "")) query = query.ilike("name", pattern);
   if (categoryId) query = query.eq("category_id", categoryId);
   if (filters.min !== undefined) query = query.gte("sale_price", filters.min);
   if (filters.max !== undefined) query = query.lte("sale_price", filters.max);
@@ -161,6 +158,45 @@ export async function getCatalog(filters: CatalogFilters): Promise<CatalogResult
     pageCount: Math.ceil(total / PAGE_SIZE),
     available: true,
   };
+}
+
+export type SearchSuggestion = {
+  slug: string;
+  name: string;
+  size: string | null;
+  salePrice: number;
+  magazinePrice: number;
+  image: string | null;
+};
+
+/** Sugerencias para el buscador instantáneo (productos publicados, los más relevantes primero). */
+export async function searchSuggestions(q: string, limit = 6): Promise<SearchSuggestion[] | null> {
+  const patterns = nameSearchPatterns(q);
+  if (patterns.length === 0) return [];
+  const supabase = createPublicClient();
+  if (!supabase) return null;
+  let query = supabase
+    .from("products")
+    .select("name, slug, size, sale_price, magazine_price, stock, images:product_images(storage_path, position)")
+    .eq("status", "published");
+  for (const pattern of patterns) query = query.ilike("name", pattern);
+  const { data, error } = await query
+    .order("stock", { ascending: false })
+    .order("is_featured", { ascending: false })
+    .order("name")
+    .limit(limit);
+  if (error) {
+    console.error("[catalog] Error en sugerencias de búsqueda:", error.message);
+    return null;
+  }
+  return (data ?? []).map((row) => ({
+    slug: row.slug,
+    name: row.name,
+    size: row.size,
+    salePrice: Number(row.sale_price),
+    magazinePrice: Number(row.magazine_price),
+    image: [...(row.images ?? [])].sort((a, b) => a.position - b.position)[0]?.storage_path ?? null,
+  }));
 }
 
 /** Cantidad total de productos publicados (null si la base no está disponible). */

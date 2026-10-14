@@ -68,6 +68,13 @@ export const productSchema = z
       .transform((v) => v ?? null)
       .refine((v) => v === null || z.uuid().safeParse(v).success, "Categoría inválida."),
     size: optionalText(60, "La presentación puede tener hasta 60 caracteres."),
+    natura_sku: z
+      .string()
+      .trim()
+      .toUpperCase()
+      .refine((v) => v === "" || /^NATARG-\d{1,12}$/.test(v), "Usá el código de Natura, por ejemplo NATARG-2821.")
+      .optional()
+      .transform((v) => (v ? v : null)),
     magazine_price: money("precio de revista"),
     sale_price: money("precio especial"),
     stock: z.coerce
@@ -152,6 +159,11 @@ export const cartRequestSchema = z
     }),
   )
   .max(50);
+
+export const orderRequestSchema = z.object({
+  items: cartRequestSchema.min(1),
+  customerName: z.string().trim().max(80).optional(),
+});
 
 /** Convierte los errores de Zod en { campo: mensaje } para mostrar en el formulario. */
 export function fieldErrors(error: z.ZodError): Record<string, string> {

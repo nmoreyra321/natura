@@ -70,3 +70,24 @@ export function getPriceInfo(
     discountPercent,
   };
 }
+
+/**
+ * Cómo queda un producto cuando cambia el precio de revista de Natura:
+ * - si el precio especial era igual al de revista, acompaña el cambio;
+ * - si era distinto (un precio propio), se mantiene;
+ * - si estaba en oferta y el especial ya no es menor que el de revista, deja de ser oferta.
+ */
+export function planMagazinePriceUpdate(
+  product: { magazine_price: number | string; sale_price: number | string; is_offer: boolean },
+  newMagazinePrice: number,
+): { magazine_price: number; sale_price: number; is_offer: boolean } {
+  const oldMagazine = toCents(product.magazine_price);
+  const oldSale = toCents(product.sale_price);
+  const newMagazine = toCents(newMagazinePrice);
+  const sale = oldSale === oldMagazine ? newMagazine : oldSale;
+  return {
+    magazine_price: newMagazine / 100,
+    sale_price: sale / 100,
+    is_offer: product.is_offer && sale < newMagazine,
+  };
+}

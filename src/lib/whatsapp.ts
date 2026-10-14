@@ -48,7 +48,11 @@ export function getOrderTotals(lines: OrderLine[]) {
 }
 
 /** Arma el mensaje de pedido. Deja claro que queda pendiente de confirmación. */
-export function buildOrderMessage(lines: OrderLine[], siteUrl?: string): string {
+export function buildOrderMessage(
+  lines: OrderLine[],
+  siteUrl?: string,
+  extra: { orderNumber?: number | null; customerName?: string | null } = {},
+): string {
   const { totalCents, savingsCents } = getOrderTotals(lines);
   const rows = lines.map((line, i) => {
     const name = line.size ? `${line.name} (${line.size})` : line.name;
@@ -56,8 +60,10 @@ export function buildOrderMessage(lines: OrderLine[], siteUrl?: string): string 
     return `${i + 1}. ${name}\n   ${line.quantity} x ${formatARS(line.unitCents)} = ${subtotal}`;
   });
 
+  const name = extra.customerName?.trim();
   const parts = [
-    "¡Hola Mariel! Quiero hacer este pedido:",
+    name ? `¡Hola Mariel! Soy ${name} y quiero hacer este pedido:` : "¡Hola Mariel! Quiero hacer este pedido:",
+    ...(extra.orderNumber ? [`*Pedido N.º ${extra.orderNumber}*`] : []),
     "",
     ...rows,
     "",

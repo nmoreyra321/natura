@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { InstallAppButton } from "./install-app";
 import { LeafMark } from "./logo";
 
 export function Footer({ categories }: { categories: { name: string; slug: string }[] }) {
@@ -58,9 +59,12 @@ export function Footer({ categories }: { categories: { name: string; slug: strin
               </Link>
             </li>
             <li>
-              <Link className="hover:text-sun" href="/contacto#como-comprar">
+              <Link className="hover:text-sun" href="/como-comprar">
                 Cómo comprar
               </Link>
+            </li>
+            <li>
+              <InstallAppButton className="inline-flex items-center gap-2 font-semibold hover:text-sun" />
             </li>
           </ul>
         </nav>
