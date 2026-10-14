@@ -27,7 +27,7 @@ export type HomeData = {
 const PERKS = [
   { icon: BadgePercent, title: "Más barato que la revista", text: "Precios especiales en todo", tone: "bg-sun" },
   { icon: MessageCircle, title: "Pedís por WhatsApp", text: "Sin registrarte ni vueltas", tone: "bg-sage" },
-  { icon: Heart, title: "Te atiende Mariel", text: "Asesoramiento personalizado", tone: "bg-pink" },
+  { icon: Heart, title: "Atención personalizada", text: "Te asesoramos en lo que necesites", tone: "bg-pink" },
   { icon: Truck, title: "Entrega coordinada", text: "Arreglás día y lugar", tone: "bg-lilac" },
 ];
 
