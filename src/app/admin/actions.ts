@@ -8,6 +8,7 @@ import { PRODUCT_IMAGES_BUCKET } from "@/lib/config";
 import { isValidProductImagePath, MAX_IMAGES_PER_PRODUCT } from "@/lib/images";
 import type { NaturaLookup } from "@/lib/natura";
 import { parseExpiry } from "@/lib/lots";
+import { toWhatsAppPhone } from "@/lib/debts";
 import { formatARS } from "@/lib/format";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isValidPrice, planMagazinePriceUpdate, salePriceFromDiscount, toCents } from "@/lib/pricing";
@@ -797,6 +798,7 @@ export async function searchProductsForSale(q: string): Promise<SaleProductOptio
 export type ManualSaleInput = {
   items: { productId: string; quantity: number; unitPrice: number }[];
   customerName?: string;
+  customerPhone?: string;
   channel: "facebook" | "presencial" | "whatsapp" | "otro";
   paymentMethod: "efectivo" | "transferencia";
   amountPaid: number;
@@ -861,6 +863,7 @@ export async function registerManualSale(input: ManualSaleInput): Promise<Action
       .from("orders")
       .insert({
         customer_name: input.customerName?.trim().slice(0, 80) || null,
+        customer_phone: toWhatsAppPhone(input.customerPhone),
         total: totalCents / 100,
         savings: savingsCents / 100,
         channel,
@@ -890,5 +893,57 @@ export async function registerManualSale(input: ManualSaleInput): Promise<Action
     return { ok: true, data: { code: order.code }, message: `Venta ${order.code} registrada. Ya descontamos el stock.` };
   } catch (e) {
     return fail(e, "No pudimos registrar la venta.");
+  }
+}
+
+/* ----------------------- Deudas y avisos de reposición ----------------------- */
+
+/** Guarda el WhatsApp de una clienta en sus pedidos (para mandarle recordatorios). */
+export async function setCustomerPhone(orderIds: string[], phone: string): Promise<ActionResult> {
+  try {
+    const { supabase } = await assertAdmin();
+    const ids = [...new Set(orderIds)].filter((id) => UUID_RE.test(id)).slice(0, 200);
+    const normalized = toWhatsAppPhone(phone);
+    if (!normalized) return { ok: false, error: "Escribí el celular con código de área, por ejemplo 11 2345-6789." };
+    if (ids.length === 0) return { ok: false, error: "No hay pedidos." };
+    const { error } = await supabase.from("orders").update({ customer_phone: normalized }).in("id", ids);
+    if (error) return fail(error, "No pudimos guardar el teléfono.");
+    revalidatePath("/admin/deudas");
+    return { ok: true, message: "WhatsApp guardado." };
+  } catch (e) {
+    return fail(e, "No pudimos guardar el teléfono.");
+  }
+}
+
+/** Marca que ya se le avisó a la clienta que el producto volvió. */
+export async function markRestockNotified(requestId: string): Promise<ActionResult> {
+  try {
+    const { supabase } = await assertAdmin();
+    if (!UUID_RE.test(requestId)) return { ok: false, error: "Datos inválidos." };
+    const { error } = await supabase
+      .from("restock_requests")
+      .update({ notified_at: new Date().toISOString() })
+      .eq("id", requestId);
+    if (error) return fail(error, "No pudimos actualizar el aviso.");
+    revalidatePath("/admin/avisos");
+    revalidatePath("/admin");
+    return { ok: true };
+  } catch (e) {
+    return fail(e, "No pudimos actualizar el aviso.");
+  }
+}
+
+/** Borra un pedido de aviso (por ejemplo, si la clienta ya no lo quiere). */
+export async function deleteRestockRequest(requestId: string): Promise<ActionResult> {
+  try {
+    const { supabase } = await assertAdmin();
+    if (!UUID_RE.test(requestId)) return { ok: false, error: "Datos inválidos." };
+    const { error } = await supabase.from("restock_requests").delete().eq("id", requestId);
+    if (error) return fail(error, "No pudimos borrar el aviso.");
+    revalidatePath("/admin/avisos");
+    revalidatePath("/admin");
+    return { ok: true, message: "Aviso borrado." };
+  } catch (e) {
+    return fail(e, "No pudimos borrar el aviso.");
   }
 }

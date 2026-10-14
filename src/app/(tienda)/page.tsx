@@ -5,7 +5,7 @@ import { LinkButton } from "@/components/ui/button";
 import { EmptyStore } from "@/components/store/empty-store";
 import { HeroArt, Wave } from "@/components/store/hero-art";
 import { ProductGrid } from "@/components/store/product-card";
-import { getActiveCategories, getHighlights, getPublishedCount } from "@/lib/catalog";
+import { getActiveCategories, getBestSellers, getHighlights, getPublishedCount } from "@/lib/catalog";
 
 export const revalidate = 300;
 
@@ -54,10 +54,11 @@ const PERKS = [
 ];
 
 export default async function HomePage() {
-  const [count, categories, highlights] = await Promise.all([
+  const [count, categories, highlights, bestSellers] = await Promise.all([
     getPublishedCount(),
     getActiveCategories(),
     getHighlights(8),
+    getBestSellers(8),
   ]);
   const hasProducts = (count ?? 0) > 0;
   const hasOffers = highlights.offers.length > 0;
@@ -159,6 +160,12 @@ export default async function HomePage() {
           {hasOffers ? (
             <Section title="Ofertas para vos" href="/productos?ofertas=1" emoji={<span aria-hidden="true">🔥</span>}>
               <ProductGrid products={highlights.offers.slice(0, 4)} />
+            </Section>
+          ) : null}
+          {/* Se muestra cuando ya hay ventas suficientes para que la lista tenga sentido. */}
+          {bestSellers.length >= 4 ? (
+            <Section title="Los más vendidos" href="/productos" emoji={<span aria-hidden="true">🏆</span>}>
+              <ProductGrid products={bestSellers.slice(0, bestSellers.length >= 8 ? 8 : 4)} />
             </Section>
           ) : null}
           {highlights.featured.length > 0 ? (

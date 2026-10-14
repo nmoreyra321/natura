@@ -140,6 +140,13 @@ En **Pedidos** cada pedido muestra cómo pagó: «Efectivo», «Transferencia»,
 
 En **Panel → Venta rápida** se cargan las ventas de los vivos de Facebook, en persona o por WhatsApp: buscás cada producto, ajustás cantidad (y precio si hiciste uno especial), elegís dónde se vendió, cómo pagó (todo, una parte o nada, con nota) y si ya lo entregaste. Al registrarla se descuenta el stock (y los vencimientos, primero el que vence antes) y queda en Pedidos y en Ventas con su origen.
 
+### Quién me debe, avisos de stock y más vendidos
+
+- **Quién me debe** (panel): clientas con pedidos sin cobrar o pagados en parte, cuánto deben y desde cuándo, con botón para recordarles por WhatsApp (si tiene el celular guardado va directo a su chat).
+- **Avisos de stock** (panel): en los productos sin stock, la clienta toca «Avisame cuando vuelva» y deja su WhatsApp. Cuando cargás stock, tocás «Avisar» y se abre WhatsApp con el mensaje listo.
+- **Inicio del panel**: avisa pedidos pendientes, lotes por vencer, plata por cobrar, clientas esperando productos y la lista «Para reponer».
+- **Tienda**: botón «Compartir» en cada producto y sección «Los más vendidos» (últimos 90 días) en el inicio, que aparece cuando hay al menos 4 productos vendidos.
+
 ### Pedidos
 
 Cuando una clienta toca **Hacer pedido por WhatsApp**, el pedido queda guardado con un número (por ejemplo *Pedido N.º 12*), que también aparece en el mensaje de WhatsApp. En **Pedidos**:

@@ -253,6 +253,18 @@ export async function getHighlights(limit = 8) {
   return { featured: rows(featured), offers: rows(offers), latest: rows(latest) };
 }
 
+/** Lo más vendido de los últimos 90 días (en la tienda y en ventas cargadas a mano), en orden. */
+export async function getBestSellers(limit = 8): Promise<PublicProduct[]> {
+  const supabase = createPublicClient();
+  if (!supabase) return [];
+  const { data: ranking, error } = await supabase.rpc("best_sellers", { max_items: limit });
+  if (error || !ranking?.length) return [];
+  const ids = ranking.map((r) => r.product_id);
+  const { data } = await supabase.from("products").select(PRODUCT_SELECT).eq("status", "published").in("id", ids);
+  const byId = new Map(((data ?? []) as unknown as PublicProduct[]).map((p) => [p.id, sortImages(p)]));
+  return ids.map((id) => byId.get(id)).filter((p): p is PublicProduct => Boolean(p));
+}
+
 export const getProductBySlug = cache(async (slug: string): Promise<PublicProduct | null> => {
   const supabase = createPublicClient();
   if (!supabase) return null;

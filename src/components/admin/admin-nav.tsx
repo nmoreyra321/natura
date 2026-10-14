@@ -1,6 +1,6 @@
 "use client";
 
-import { Boxes, CalendarClock, CirclePlus, ClipboardList, ExternalLink, LayoutDashboard, LogOut, Package, RefreshCw, Settings, Tags, TrendingUp } from "lucide-react";
+import { BellRing, Boxes, CalendarClock, CirclePlus, HandCoins, ClipboardList, ExternalLink, LayoutDashboard, LogOut, Package, RefreshCw, Settings, Tags, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -11,10 +11,12 @@ const items = [
   { href: "/admin", label: "Inicio", icon: LayoutDashboard, exact: true },
   { href: "/admin/vender", label: "Venta rápida", icon: CirclePlus },
   { href: "/admin/pedidos", label: "Pedidos", icon: ClipboardList },
+  { href: "/admin/deudas", label: "Quién me debe", icon: HandCoins },
   { href: "/admin/ventas", label: "Ventas", icon: TrendingUp },
   { href: "/admin/productos", label: "Productos", icon: Package },
   { href: "/admin/inventario", label: "Inventario", icon: Boxes },
   { href: "/admin/vencimientos", label: "Vencimientos", icon: CalendarClock },
+  { href: "/admin/avisos", label: "Avisos de stock", icon: BellRing },
   { href: "/admin/precios", label: "Precios Natura", icon: RefreshCw },
   { href: "/admin/categorias", label: "Categorías", icon: Tags },
   { href: "/admin/configuracion", label: "Configuración", icon: Settings },

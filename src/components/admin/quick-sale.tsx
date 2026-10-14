@@ -29,6 +29,7 @@ export function QuickSale() {
   const [searching, setSearching] = useState(false);
   const [lines, setLines] = useState<Line[]>([]);
   const [customer, setCustomer] = useState("");
+  const [phone, setPhone] = useState("");
   const [channel, setChannel] = useState<Channel>("facebook");
   const [method, setMethod] = useState<"efectivo" | "transferencia">("transferencia");
   const [paidAll, setPaidAll] = useState(true);
@@ -80,6 +81,7 @@ export function QuickSale() {
   const reset = () => {
     setLines([]);
     setCustomer("");
+    setPhone("");
     setPaidAll(true);
     setPaid("");
     setNote("");
@@ -96,6 +98,7 @@ export function QuickSale() {
       const res = await registerManualSale({
         items: lines.map((l) => ({ productId: l.id, quantity: l.quantity, unitPrice: parseMoney(l.price) })),
         customerName: customer,
+        customerPhone: phone,
         channel,
         paymentMethod: method,
         amountPaid,
@@ -244,6 +247,19 @@ export function QuickSale() {
           maxLength={80}
           onChange={(e) => setCustomer(e.target.value)}
           placeholder="Ej.: Laura Gómez"
+          className="mt-1 h-11 w-full rounded-full border border-line bg-white px-4 text-base"
+        />
+        <label htmlFor="vr-tel" className="mt-3 block text-sm font-semibold">
+          WhatsApp de la clienta <span className="font-normal text-muted">(opcional, para recordarle si queda debiendo)</span>
+        </label>
+        <input
+          id="vr-tel"
+          type="tel"
+          inputMode="tel"
+          value={phone}
+          maxLength={20}
+          onChange={(e) => setPhone(e.target.value)}
+          placeholder="Ej.: 11 2345-6789"
           className="mt-1 h-11 w-full rounded-full border border-line bg-white px-4 text-base"
         />
         <div className="mt-3 flex flex-wrap gap-2" role="radiogroup" aria-label="Dónde se vendió">

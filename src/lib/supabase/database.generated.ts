@@ -108,17 +108,37 @@ isOneToOne: false
                   ]
                 },"orders": {
                   Row: {
-                    "amount_paid": number,"channel": string,"code": string,"created_at": string,"customer_name": string | null,"id": string,"mp_payment_id": string | null,"number": number,"paid_at": string | null,"payment_method": string,"payment_note": string | null,"payment_status": string | null,"savings": number,"status": string,"stock_applied": boolean,"total": number,"updated_at": string
+                    "amount_paid": number,"channel": string,"code": string,"created_at": string,"customer_name": string | null,"customer_phone": string | null,"id": string,"mp_payment_id": string | null,"number": number,"paid_at": string | null,"payment_method": string,"payment_note": string | null,"payment_status": string | null,"savings": number,"status": string,"stock_applied": boolean,"total": number,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "amount_paid"?: number,"channel"?: string,"code"?: string,"created_at"?: string,"customer_name"?: string | null,"id"?: string,"mp_payment_id"?: string | null,"number"?: never,"paid_at"?: string | null,"payment_method"?: string,"payment_note"?: string | null,"payment_status"?: string | null,"savings"?: number,"status"?: string,"stock_applied"?: boolean,"total": number,"updated_at"?: string
+                    "amount_paid"?: number,"channel"?: string,"code"?: string,"created_at"?: string,"customer_name"?: string | null,"customer_phone"?: string | null,"id"?: string,"mp_payment_id"?: string | null,"number"?: never,"paid_at"?: string | null,"payment_method"?: string,"payment_note"?: string | null,"payment_status"?: string | null,"savings"?: number,"status"?: string,"stock_applied"?: boolean,"total": number,"updated_at"?: string
                   }
                   Update: {
-                    "amount_paid"?: number,"channel"?: string,"code"?: string,"created_at"?: string,"customer_name"?: string | null,"id"?: string,"mp_payment_id"?: string | null,"number"?: never,"paid_at"?: string | null,"payment_method"?: string,"payment_note"?: string | null,"payment_status"?: string | null,"savings"?: number,"status"?: string,"stock_applied"?: boolean,"total"?: number,"updated_at"?: string
+                    "amount_paid"?: number,"channel"?: string,"code"?: string,"created_at"?: string,"customer_name"?: string | null,"customer_phone"?: string | null,"id"?: string,"mp_payment_id"?: string | null,"number"?: never,"paid_at"?: string | null,"payment_method"?: string,"payment_note"?: string | null,"payment_status"?: string | null,"savings"?: number,"status"?: string,"stock_applied"?: boolean,"total"?: number,"updated_at"?: string
                   }
                   Relationships: [
                     
+                  ]
+                },"restock_requests": {
+                  Row: {
+                    "created_at": string,"id": string,"name": string | null,"notified_at": string | null,"phone": string,"product_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"id"?: string,"name"?: string | null,"notified_at"?: string | null,"phone": string,"product_id": string
+                  }
+                  Update: {
+                    "created_at"?: string,"id"?: string,"name"?: string | null,"notified_at"?: string | null,"phone"?: string,"product_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "restock_requests_product_id_fkey"
+      columns: ["product_id"]
+isOneToOne: false
+      referencedRelation: "products"
+      referencedColumns: ["id"]
+    }
                   ]
                 },"store_settings": {
                   Row: {
@@ -200,6 +220,9 @@ isOneToOne: false
             [_ in never]: never
           }
           Functions: {
+            "best_sellers":
+{ Args: { "max_items"?: number }; Returns: { "product_id": string; "units": number }[]
+                           },
             "create_order":
 { Args: { "customer_name"?: string; "items": Json }; Returns: { "id": string; "number": number; "total": number }[]
                            },

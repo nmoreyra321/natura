@@ -8,7 +8,10 @@ import { AddToCart } from "@/components/store/add-to-cart";
 import { Gallery } from "@/components/store/gallery";
 import { DiscountBadge, Price } from "@/components/store/price";
 import { ProductGrid } from "@/components/store/product-card";
+import { RestockForm } from "@/components/store/restock-form";
+import { ShareButton } from "@/components/store/share-button";
 import { StockBadge } from "@/components/store/stock-badge";
+import { formatARS } from "@/lib/format";
 import { getProductBySlug, getRelatedProducts } from "@/lib/catalog";
 import { getSiteUrl, SITE_NAME } from "@/lib/config";
 import { productImageUrl } from "@/lib/images";
@@ -150,6 +153,14 @@ export default async function ProductPage({ params }: PageProps<"/productos/[slu
               magazinePrice: toCents(product.magazine_price) / 100,
               stock: product.stock,
             }}
+          />
+
+          {product.stock <= 0 ? <RestockForm productId={product.id} /> : null}
+
+          <ShareButton
+            title={product.name}
+            text={`Mirá este producto de Natu Mariel: ${product.name}${product.size ? ` (${product.size})` : ""} a ${formatARS(toCents(product.sale_price))}`}
+            url={url}
           />
 
           {whatsapp ? (
