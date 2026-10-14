@@ -55,3 +55,18 @@ describe("buildOrderMessage con número de pedido", () => {
     expect(msg).toContain("*Pedido N.º 42*");
   });
 });
+
+describe("buildOrderMessage con forma de pago", () => {
+  const lines = [{ name: "Ekos Maracuyá", size: "200 ml", quantity: 1, unitCents: 1_000_000, magazineUnitCents: 1_000_000 }];
+
+  it("indica la forma de pago elegida", () => {
+    expect(buildOrderMessage(lines, undefined, { paymentMethod: "efectivo" })).toContain("Forma de pago: Efectivo");
+  });
+
+  it("si ya pagó con Mercado Pago lo dice y no pide confirmar el pago", () => {
+    const msg = buildOrderMessage(lines, undefined, { orderNumber: 7, paid: true });
+    expect(msg).toContain("Ya lo pagué con Mercado Pago");
+    expect(msg).toContain("Pedido N.º 7");
+    expect(msg).not.toContain("confirmación de stock, pago");
+  });
+});

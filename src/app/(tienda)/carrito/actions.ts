@@ -1,6 +1,9 @@
 "use server";
 
 import { getProductsForCart } from "@/lib/catalog";
+import { getSiteUrl } from "@/lib/config";
+import { createPreference, isMercadoPagoEnabled } from "@/lib/mercadopago";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createPublicClient } from "@/lib/supabase/server";
 import { toCents } from "@/lib/pricing";
 import { cartRequestSchema, orderRequestSchema } from "@/lib/validation";
@@ -74,4 +77,57 @@ export async function registerOrder(input: unknown): Promise<RegisterOrderResult
     return { ok: false, error: "No pudimos registrar el pedido." };
   }
   return { ok: true, number: row.number };
+}
+
+export type MercadoPagoCheckoutResult = { ok: true; url: string; number: number } | { ok: false; error: string };
+
+/**
+ * Registra el pedido como "Mercado Pago" y devuelve el link para pagar.
+ * Los precios salen del pedido guardado en la base, no del navegador.
+ */
+export async function payWithMercadoPago(input: unknown): Promise<MercadoPagoCheckoutResult> {
+  if (!isMercadoPagoEnabled()) return { ok: false, error: "El pago con Mercado Pago no está disponible." };
+  const parsed = orderRequestSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "El pedido tiene datos inválidos." };
+
+  const supabase = createPublicClient({ cached: false });
+  const admin = createAdminClient();
+  if (!supabase || !admin) return { ok: false, error: "La tienda no está configurada para cobrar online." };
+
+  const { data, error } = await supabase.rpc("create_order", {
+    items: parsed.data.items,
+    customer_name: parsed.data.customerName || undefined,
+  });
+  const order = data?.[0];
+  if (error || !order) {
+    console.error("[pedido] No se pudo registrar:", error?.message);
+    return { ok: false, error: "No pudimos registrar el pedido." };
+  }
+
+  const [{ error: markError }, { data: items }] = await Promise.all([
+    admin.from("orders").update({ payment_method: "mercadopago", payment_status: "pending" }).eq("id", order.id),
+    admin.from("order_items").select("product_id, name, size, quantity, unit_price").eq("order_id", order.id),
+  ]);
+  if (markError || !items || items.length === 0) {
+    console.error("[pedido] No se pudo preparar el pago:", markError?.message);
+    return { ok: false, error: "No pudimos preparar el pago. Probá de nuevo." };
+  }
+
+  const preference = await createPreference({
+    orderId: order.id,
+    orderNumber: order.number,
+    siteUrl: getSiteUrl(),
+    items: items.map((i) => ({
+      id: i.product_id ?? i.name,
+      title: i.size ? `${i.name} (${i.size})` : i.name,
+      quantity: i.quantity,
+      unitPrice: toCents(i.unit_price) / 100,
+    })),
+  });
+  if (!preference) {
+    // El pedido no sirve sin link de pago: lo dejamos cancelado para que no confunda en el panel.
+    await admin.from("orders").update({ status: "cancelled", payment_status: "cancelled" }).eq("id", order.id);
+    return { ok: false, error: "Mercado Pago no respondió. Probá de nuevo en un rato o elegí efectivo." };
+  }
+  return { ok: true, url: preference.url, number: order.number };
 }

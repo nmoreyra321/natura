@@ -20,6 +20,21 @@ const STATUS_LABELS: Record<OrderStatus, { label: string; tone: string }> = {
   cancelled: { label: "Cancelado", tone: "bg-cream text-muted" },
 };
 
+const PAYMENT_LABELS: Record<string, { label: string; tone: string }> = {
+  approved: { label: "Mercado Pago · Pagado", tone: "bg-[#009ee3] text-white" },
+  pending: { label: "Mercado Pago · Esperando pago", tone: "bg-[#e6f6fd] text-[#00649a]" },
+  in_process: { label: "Mercado Pago · En proceso", tone: "bg-[#e6f6fd] text-[#00649a]" },
+  rejected: { label: "Mercado Pago · Rechazado", tone: "bg-coral-soft text-coral-deep" },
+  cancelled: { label: "Mercado Pago · No pagó", tone: "bg-cream text-muted" },
+  refunded: { label: "Mercado Pago · Devuelto", tone: "bg-cream text-muted" },
+  charged_back: { label: "Mercado Pago · Contracargo", tone: "bg-coral-soft text-coral-deep" },
+};
+
+function paymentBadge(method: string, status: string | null) {
+  if (method !== "mercadopago") return { label: "Efectivo", tone: "bg-sage text-botanical-deep" };
+  return PAYMENT_LABELS[status ?? "pending"] ?? PAYMENT_LABELS.pending;
+}
+
 const FILTERS: { value: string; label: string }[] = [
   { value: "", label: "Todos" },
   { value: "pending", label: "Pendientes" },
@@ -56,7 +71,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
   let query = supabase
     .from("orders")
     .select(
-      "id, number, status, customer_name, total, savings, created_at, items:order_items(id, product_id, name, size, quantity, unit_price), lots:order_lot_allocations(product_id, expires_on, quantity)",
+      "id, number, status, customer_name, total, savings, created_at, payment_method, payment_status, items:order_items(id, product_id, name, size, quantity, unit_price), lots:order_lot_allocations(product_id, expires_on, quantity)",
       { count: "exact" },
     )
     .order("created_at", { ascending: false })
@@ -112,6 +127,11 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
                       <span className="font-display text-xl font-bold">Pedido N.º {o.number}</span>
                       <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${STATUS_LABELS[status].tone}`}>
                         {STATUS_LABELS[status].label}
+                      </span>
+                      <span
+                        className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${paymentBadge(o.payment_method, o.payment_status).tone}`}
+                      >
+                        {paymentBadge(o.payment_method, o.payment_status).label}
                       </span>
                     </p>
                     <p className="text-sm text-muted">

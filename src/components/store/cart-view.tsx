@@ -1,11 +1,11 @@
 "use client";
 
-import { AlertCircle, Info, Loader2, MessageCircle, ShoppingBag, Trash2 } from "lucide-react";
+import { AlertCircle, Banknote, CreditCard, Info, Loader2, MessageCircle, ShoppingBag, Trash2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { registerOrder, validateCart } from "@/app/(tienda)/carrito/actions";
+import { payWithMercadoPago, registerOrder, validateCart } from "@/app/(tienda)/carrito/actions";
 import { Button, LinkButton, buttonClasses } from "@/components/ui/button";
 import { cart, useCart, useCartHydrated } from "@/lib/cart-store";
 import { formatARS } from "@/lib/format";
@@ -27,7 +27,16 @@ function readSavedName(): string {
   }
 }
 
-export function CartView({ whatsappNumber, siteUrl }: { whatsappNumber: string | null; siteUrl: string }) {
+export function CartView({
+  whatsappNumber,
+  siteUrl,
+  mercadoPago = false,
+}: {
+  whatsappNumber: string | null;
+  siteUrl: string;
+  /** true si la tienda tiene Mercado Pago configurado. */
+  mercadoPago?: boolean;
+}) {
   const items = useCart();
   const hydrated = useCartHydrated();
   const [status, setStatus] = useState<Status>("idle");
@@ -36,6 +45,7 @@ export function CartView({ whatsappNumber, siteUrl }: { whatsappNumber: string |
   const requestId = useRef(0);
   const [customerName, setCustomerName] = useState(readSavedName);
   const [sending, setSending] = useState(false);
+  const [payment, setPayment] = useState<"efectivo" | "mercadopago">("efectivo");
 
   // Clave estable: cambia solo si cambian productos o cantidades.
   const key = items.map((i) => `${i.productId}:${i.quantity}`).join("|");
@@ -259,6 +269,70 @@ export function CartView({ whatsappNumber, siteUrl }: { whatsappNumber: string |
                   className="mt-1 h-11 w-full rounded-full border border-line bg-white px-4 text-base focus:border-botanical focus:ring-3 focus:ring-botanical/20 focus:outline-none"
                 />
               </div>
+              {mercadoPago ? (
+                <fieldset>
+                  <legend className="text-sm font-semibold">¿Cómo querés pagar?</legend>
+                  <div className="mt-1.5 grid grid-cols-2 gap-2">
+                    {(
+                      [
+                        ["efectivo", "Efectivo", Banknote],
+                        ["mercadopago", "Mercado Pago", CreditCard],
+                      ] as const
+                    ).map(([value, label, Icon]) => (
+                      <label
+                        key={value}
+                        className={`flex cursor-pointer items-center justify-center gap-2 rounded-2xl border-2 px-3 py-3 text-sm font-bold transition-colors ${payment === value ? "border-forest bg-sun/60" : "border-line bg-white hover:bg-cream"}`}
+                      >
+                        <input
+                          type="radio"
+                          name="forma-de-pago"
+                          value={value}
+                          checked={payment === value}
+                          onChange={() => setPayment(value)}
+                          className="sr-only"
+                        />
+                        <Icon className="size-5" aria-hidden="true" />
+                        {label}
+                      </label>
+                    ))}
+                  </div>
+                </fieldset>
+              ) : null}
+              {payment === "mercadopago" && mercadoPago ? (
+                <button
+                  type="button"
+                  disabled={sending}
+                  className="inline-flex h-13 items-center justify-center gap-2 rounded-full bg-[#009ee3] px-7 text-base font-bold text-white transition-colors hover:bg-[#0089c7] disabled:opacity-70"
+                  onClick={async () => {
+                    if (sending) return;
+                    setSending(true);
+                    setError(null);
+                    const name = customerName.trim();
+                    try {
+                      window.localStorage.setItem(NAME_KEY, name);
+                    } catch {
+                      // Sin almacenamiento: no pasa nada.
+                    }
+                    const res = await payWithMercadoPago({
+                      items: items.map((i) => ({ productId: i.productId, quantity: i.quantity })),
+                      customerName: name || undefined,
+                    }).catch(() => null);
+                    if (res?.ok) {
+                      window.location.href = res.url;
+                      return;
+                    }
+                    setError(res?.error ?? "No pudimos conectar con Mercado Pago. Probá de nuevo.");
+                    setSending(false);
+                  }}
+                >
+                  {sending ? (
+                    <Loader2 className="size-5 animate-spin" aria-hidden="true" />
+                  ) : (
+                    <CreditCard className="size-5" aria-hidden="true" />
+                  )}
+                  {sending ? "Te llevamos a Mercado Pago…" : "Pagar con Mercado Pago"}
+                </button>
+              ) : (
               <a
                 href={whatsappUrl}
                 target="_blank"
@@ -284,6 +358,7 @@ export function CartView({ whatsappNumber, siteUrl }: { whatsappNumber: string |
                   const message = buildOrderMessage(lines, siteUrl, {
                     orderNumber: res?.ok ? res.number : null,
                     customerName: name,
+                    paymentMethod: mercadoPago ? "efectivo" : undefined,
                   });
                   const url = buildWhatsAppUrl(whatsappNumber, message);
                   if (win) {
@@ -302,6 +377,7 @@ export function CartView({ whatsappNumber, siteUrl }: { whatsappNumber: string |
                 )}
                 Hacer pedido por WhatsApp
               </a>
+              )}
             </>
           ) : (
             <Button variant="whatsapp" size="lg" disabled>
@@ -319,8 +395,9 @@ export function CartView({ whatsappNumber, siteUrl }: { whatsappNumber: string |
             </p>
           ) : null}
           <p className="text-xs leading-relaxed text-muted">
-            Al enviar el pedido se abre WhatsApp con el detalle. Mariel te va a confirmar stock, forma de pago y
-            entrega. El pedido no queda confirmado ni el stock reservado hasta esa confirmación.
+            {payment === "mercadopago" && mercadoPago
+              ? "Te llevamos a la página segura de Mercado Pago para pagar con tarjeta, dinero en cuenta o efectivo en puntos de pago. Cuando termines, volvés a la tienda y Mariel coordina la entrega con vos."
+              : "Al enviar el pedido se abre WhatsApp con el detalle. Mariel te va a confirmar stock, pago y entrega. El pedido no queda confirmado ni el stock reservado hasta esa confirmación."}
           </p>
           <Link href="/productos" className="text-center text-sm font-semibold text-coral-deep hover:underline">
             Seguir comprando

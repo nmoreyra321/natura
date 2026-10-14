@@ -51,7 +51,13 @@ export function getOrderTotals(lines: OrderLine[]) {
 export function buildOrderMessage(
   lines: OrderLine[],
   siteUrl?: string,
-  extra: { orderNumber?: number | null; customerName?: string | null } = {},
+  extra: {
+    orderNumber?: number | null;
+    customerName?: string | null;
+    paymentMethod?: "efectivo" | "mercadopago";
+    /** true si ya se pagó online (mensaje desde la página del pedido). */
+    paid?: boolean;
+  } = {},
 ): string {
   const { totalCents, savingsCents } = getOrderTotals(lines);
   const rows = lines.map((line, i) => {
@@ -72,10 +78,14 @@ export function buildOrderMessage(
   if (savingsCents > 0) {
     parts.push(`Ahorro frente a precio de revista: ${formatARS(savingsCents)}`);
   }
-  parts.push(
-    "",
-    "Quedo a la espera de tu confirmación de stock, pago y entrega. ¡Gracias!",
-  );
+  if (extra.paid) {
+    parts.push("", "✅ Ya lo pagué con Mercado Pago. Quedo a la espera para coordinar la entrega. ¡Gracias!");
+  } else {
+    if (extra.paymentMethod) {
+      parts.push("", `Forma de pago: ${extra.paymentMethod === "mercadopago" ? "Mercado Pago" : "Efectivo"}`);
+    }
+    parts.push("", "Quedo a la espera de tu confirmación de stock, pago y entrega. ¡Gracias!");
+  }
   if (siteUrl) parts.push(`(Pedido armado en ${siteUrl})`);
   return parts.join("\n");
 }

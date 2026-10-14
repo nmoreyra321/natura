@@ -126,6 +126,12 @@ Abrí `/admin` e ingresá con tu **usuario** (por ejemplo `natumariel2026`) o tu
 
 Las **categorías** son el tipo de producto (Perfumería, Cuerpo y baño, Rostro, Cabello, Maquillajes…). La **línea** es la marca de Natura (Chronos, Ekos, Tododia, Una…) y se carga en el campo «Línea Natura» de cada producto. En la tienda se puede filtrar por categoría, por línea y marcar «Solo repuestos» (se detecta solo: todo producto con «repuesto» en el nombre).
 
+### Formas de pago: efectivo o Mercado Pago
+
+En el carrito la clienta elige **Efectivo** (el pedido se manda por WhatsApp, como siempre) o **Mercado Pago** (la tienda la lleva a la página de Mercado Pago para pagar con tarjeta, dinero en cuenta, etc.). Al volver ve si el pago se aprobó y puede avisarte por WhatsApp. En **Pedidos** cada pedido muestra cómo pagó: «Efectivo», «Mercado Pago · Pagado», «Esperando pago» o «Rechazado».
+
+Mercado Pago se activa cargando en Vercel la variable `MP_ACCESS_TOKEN` (Access Token de producción, ver `.env.example`) y volviendo a desplegar. Mercado Pago avisa cada pago a `/api/mercadopago`; la tienda confirma el estado consultando a Mercado Pago, así un aviso falso no puede marcar nada como pagado.
+
 ### Pedidos
 
 Cuando una clienta toca **Hacer pedido por WhatsApp**, el pedido queda guardado con un número (por ejemplo *Pedido N.º 12*), que también aparece en el mensaje de WhatsApp. En **Pedidos**:

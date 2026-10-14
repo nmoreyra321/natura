@@ -108,14 +108,14 @@ isOneToOne: false
                   ]
                 },"orders": {
                   Row: {
-                    "created_at": string,"customer_name": string | null,"id": string,"number": number,"savings": number,"status": string,"stock_applied": boolean,"total": number,"updated_at": string
+                    "created_at": string,"customer_name": string | null,"id": string,"mp_payment_id": string | null,"number": number,"payment_method": string,"payment_status": string | null,"savings": number,"status": string,"stock_applied": boolean,"total": number,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"customer_name"?: string | null,"id"?: string,"number"?: never,"savings"?: number,"status"?: string,"stock_applied"?: boolean,"total": number,"updated_at"?: string
+                    "created_at"?: string,"customer_name"?: string | null,"id"?: string,"mp_payment_id"?: string | null,"number"?: never,"payment_method"?: string,"payment_status"?: string | null,"savings"?: number,"status"?: string,"stock_applied"?: boolean,"total": number,"updated_at"?: string
                   }
                   Update: {
-                    "created_at"?: string,"customer_name"?: string | null,"id"?: string,"number"?: never,"savings"?: number,"status"?: string,"stock_applied"?: boolean,"total"?: number,"updated_at"?: string
+                    "created_at"?: string,"customer_name"?: string | null,"id"?: string,"mp_payment_id"?: string | null,"number"?: never,"payment_method"?: string,"payment_status"?: string | null,"savings"?: number,"status"?: string,"stock_applied"?: boolean,"total"?: number,"updated_at"?: string
                   }
                   Relationships: [
                     
