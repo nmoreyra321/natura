@@ -572,7 +572,7 @@ export async function searchProductsForLots(q: string): Promise<LotProductOption
     const patterns = nameSearchPatterns(String(q).slice(0, 80));
     if (patterns.length === 0) return [];
     let query = supabase.from("products").select("id, name, size, images:product_images(storage_path, position)");
-    for (const pattern of patterns) query = query.ilike("name", pattern);
+    for (const pattern of patterns) query = query.filter("name", "imatch", pattern);
     const { data } = await query.order("status", { ascending: false }).order("name").limit(8);
     return (data ?? []).map((p) => ({
       id: p.id,
@@ -749,7 +749,7 @@ export async function searchProductsForSale(q: string): Promise<SaleProductOptio
     let query = supabase
       .from("products")
       .select("id, name, size, sale_price, stock, images:product_images(storage_path, position)");
-    for (const pattern of patterns) query = query.ilike("name", pattern);
+    for (const pattern of patterns) query = query.filter("name", "imatch", pattern);
     const { data } = await query.order("stock", { ascending: false }).order("name").limit(10);
     return (data ?? []).map((p) => ({
       id: p.id,

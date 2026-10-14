@@ -5,6 +5,7 @@ import { buttonClasses } from "@/components/ui/button";
 import { inputClasses } from "@/components/ui/fields";
 import { EmptyStore } from "./empty-store";
 import { ProductGrid } from "./product-card";
+import { CatalogSearchField } from "./search-box";
 import {
   getActiveCategories,
   getActiveLines,
@@ -82,7 +83,7 @@ export async function CatalogView({
           <label htmlFor="f-q" className="mb-1 block text-sm font-semibold">
             Buscar
           </label>
-          <input id="f-q" name="q" type="search" defaultValue={filters.q} placeholder="Nombre del producto" maxLength={80} className={`${inputClasses} h-11`} />
+          <CatalogSearchField id="f-q" defaultValue={filters.q} />
         </div>
         {!fixedCategory ? (
           <div className="col-span-2 md:col-span-1">

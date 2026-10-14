@@ -74,7 +74,7 @@ export function Header({ categories }: { categories: NavCategory[] }) {
   }, [open]);
 
   const links = [
-    { href: "/productos", label: "Productos" },
+    { href: "/productos", label: "Todos los productos" },
     { href: "/productos?ofertas=1", label: "Ofertas" },
     ...categories.slice(0, 4).map((c) => ({ href: `/categorias/${c.slug}`, label: c.name })),
   ];
@@ -100,11 +100,12 @@ export function Header({ categories }: { categories: NavCategory[] }) {
 
         <nav aria-label="Principal" className="ml-6 hidden lg:block">
           <ul className="flex items-center gap-1">
-            {links.map((l) => (
-              <li key={l.href}>
+            {links.map((l, i) => (
+              // En pantallas medianas entran solo las 2 primeras categorías; el resto, desde pantallas grandes.
+              <li key={l.href} className={i >= 4 ? "hidden 2xl:block" : i >= 2 ? "hidden xl:block" : undefined}>
                 <Link
                   href={l.href}
-                  className="rounded-full px-3.5 py-2 text-[0.95rem] font-bold text-forest transition-colors hover:bg-sun"
+                  className="rounded-full px-3 py-2 text-[0.95rem] font-bold whitespace-nowrap text-forest transition-colors hover:bg-sun"
                 >
                   {l.label}
                 </Link>

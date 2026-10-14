@@ -128,7 +128,7 @@ export async function getCatalog(filters: CatalogFilters): Promise<CatalogResult
     .select(PRODUCT_SELECT, { count: "exact" })
     .eq("status", "published");
 
-  for (const pattern of nameSearchPatterns(filters.q ?? "")) query = query.ilike("name", pattern);
+  for (const pattern of nameSearchPatterns(filters.q ?? "")) query = query.filter("name", "imatch", pattern);
   if (categoryId) query = query.eq("category_id", categoryId);
   if (lineName) query = query.eq("line", lineName);
   if (filters.refills) query = query.eq("is_refill", true);
@@ -197,7 +197,7 @@ export async function searchSuggestions(q: string, limit = 6): Promise<SearchSug
     .from("products")
     .select("name, slug, size, sale_price, magazine_price, stock, images:product_images(storage_path, position)")
     .eq("status", "published");
-  for (const pattern of patterns) query = query.ilike("name", pattern);
+  for (const pattern of patterns) query = query.filter("name", "imatch", pattern);
   const { data, error } = await query
     .order("stock", { ascending: false })
     .order("is_featured", { ascending: false })

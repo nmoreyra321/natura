@@ -4,7 +4,7 @@ import { CatalogView } from "@/components/store/catalog-view";
 import { parseCatalogFilters } from "@/lib/catalog";
 
 export const metadata: Metadata = {
-  title: "Productos",
+  title: "Todos los productos",
   description: "Catálogo de productos Natura a precios especiales: perfumería, cuerpo, rostro, cabello y más.",
   alternates: { canonical: "/productos" },
 };

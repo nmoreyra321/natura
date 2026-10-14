@@ -41,7 +41,7 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
     .select("id, name, size, stock, status, images:product_images(storage_path, position)", { count: "exact" })
     .order("name")
     .order("id");
-  for (const pattern of nameSearchPatterns(q)) query = query.ilike("name", pattern);
+  for (const pattern of nameSearchPatterns(q)) query = query.filter("name", "imatch", pattern);
   if (categoria === NO_CATEGORY) query = query.is("category_id", null);
   else if (/^[0-9a-f-]{36}$/.test(categoria)) query = query.eq("category_id", categoria);
   if (ver === "con") query = query.gt("stock", 0);

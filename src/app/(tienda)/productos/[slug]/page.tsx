@@ -82,7 +82,7 @@ export default async function ProductPage({ params }: PageProps<"/productos/[slu
           </li>
           <ChevronRight className="size-3.5" aria-hidden="true" />
           <li>
-            <Link href="/productos" className="hover:text-forest">Productos</Link>
+            <Link href="/productos" className="hover:text-forest">Todos los productos</Link>
           </li>
           {product.category ? (
             <>

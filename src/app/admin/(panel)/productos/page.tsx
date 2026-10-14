@@ -55,7 +55,7 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
     .order("updated_at", { ascending: false })
     // Desempate estable: sin esto, productos con la misma fecha podrían repetirse o saltearse entre páginas.
     .order("id");
-  for (const pattern of nameSearchPatterns(q)) query = query.ilike("name", pattern);
+  for (const pattern of nameSearchPatterns(q)) query = query.filter("name", "imatch", pattern);
   if (estado === "published" || estado === "draft") query = query.eq("status", estado);
   if (stock === "sin") query = query.eq("stock", 0);
   if (stock === "bajo") query = query.gt("stock", 0).lte("stock", LOW_STOCK_THRESHOLD);
