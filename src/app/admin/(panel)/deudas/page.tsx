@@ -30,8 +30,8 @@ export default async function DebtsPage() {
     <div className="mx-auto max-w-3xl">
       <h1 className="font-display text-3xl font-bold">Quién me debe</h1>
       <p className="text-muted">
-        Clientas con pedidos sin cobrar o pagados en parte. Para anotar un pago, tocá el código del pedido. Si una clienta se
-        arrepintió, marcá el pedido con el casillero y tocá «Borrar».
+        Clientas con pedidos sin cobrar o pagados en parte. Cuando te paguen, tocá «Me pagó todo» o «Me pagó una parte» en
+        cada pedido. Si una clienta se arrepintió, marcá el pedido con el casillero y tocá «Borrar».
       </p>
 
       {error ? (

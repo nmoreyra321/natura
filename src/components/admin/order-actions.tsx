@@ -89,8 +89,9 @@ export function OrderActions({
 }
 
 /**
- * Cobro de pedidos en efectivo o transferencia: se anota cada pago (seña y resto, o todo junto).
- * Cuando lo pagado cubre el total, el pedido queda "Pagado".
+ * Cobro de pedidos en efectivo o transferencia (igual en «Pedidos» y en «Quién me debe»):
+ * «Me pagó todo» con un toque, o anotar una parte (seña y resto). Cuando lo pagado cubre
+ * el total, el pedido queda "Pagado".
  */
 export function PaymentControl({
   id,
@@ -104,7 +105,8 @@ export function PaymentControl({
   const router = useRouter();
   const [pending, start] = useTransition();
   const remainingCents = Math.max(totalCents - paidCents, 0);
-  const [amount, setAmount] = useState(String(remainingCents / 100).replace(".", ","));
+  const [partOpen, setPartOpen] = useState(false);
+  const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
 
   const run = (fn: () => ReturnType<typeof resetOrderPayment>) =>
@@ -112,6 +114,9 @@ export function PaymentControl({
       const res = await fn();
       if (res.ok) {
         toast.success(res.message ?? "Listo.");
+        setPartOpen(false);
+        setAmount("");
+        setNote("");
         router.refresh();
       } else {
         toast.error(res.error);
@@ -127,60 +132,80 @@ export function PaymentControl({
   }
 
   const value = parseMoney(amount);
+  const valid = Number.isFinite(value) && value > 0;
   return (
-    <form
-      className="flex flex-wrap items-end gap-2 rounded-2xl bg-cream/70 p-2.5"
-      onSubmit={(e) => {
-        e.preventDefault();
-        run(() => registerOrderPayment(id, value, value * 100 < remainingCents ? note : undefined));
-      }}
-    >
-      <label className="flex flex-col text-xs font-semibold">
-        Monto que pagó
-        <span className="mt-1 flex items-center gap-1">
-          <span className="text-sm">$</span>
-          <input
-            inputMode="decimal"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            className="h-10 w-28 rounded-xl border border-line bg-white px-2 text-sm tabular"
-          />
-        </span>
-      </label>
-      {Number.isFinite(value) && value > 0 && value * 100 < remainingCents ? (
-        <label className="flex min-w-40 flex-1 flex-col text-xs font-semibold">
-          Nota (opcional)
-          <input
-            value={note}
-            maxLength={120}
-            onChange={(e) => setNote(e.target.value)}
-            placeholder="Ej.: el resto el lunes"
-            className="mt-1 h-10 rounded-xl border border-line bg-white px-2 text-sm font-normal"
-          />
-        </label>
-      ) : null}
-      <button
-        type="submit"
-        disabled={pending || !Number.isFinite(value) || value <= 0}
-        className={buttonClasses("secondary", "sm", "h-10")}
-      >
-        <BadgeCheck className="size-4" aria-hidden="true" /> Registrar pago
-      </button>
-      {paidCents > 0 ? (
+    <div className="flex flex-col gap-2 rounded-2xl bg-cream/70 p-2.5">
+      <div className="flex flex-wrap items-center gap-2">
         <button
           type="button"
           disabled={pending}
-          onClick={() => run(() => resetOrderPayment(id))}
-          className="h-10 px-2 text-xs font-semibold text-muted underline hover:text-coral-deep"
+          onClick={() => run(() => registerOrderPayment(id, remainingCents / 100))}
+          className={buttonClasses("primary", "sm", "h-10")}
         >
-          Borrar pagos
+          <BadgeCheck className="size-4" aria-hidden="true" /> Me pagó todo ({formatARS(remainingCents)})
         </button>
+        <button
+          type="button"
+          disabled={pending}
+          onClick={() => setPartOpen((v) => !v)}
+          aria-expanded={partOpen}
+          className={buttonClasses("outline", "sm", "h-10")}
+        >
+          Me pagó una parte
+        </button>
+        {paidCents > 0 ? (
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() => run(() => resetOrderPayment(id))}
+            className="h-10 px-2 text-xs font-semibold text-muted underline hover:text-coral-deep"
+          >
+            Borrar pagos
+          </button>
+        ) : null}
+      </div>
+      {partOpen ? (
+        <form
+          className="flex flex-wrap items-end gap-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (valid) run(() => registerOrderPayment(id, value, value * 100 < remainingCents ? note : undefined));
+          }}
+        >
+          <label className="flex flex-col text-xs font-semibold">
+            ¿Cuánto te pagó?
+            <span className="mt-1 flex items-center gap-1">
+              <span className="text-sm">$</span>
+              <input
+                inputMode="decimal"
+                autoFocus
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                placeholder="Ej.: 20.000"
+                className="h-10 w-28 rounded-xl border border-line bg-white px-2 text-sm tabular"
+              />
+            </span>
+          </label>
+          <label className="flex min-w-40 flex-1 flex-col text-xs font-semibold">
+            Nota (opcional)
+            <input
+              value={note}
+              maxLength={120}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="Ej.: el resto el lunes"
+              className="mt-1 h-10 rounded-xl border border-line bg-white px-2 text-sm font-normal"
+            />
+          </label>
+          <button type="submit" disabled={pending || !valid} className={buttonClasses("secondary", "sm", "h-10")}>
+            Anotar
+          </button>
+        </form>
       ) : null}
-      <p className="w-full text-xs text-muted">
+      <p className="text-xs text-muted">
         {paidCents > 0
           ? `Ya pagó ${formatARS(paidCents)} de ${formatARS(totalCents)}. Falta ${formatARS(remainingCents)}.`
-          : `Total del pedido: ${formatARS(totalCents)}. Si te pagó una parte, escribí solo esa parte.`}
+          : `Total del pedido: ${formatARS(totalCents)}.`}
       </p>
-    </form>
+    </div>
   );
 }

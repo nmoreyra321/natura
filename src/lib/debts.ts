@@ -14,7 +14,15 @@ export type DebtOrderRow = {
   status: string;
 };
 
-export type DebtOrder = { id: string; code: string; owedCents: number; createdAt: string; note: string | null };
+export type DebtOrder = {
+  id: string;
+  code: string;
+  owedCents: number;
+  totalCents: number;
+  paidCents: number;
+  createdAt: string;
+  note: string | null;
+};
 
 export type CustomerDebt = {
   key: string;
@@ -53,7 +61,15 @@ export function groupDebts(rows: DebtOrderRow[]): CustomerDebt[] {
     g.owedCents += owed;
     if (o.created_at < g.since) g.since = o.created_at;
     g.phone ??= o.customer_phone;
-    g.orders.push({ id: o.id, code: o.code, owedCents: owed, createdAt: o.created_at, note: o.payment_note });
+    g.orders.push({
+      id: o.id,
+      code: o.code,
+      owedCents: owed,
+      totalCents: toCents(o.total),
+      paidCents: toCents(o.amount_paid),
+      createdAt: o.created_at,
+      note: o.payment_note,
+    });
     groups.set(key, g);
   }
   return [...groups.values()]

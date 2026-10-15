@@ -10,6 +10,7 @@ import { setCustomerPhone } from "@/app/admin/actions";
 import { buttonClasses } from "@/components/ui/button";
 import type { CustomerDebt } from "@/lib/debts";
 import { formatARS } from "@/lib/format";
+import { PaymentControl } from "./order-actions";
 import { SelectBox } from "./select-to-delete";
 
 const dateFmt = new Intl.DateTimeFormat("es-AR", { dateStyle: "medium", timeZone: "America/Argentina/Buenos_Aires" });
@@ -48,7 +49,8 @@ export function DebtCard({ debt, today }: { debt: CustomerDebt; today: number })
 
       <ul className="mt-3 divide-y divide-line/70 rounded-2xl border border-line/70 text-sm">
         {debt.orders.map((o) => (
-          <li key={o.id} className="flex flex-wrap justify-between gap-x-3 px-3 py-2">
+          <li key={o.id} className="flex flex-col gap-2 px-3 py-2">
+            <span className="flex flex-wrap justify-between gap-x-3">
             <span className="flex items-center gap-2">
               <SelectBox id={o.id} label={`el pedido ${o.code}`} />
               Pedido{" "}
@@ -58,6 +60,8 @@ export function DebtCard({ debt, today }: { debt: CustomerDebt; today: number })
               {o.note ? <span className="text-muted"> · {o.note}</span> : null}
             </span>
             <span className="tabular">falta {formatARS(o.owedCents)}</span>
+            </span>
+            <PaymentControl id={o.id} totalCents={o.totalCents} paidCents={o.paidCents} />
           </li>
         ))}
       </ul>
