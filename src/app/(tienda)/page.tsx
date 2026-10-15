@@ -3,6 +3,7 @@ import {
   getActiveCampaign,
   getActiveCategories,
   getBestSellers,
+  getCatalog,
   getHighlights,
   getProductsByIds,
   getPublishedCount,
@@ -27,14 +28,22 @@ function pickHeroProducts(...lists: PublicProduct[][]): PublicProduct[] {
   return out;
 }
 
+/** Hasta 8 productos para «Todos los productos» que no estén ya en las otras filas del inicio. */
+function pickMore(all: PublicProduct[], ...shown: PublicProduct[][]): PublicProduct[] {
+  const seen = new Set(shown.flatMap((list) => list.slice(0, 8).map((p) => p.id)));
+  const fresh = all.filter((p) => !seen.has(p.id));
+  return (fresh.length >= 4 ? fresh : all).slice(0, 8);
+}
+
 export default async function HomePage() {
-  const [count, categories, highlights, bestSellers, campaign, reviews] = await Promise.all([
+  const [count, categories, highlights, bestSellers, campaign, reviews, catalog] = await Promise.all([
     getPublishedCount(),
     getActiveCategories(),
     getHighlights(8),
     getBestSellers(8),
     getActiveCampaign(),
     getReviewSummary(),
+    getCatalog({ sort: "destacados", page: 1 }),
   ]);
   const clubMin = await getLoyaltyMinTotal();
   const campaignProducts = campaign ? await getProductsByIds(campaign.productIds) : [];
@@ -53,6 +62,9 @@ export default async function HomePage() {
         campaign: campaign ? { ...campaign, products: campaignProducts } : null,
         clubMinCents: Math.round(clubMin * 100),
         reviews,
+        // «Todos los productos» al final: los que no aparecieron en las filas de arriba.
+        more: pickMore(catalog.products, highlights.offers, bestSellers, highlights.featured, highlights.latest),
+        totalProducts: catalog.total || count || 0,
         whatsappUrl: whatsapp ? buildWhatsAppUrl(whatsapp, "¡Hola Mariel! Quería hacerte una consulta 😊") : null,
       }}
     />

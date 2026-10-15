@@ -33,6 +33,9 @@ export type HomeData = {
   clubMinCents: number;
   /** Reseñas de clientas (promedio, cantidad y las últimas). */
   reviews: ReviewSummary | null;
+  /** Para la fila final «Todos los productos». */
+  more: PublicProduct[];
+  totalProducts: number;
 };
 
 const reviewDateFmt = new Intl.DateTimeFormat("es-AR", { month: "long", year: "numeric", timeZone: "America/Argentina/Buenos_Aires" });
@@ -353,10 +356,27 @@ export function HomeView({ d }: { d: HomeData }) {
             </Section>
           ) : null}
 
-          <Section className="pb-14">
+          <Section>
             <SectionHeader title="Novedades ✨" subtitle="Lo último que llegó a la tienda" href="/productos?orden=nuevos" />
             <ProductRail products={d.latest.slice(0, 8)} />
           </Section>
+
+          {/* Al final: para quien bajó todo sin encontrar nada, el catálogo completo. */}
+          {d.more.length > 0 ? (
+            <Section className="pb-14">
+              <SectionHeader
+                title="Todos los productos 🛍️"
+                subtitle={d.totalProducts > 0 ? `Mirá el catálogo completo: ${d.totalProducts} productos` : "Mirá el catálogo completo"}
+                href="/productos"
+              />
+              <ProductRail products={d.more} />
+              <div className="mt-6 flex justify-center">
+                <LinkButton href="/productos" size="lg" className="w-full shadow-lift sm:w-auto">
+                  {d.totalProducts > 0 ? `Ver los ${d.totalProducts} productos` : "Ver todos los productos"} <ArrowRight className="size-5" aria-hidden="true" />
+                </LinkButton>
+              </div>
+            </Section>
+          ) : null}
         </>
       )}
     </>
