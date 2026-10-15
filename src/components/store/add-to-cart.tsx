@@ -125,3 +125,38 @@ export function AddToCart({ product }: { product: Omit<CartItem, "quantity"> }) 
     </div>
   );
 }
+
+/**
+ * Barra fija abajo en el celular con el precio y "Agregar": siempre a mano mientras se lee la
+ * descripción. Suma de a una unidad y abre el carrito. No aparece si no hay stock.
+ */
+export function MobileBuyBar({ product }: { product: Omit<CartItem, "quantity"> }) {
+  const items = useCart();
+  const inCart = items.find((i) => i.productId === product.productId)?.quantity ?? 0;
+  if (product.stock <= 0) return null;
+  const full = inCart >= product.stock;
+  const saleCents = toCents(product.salePrice);
+  const magazineCents = toCents(product.magazinePrice);
+  return (
+    <div className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-warm-white/95 px-4 py-3 shadow-[0_-8px_24px_-12px_rgb(59_30_74/0.25)] backdrop-blur md:hidden">
+      <div className="mx-auto flex max-w-xl items-center gap-3">
+        <div className="min-w-0 flex-1 leading-tight tabular">
+          <p className="font-display text-xl font-bold text-coral-deep">{formatARS(saleCents)}</p>
+          {magazineCents > saleCents ? <p className="text-xs text-muted line-through">{formatARS(magazineCents)}</p> : null}
+        </div>
+        <Button
+          size="lg"
+          disabled={full}
+          onClick={() => {
+            const res = cart.add(product, 1);
+            if (res.capped) toast.warning(`Ya tenés el máximo disponible: ${res.quantity} en tu carrito.`);
+            else cartDrawer.open();
+          }}
+        >
+          <ShoppingBag className="size-5" aria-hidden="true" />
+          {full ? "Sin más stock" : "Agregar al carrito"}
+        </Button>
+      </div>
+    </div>
+  );
+}

@@ -80,7 +80,7 @@ export function Header({ categories }: { categories: NavCategory[] }) {
   ];
 
   return (
-    <header className="sticky top-0 z-40 border-b-2 border-forest bg-cream/95 backdrop-blur-md supports-[backdrop-filter]:bg-cream/85">
+    <header className="sticky top-0 z-40 border-b border-line bg-cream/95 backdrop-blur-md supports-[backdrop-filter]:bg-cream/85">
       <p className="bg-coral-deep px-4 py-1.5 text-center text-xs font-extrabold tracking-wide text-white sm:text-sm">
         ✨ Productos Natura a precios especiales · Pedidos por WhatsApp ✨
       </p>

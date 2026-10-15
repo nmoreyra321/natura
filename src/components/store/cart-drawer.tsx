@@ -59,7 +59,7 @@ export function CartDrawer() {
       className="fixed inset-y-0 right-0 left-auto m-0 h-dvh max-h-dvh w-[min(92vw,420px)] max-w-none overflow-hidden bg-warm-white p-0 text-forest shadow-lift backdrop:bg-forest/35 backdrop:backdrop-blur-[2px] animate-slide-in"
     >
       <div className="flex h-full flex-col">
-        <div className="flex items-center justify-between border-b-2 border-forest px-5 py-4">
+        <div className="flex items-center justify-between border-b border-line px-5 py-4">
           <h2 id="mini-carrito-titulo" className="font-display text-2xl font-bold">
             Tu carrito {count > 0 ? <span className="text-coral-deep tabular">({count})</span> : null}
           </h2>
@@ -134,7 +134,7 @@ export function CartDrawer() {
               })}
             </ul>
 
-            <div className="border-t-2 border-forest bg-cream px-5 py-4">
+            <div className="border-t border-line bg-cream px-5 py-4">
               <SavingsCelebration savingsCents={totals.savingsCents} totalCents={totals.totalCents} />
               <p className="mt-2 flex items-baseline justify-between tabular">
                 <span className="text-lg font-bold">Total</span>
