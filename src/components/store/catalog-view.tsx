@@ -133,7 +133,7 @@ export async function CatalogView({
         </div>
         <div className="col-span-2 md:col-span-1">
           <label htmlFor="f-para" className="mb-1 block text-sm font-semibold">
-            Para
+            Género
           </label>
           <select id="f-para" name="para" defaultValue={filters.gender ?? ""} className={`${inputClasses} h-11`}>
             <option value="">Todos</option>

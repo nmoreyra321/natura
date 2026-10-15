@@ -279,7 +279,7 @@ export function ProductForm({
             <option value="published">Publicado (visible en la tienda)</option>
           </Select>
         </Field>
-        <Field label="Para quién es (filtro «Para» de la tienda)" htmlFor="gender" className="sm:col-span-2">
+        <Field label="Género (filtro «Género» de la tienda)" htmlFor="gender" className="sm:col-span-2">
           <Select id="gender" {...register("gender")}>
             <option value="">Para todos (aparece en Mujer y en Hombre)</option>
             <option value="femenino">Mujer</option>
