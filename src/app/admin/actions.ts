@@ -864,6 +864,38 @@ export async function changeLotQuantity(lotId: string, delta: number): Promise<A
   }
 }
 
+/**
+ * «Vendido» en Próximos a vencer: resta 1 de la lista y 1 del stock del producto.
+ * Si era la última unidad anotada, sale de la lista.
+ */
+export async function sellFromLot(lotId: string): Promise<ActionResult> {
+  try {
+    const { supabase } = await assertAdmin();
+    if (!UUID_RE.test(lotId)) return { ok: false, error: "Datos inválidos." };
+    const { data: lot } = await supabase.from("product_lots").select("id, product_id, quantity").eq("id", lotId).maybeSingle();
+    if (!lot) return { ok: false, error: "Ese producto ya no está en la lista." };
+    const { data: product } = await supabase.from("products").select("stock").eq("id", lot.product_id).maybeSingle();
+    if (product) {
+      const { error } = await supabase
+        .from("products")
+        .update({ stock: Math.max(product.stock - 1, 0) })
+        .eq("id", lot.product_id);
+      if (error) return fail(error, "No pudimos descontar el stock.");
+    }
+    const { error } =
+      lot.quantity <= 1
+        ? await supabase.from("product_lots").delete().eq("id", lotId)
+        : await supabase.from("product_lots").update({ quantity: lot.quantity - 1 }).eq("id", lotId);
+    if (error) return fail(error, "No pudimos actualizar la lista.");
+    refreshCatalog();
+    revalidatePath("/admin/vencimientos");
+    revalidatePath("/admin");
+    return { ok: true, message: product ? `Vendido: queda${product.stock - 1 === 1 ? "" : "n"} ${Math.max(product.stock - 1, 0)} en stock.` : "Listo." };
+  } catch (e) {
+    return fail(e, "No pudimos descontar el stock.");
+  }
+}
+
 /** Borra un lote ("ya no lo tengo"). */
 export async function deleteLot(lotId: string): Promise<ActionResult> {
   try {

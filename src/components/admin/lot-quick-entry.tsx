@@ -107,7 +107,7 @@ export function LotQuickEntry({ mode = "vencimiento" }: { mode?: "llegada" | "ve
   return (
     <section aria-labelledby="carga" className="rounded-3xl border-2 border-forest bg-warm-white p-5 shadow-[4px_4px_0_var(--forest)]">
       <h2 id="carga" className="font-display text-xl font-bold">
-        {arrival ? "Cargar a mano" : "Anotar vencimientos"}
+        {arrival ? "Cargar a mano" : "Agregar un producto próximo a vencer"}
       </h2>
       <p className="text-sm text-muted">
         {arrival ? (
@@ -117,8 +117,9 @@ export function LotQuickEntry({ mode = "vencimiento" }: { mode?: "llegada" | "ve
           </>
         ) : (
           <>
-            Para algo que <strong>ya está en el stock</strong> (no lo cambia): escribí el producto, Enter, el vencimiento
-            como figura en el envase (por ejemplo <strong>0129</strong> para 01/29) y Enter.
+            Anotá solo los que ves que vencen pronto (no hace falta cargar todos). Escribí el producto, Enter, el
+            vencimiento como figura en el envase (por ejemplo <strong>0129</strong> para 01/29) y Enter. El stock no
+            cambia: ese producto ya está contado.
           </>
         )}
       </p>

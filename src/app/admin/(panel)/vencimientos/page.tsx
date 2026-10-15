@@ -97,22 +97,15 @@ export default async function ExpiryPage() {
 
   return (
     <div className="mx-auto max-w-5xl">
-      <h1 className="font-display text-3xl font-bold">Vencimientos</h1>
+      <h1 className="font-display text-3xl font-bold">Próximos a vencer</h1>
       <p className="text-muted">
-        Lo que vence en los próximos {EXPIRY_WARNING_MONTHS} meses aparece en «Por vencer». Los vencimientos se cargan cuando
-        te llega la mercadería, en{" "}
-        <Link href="/admin/productos?vista=llego" className="font-semibold text-coral-deep underline">
-          Me llegó mercadería
-        </Link>
-        .
+        Tu lista de productos que vencen pronto, para venderlos primero. Cuando vendas uno tocá <strong>Vendido</strong> (se
+        descuenta del stock); si ya no querés seguirlo, <strong>Sacar de la lista</strong>.
       </p>
 
-      <details className="group mt-6">
-        <summary className="cursor-pointer list-none rounded-full bg-warm-white px-4 py-2.5 text-sm font-bold shadow-soft hover:bg-sun group-open:mb-3 [&::-webkit-details-marker]:hidden">
-          + Anotar el vencimiento de algo que ya tenés en el stock
-        </summary>
+      <div className="mt-6">
         <LotQuickEntry />
-      </details>
+      </div>
 
       {error ? (
         <p className="mt-6 rounded-2xl bg-coral-soft p-4 font-semibold">No pudimos cargar los vencimientos.</p>
@@ -133,8 +126,8 @@ export default async function ExpiryPage() {
             ) : (
               <>
                 <p className="mt-1 text-sm text-muted">
-                  Ordenados del más próximo al más lejano. Ponelos en oferta para venderlos antes, y cuando ya no los tengas
-                  tocá «Ya no lo tengo».
+                  Ordenados del más próximo al más lejano. Ponelos en oferta para venderlos antes. Cuando vendas uno tocá
+                  «Vendido».
                 </p>
                 <LotList lots={soon} emphasize />
               </>

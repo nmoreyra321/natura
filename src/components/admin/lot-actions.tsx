@@ -1,21 +1,24 @@
 "use client";
 
-import { Minus, Trash2 } from "lucide-react";
+import { Check, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { toast } from "sonner";
 
-import { changeLotQuantity, deleteLot } from "@/app/admin/actions";
+import { deleteLot, sellFromLot } from "@/app/admin/actions";
 
-/** "Restar 1" (al vender o usar una unidad) y "Ya no lo tengo" para un lote. */
+/**
+ * En «Próximos a vencer»: «Vendido» (resta 1 de la lista y del stock) y
+ * «Sacar de la lista» (deja de seguirlo; el stock no cambia).
+ */
 export function LotActions({ id, name }: { id: string; name: string }) {
   const router = useRouter();
   const [pending, start] = useTransition();
-  const run = (fn: () => Promise<{ ok: boolean; error?: string }>, success: string) =>
+  const run = (fn: () => Promise<{ ok: boolean; error?: string; message?: string }>, success: string) =>
     start(async () => {
       const res = await fn();
       if (res.ok) {
-        toast.success(success);
+        toast.success(res.message ?? success);
         router.refresh();
       } else {
         toast.error(res.error ?? "Algo salió mal.");
@@ -27,20 +30,20 @@ export function LotActions({ id, name }: { id: string; name: string }) {
       <button
         type="button"
         disabled={pending}
-        onClick={() => run(() => changeLotQuantity(id, -1), "Restamos una unidad.")}
-        className="inline-flex h-9 items-center gap-1 rounded-full border border-line px-3 text-sm font-semibold hover:bg-sun disabled:opacity-50"
-        aria-label={`Restar una unidad de ${name}`}
+        onClick={() => run(() => sellFromLot(id), "Vendido.")}
+        className="inline-flex h-9 items-center gap-1 rounded-full bg-botanical-deep px-3 text-sm font-semibold text-white hover:bg-[#146347] disabled:opacity-50"
+        aria-label={`Vendí uno de ${name}`}
       >
-        <Minus className="size-4" aria-hidden="true" /> 1
+        <Check className="size-4" aria-hidden="true" /> Vendido
       </button>
       <button
         type="button"
         disabled={pending}
-        onClick={() => run(() => deleteLot(id), "Lote quitado de la lista.")}
+        onClick={() => run(() => deleteLot(id), "Lo sacamos de la lista. El stock no cambió.")}
         className="inline-flex h-9 items-center gap-1 rounded-full px-3 text-sm font-semibold text-coral-deep hover:bg-coral-soft disabled:opacity-50"
-        aria-label={`Ya no tengo ${name}`}
+        aria-label={`Sacar ${name} de la lista`}
       >
-        <Trash2 className="size-4" aria-hidden="true" /> Ya no lo tengo
+        <X className="size-4" aria-hidden="true" /> Sacar de la lista
       </button>
     </div>
   );

@@ -144,7 +144,7 @@ export default async function DashboardPage() {
       href: "/admin/vencimientos",
       icon: CalendarClock,
       tone: "info",
-      text: `${expiringLots} ${expiringLots === 1 ? "lote vence pronto" : "lotes vencen pronto"}: ofrecelos primero`,
+      text: `${expiringLots} ${expiringLots === 1 ? "producto está por vencer" : "productos están por vencer"}: ofrecelos primero`,
     });
   }
   if (restockWaiting > restockReady) {
