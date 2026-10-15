@@ -27,10 +27,12 @@ export type ReorderSuggestion = ReorderInput & {
  * Si hay clientas esperando, por lo menos se pide para ellas.
  * Devuelve solo lo que conviene pedir, lo más urgente primero.
  */
-export function suggestReorder(items: ReorderInput[], coverDays = 30): ReorderSuggestion[] {
+export function suggestReorder(items: ReorderInput[], coverDays = 30, windowDays = SALES_WINDOW_DAYS): ReorderSuggestion[] {
   const out: ReorderSuggestion[] = [];
+  // Con poca historia (tienda nueva) se divide por los días que realmente hubo ventas, no por 90.
+  const days = Math.min(SALES_WINDOW_DAYS, Math.max(7, windowDays));
   for (const it of items) {
-    const perDay = it.sold / SALES_WINDOW_DAYS;
+    const perDay = it.sold / days;
     const target = Math.ceil(perDay * coverDays);
     const forSales = Math.max(0, target - it.stock);
     const forWaiting = Math.max(0, it.waiting - it.stock);
@@ -53,6 +55,12 @@ export function suggestReorder(items: ReorderInput[], coverDays = 30): ReorderSu
 export function reorderText(list: { name: string; order: number; sku: string | null }[]): string {
   const lines = list.map((r) => `• ${r.order} × ${r.name}${r.sku ? ` (cód. ${r.sku.replace("NATARG-", "")})` : ""}`);
   return ["Pedido Natura:", ...lines].join("\n");
+}
+
+/** Cuántos días de ventas hay desde la primera venta (para no subestimar con una tienda nueva). */
+export function historyDays(firstSaleIso: string | null, now = new Date()): number {
+  if (!firstSaleIso) return SALES_WINDOW_DAYS;
+  return Math.ceil((now.getTime() - new Date(firstSaleIso).getTime()) / 86_400_000);
 }
 
 /** Desde qué fecha se cuentan las ventas (ISO). */

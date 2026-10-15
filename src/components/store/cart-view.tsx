@@ -66,6 +66,8 @@ export function CartView({
   const [notices, setNotices] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const requestId = useRef(0);
+  /** Se suma al tocar «Reintentar» para volver a verificar el carrito. */
+  const [retry, setRetry] = useState(0);
   const [customerName, setCustomerName] = useState(() => readSaved(NAME_KEY));
   const [customerPhone, setCustomerPhone] = useState(() => readSaved(PHONE_KEY));
   /** Se marca al intentar enviar: recién ahí se muestran los avisos de datos faltantes. */
@@ -110,13 +112,14 @@ export function CartView({
       setStatus("checking");
       const snapshot = cart;
       const current = items;
-      const res = await validateCart(current.map((i) => ({ productId: i.productId, quantity: i.quantity })));
+      const res = await validateCart(current.map((i) => ({ productId: i.productId, quantity: i.quantity }))).catch(() => null);
       if (id !== requestId.current) return;
-      if (!res.ok) {
+      if (!res?.ok) {
         setStatus("error");
-        setError(res.error);
+        setError(res?.error ?? "No pudimos verificar el carrito. Revisá tu conexión y tocá «Reintentar».");
         return;
       }
+      setError(null);
       const messages: string[] = [];
       const updates = new Map(
         res.products.map((p) => [
@@ -150,7 +153,7 @@ export function CartView({
     }, 250);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key, hydrated]);
+  }, [key, hydrated, retry]);
 
   const lines: OrderLine[] = useMemo(
     () =>
@@ -509,25 +512,26 @@ export function CartView({
                     customerPhone: phone,
                     paymentMethod: "efectivo",
                   }).catch(() => null);
+                  if (!res?.ok) {
+                    // Sin pedido guardado no se manda nada: así no queda un pedido que el panel no tiene.
+                    win?.close();
+                    setError(res?.error ?? "No pudimos registrar el pedido. Revisá tu conexión y probá de nuevo.");
+                    setSending(false);
+                    return;
+                  }
                   const message = buildOrderMessage(lines, siteUrl, {
-                    orderCode: res?.ok ? res.code : null,
+                    orderCode: res.code,
                     customerName: name,
                     paymentMethod: paymentOptions.length > 1 ? "efectivo" : undefined,
-                    trackUrl: res?.ok ? `${siteUrl}/pedido/${res.id}` : null,
+                    trackUrl: `${siteUrl}/pedido/${res.id}`,
                   });
-                  const url = buildWhatsAppUrl(whatsappNumber, message);
                   if (win) {
                     win.opener = null;
-                    win.location.href = url;
-                    // Esta pestaña pasa a la página del pedido, donde puede ver en qué está.
-                    if (res?.ok) {
-                      router.push(`/pedido/${res.id}?nuevo=1`);
-                      return;
-                    }
-                  } else {
-                    window.location.href = url;
+                    win.location.href = buildWhatsAppUrl(whatsappNumber, message);
                   }
-                  setSending(false);
+                  // Esta pestaña pasa a la página del pedido (vacía el carrito). Si el navegador bloqueó
+                  // WhatsApp, ahí está el botón «Mandar el pedido por WhatsApp».
+                  router.push(`/pedido/${res.id}?nuevo=1`);
                 }}
               >
                 {sending ? (
@@ -540,14 +544,17 @@ export function CartView({
               )}
             </>
           ) : (
-            <Button variant="whatsapp" size="lg" disabled>
-              {status === "error" ? (
+            status === "error" ? (
+              <Button variant="outline" size="lg" onClick={() => setRetry((n) => n + 1)}>
                 <AlertCircle className="size-5" aria-hidden="true" />
-              ) : (
+                Reintentar
+              </Button>
+            ) : (
+              <Button variant="whatsapp" size="lg" disabled>
                 <Loader2 className="size-5 animate-spin" aria-hidden="true" />
-              )}
-              {status === "error" ? "No pudimos verificar el carrito" : "Verificando precios y stock…"}
-            </Button>
+                Verificando precios y stock…
+              </Button>
+            )
           )}
           {error ? (
             <p className="text-sm font-semibold text-coral-deep" role="alert">

@@ -336,6 +336,10 @@ export async function registerOrderPayment(orderId: string, amount: number, note
     if (!order || order.payment_method === "mercadopago") return { ok: false, error: "No encontramos ese pedido." };
 
     const totalCents = toCents(order.total);
+    const owedCents = totalCents - toCents(order.amount_paid);
+    if (toCents(amount) > owedCents) {
+      return { ok: false, error: `Ese monto es mayor a lo que falta cobrar (${formatARS(Math.max(owedCents, 0))}).` };
+    }
     const paidCents = toCents(order.amount_paid) + toCents(amount);
     const complete = paidCents >= totalCents;
     const { error } = await supabase
@@ -397,7 +401,12 @@ export async function approveTransferPayment(orderId: string): Promise<ActionRes
       const { error: confirmError } = await supabase.rpc("set_order_status", { order_id: orderId, new_status: "confirmed" });
       if (confirmError) {
         console.error("[pagos] Pago aprobado pero no se pudo confirmar el pedido:", confirmError.message);
-        return { ok: true, message: "Pago aprobado. No pudimos confirmar el pedido (¿falta stock?): revisalo." };
+        // Se deshace la aprobación para que la clienta no vea «Pago confirmado» con el pedido sin confirmar.
+        await supabase
+          .from("orders")
+          .update({ amount_paid: 0, payment_status: null, paid_at: null })
+          .eq("id", orderId);
+        return fail(confirmError, "No pudimos confirmar el pedido. Probá de nuevo en un rato.");
       }
       refreshCatalog();
       return { ok: true, message: "Pago aprobado y pedido confirmado (se descontó el stock)." };
@@ -466,8 +475,10 @@ export async function deleteCancelledOrders(orderIds: string[]): Promise<ActionR
       .in("id", ids)
       .eq("status", "cancelled")
       .eq("stock_applied", false)
-      .select("id");
+      .select("id, payment_proof_path");
     if (error) return fail(error, "No pudimos borrar los pedidos.");
+    const proofs = (data ?? []).map((o) => o.payment_proof_path).filter((p): p is string => Boolean(p));
+    if (proofs.length > 0) await supabase.storage.from("payment-proofs").remove(proofs);
     revalidatePath("/admin/pedidos");
     revalidatePath("/admin/ventas");
     const deleted = data?.length ?? 0;
@@ -505,7 +516,9 @@ export async function deleteSelected(kind: DeleteKind, rawIds: string[]): Promis
         .in("id", ids);
       if (readError) return fail(readError, "No pudimos leer los pedidos.");
       for (const o of orders ?? []) {
-        if (o.status !== "cancelled" || o.stock_applied) {
+        // Un pedido entregado ya está en manos de la clienta: se borra sin devolver stock.
+        // Uno confirmado (no entregado) se cancela primero para que los productos vuelvan al stock.
+        if (o.status !== "delivered" && (o.status !== "cancelled" || o.stock_applied)) {
           const { error } = await supabase.rpc("set_order_status", { order_id: o.id, new_status: "cancelled" });
           if (error) return fail(error, `No pudimos devolver el stock de un pedido. Se borraron ${deleted}.`);
         }

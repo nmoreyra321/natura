@@ -63,3 +63,21 @@ describe("formatPhone", () => {
     expect(formatPhone("1125030882")).toBe("1125030882");
   });
 });
+
+describe("groupDebts con mismo nombre", () => {
+  it("separa dos clientas con el mismo nombre y distinto teléfono", () => {
+    const groups = groupDebts([
+      { id: "a", code: "NM-A", customer_name: "Laura", customer_phone: "5491111111111", total: 1000, amount_paid: 0, created_at: "2026-10-01T10:00:00Z", payment_note: null, payment_method: "efectivo", payment_status: null, status: "confirmed" },
+      { id: "b", code: "NM-B", customer_name: "Laura", customer_phone: "5492222222222", total: 2000, amount_paid: 0, created_at: "2026-10-02T10:00:00Z", payment_note: null, payment_method: "efectivo", payment_status: null, status: "confirmed" },
+    ]);
+    expect(groups).toHaveLength(2);
+  });
+});
+
+describe("toWhatsAppPhone sin código de área", () => {
+  it("rechaza un celular escrito con 15 pero sin código de área", () => {
+    expect(toWhatsAppPhone("15 2345-6789")).toBeNull();
+    expect(toWhatsAppPhone("011 15 2345-6789")).toBe("5491123456789");
+    expect(toWhatsAppPhone("549112345678")).toBeNull();
+  });
+});

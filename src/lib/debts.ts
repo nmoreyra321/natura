@@ -35,8 +35,8 @@ const normalizeName = (name: string) =>
   name.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
 
 /**
- * Agrupa por clienta lo que falta cobrar. Se agrupa por nombre (sin importar tildes ni mayúsculas);
- * los pedidos sin nombre van cada uno por separado. Ordena de mayor deuda a menor.
+ * Agrupa por clienta lo que falta cobrar: por nombre (sin importar tildes ni mayúsculas), pero dos
+ * pedidos con el mismo nombre y distinto teléfono van separados. Sin nombre ni teléfono, cada uno aparte. Ordena de mayor deuda a menor.
  */
 export function groupDebts(rows: DebtOrderRow[]): CustomerDebt[] {
   const groups = new Map<string, CustomerDebt>();
@@ -44,7 +44,11 @@ export function groupDebts(rows: DebtOrderRow[]): CustomerDebt[] {
     const owed = owedCents(o);
     if (owed <= 0) continue;
     const name = o.customer_name?.trim() || null;
-    const key = name ? `n:${normalizeName(name)}` : `o:${o.id}`;
+    const phone = toWhatsAppPhone(o.customer_phone);
+    // Por nombre; si dos pedidos con el mismo nombre tienen teléfonos distintos, son clientas distintas.
+    let key = name ? `n:${normalizeName(name)}` : phone ? `p:${phone}` : `o:${o.id}`;
+    const same = groups.get(key);
+    if (name && phone && same?.phone && toWhatsAppPhone(same.phone) !== phone) key = `${key}|${phone}`;
     const g = groups.get(key) ?? { key, name, phone: null, owedCents: 0, since: o.created_at, orders: [] };
     g.owedCents += owed;
     if (o.created_at < g.since) g.since = o.created_at;
@@ -64,13 +68,14 @@ export function groupDebts(rows: DebtOrderRow[]): CustomerDebt[] {
 export function toWhatsAppPhone(raw: string | null | undefined): string | null {
   if (!raw) return null;
   let d = raw.replace(/\D/g, "");
-  if (d.startsWith("549")) return d.length >= 12 && d.length <= 13 ? d : null;
+  if (d.startsWith("549")) return d.length === 13 && !d.startsWith("54915") ? d : null;
   if (d.startsWith("54")) d = d.slice(2);
   d = d.replace(/^0+/, "");
   // Quita el "15" de celulares escritos a la antigua: código de área (2 a 4 dígitos) + 15 + número.
   const old = d.match(/^(\d{2,4})15(\d{6,8})$/);
   if (old && old[1].length + old[2].length === 10) d = old[1] + old[2];
-  return d.length === 10 ? `549${d}` : null;
+  // Ningún código de área empieza con 15: "15 2345-6789" es un celular sin el código de área.
+  return d.length === 10 && !d.startsWith("15") ? `549${d}` : null;
 }
 
 /** Teléfono guardado ("5491125030882") en forma legible: "+54 9 11 2503-0882". */

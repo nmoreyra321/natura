@@ -53,7 +53,7 @@ export default async function DashboardPage() {
     supabase
       .from("orders")
       .select("id, code, customer_name, customer_phone, total, amount_paid, created_at, payment_note, payment_method, payment_status, status")
-      .neq("status", "cancelled")
+      .in("status", ["confirmed", "delivered"])
       .neq("payment_method", "mercadopago")
       .or("payment_status.is.null,payment_status.neq.approved")
       .limit(1000),

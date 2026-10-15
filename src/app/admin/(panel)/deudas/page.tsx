@@ -15,7 +15,8 @@ export default async function DebtsPage() {
     .select(
       "id, code, customer_name, customer_phone, total, amount_paid, created_at, payment_note, payment_method, payment_status, status",
     )
-    .neq("status", "cancelled")
+    // Solo cuenta como deuda lo que ya se confirmó o entregó (un pedido nuevo todavía no es deuda).
+    .in("status", ["confirmed", "delivered"])
     .neq("payment_method", "mercadopago")
     .or("payment_status.is.null,payment_status.neq.approved")
     .order("created_at")

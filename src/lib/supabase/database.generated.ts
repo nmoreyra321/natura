@@ -81,7 +81,7 @@ isOneToOne: false
                   ]
                 },"order_items": {
                   Row: {
-                    "id": string,"magazine_price": number,"name": string,"order_id": string,"product_id": string | null,"quantity": number,"size": string | null,"unit_price": number
+                    "id": string,"magazine_price": number,"name": string,"order_id": string,"product_id": string | null,"quantity": number,"size": string | null,"stock_taken": number | null,"unit_price": number
                   }
                   ComputedFields: never
                   Insert: {
@@ -288,6 +288,9 @@ isOneToOne: false
                            },
             "is_admin":
 { Args: Record<PropertyKey, never>; Returns: boolean
+                           },
+            "rate_limit_hit":
+{ Args: { "p_key": string; "p_max": number; "p_seconds": number }; Returns: boolean
                            },
             "set_order_status":
 { Args: { "new_status": string; "order_id": string }; Returns: undefined

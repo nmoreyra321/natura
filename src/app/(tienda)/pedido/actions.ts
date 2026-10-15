@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 
 import { toWhatsAppPhone } from "@/lib/debts";
 import { canReportPayment, normalizeOrderCode } from "@/lib/order-tracking";
+import { allowRequest } from "@/lib/rate-limit";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -16,6 +17,16 @@ const PROOF_TYPES: Record<string, string> = {
   "application/pdf": "pdf",
 };
 const MAX_PROOF_BYTES = 3_800_000;
+
+/** Revisa los primeros bytes: que el archivo sea de verdad una foto o un PDF (no solo que lo diga). */
+function looksLike(type: string, bytes: Uint8Array): boolean {
+  const starts = (...sig: number[]) => sig.every((b, i) => bytes[i] === b);
+  if (type === "image/jpeg") return starts(0xff, 0xd8, 0xff);
+  if (type === "image/png") return starts(0x89, 0x50, 0x4e, 0x47);
+  if (type === "image/webp") return starts(0x52, 0x49, 0x46, 0x46) && bytes[8] === 0x57 && bytes[9] === 0x45;
+  if (type === "application/pdf") return starts(0x25, 0x50, 0x44, 0x46);
+  return false;
+}
 
 export type ReportPaymentResult = { ok: true } | { ok: false; error: string };
 
@@ -36,6 +47,9 @@ export async function reportTransferPayment(formData: FormData): Promise<ReportP
 
   const admin = createAdminClient();
   if (!admin) return { ok: false, error: "La tienda no está configurada." };
+  if (!(await allowRequest("aviso-pago", 10, 3600))) {
+    return { ok: false, error: "Ya avisaste varias veces. Si necesitás ayuda, escribile a Natu Mariel por WhatsApp." };
+  }
   const { data: order } = await admin
     .from("orders")
     .select("id, status, payment_method, payment_status, amount_paid, total, payment_reported_at, payment_rejection, payment_proof_path")
@@ -48,10 +62,10 @@ export async function reportTransferPayment(formData: FormData): Promise<ReportP
 
   let proofPath: string | null = null;
   if (proof) {
+    const bytes = new Uint8Array(await proof.arrayBuffer());
+    if (!looksLike(proof.type, bytes)) return { ok: false, error: "El comprobante tiene que ser una foto o un PDF." };
     proofPath = `orders/${orderId}/${crypto.randomUUID()}.${PROOF_TYPES[proof.type]}`;
-    const { error } = await admin.storage
-      .from(PROOF_BUCKET)
-      .upload(proofPath, new Uint8Array(await proof.arrayBuffer()), { contentType: proof.type, upsert: false });
+    const { error } = await admin.storage.from(PROOF_BUCKET).upload(proofPath, bytes, { contentType: proof.type, upsert: false });
     if (error) {
       console.error("[comprobante] No se pudo guardar:", error.message);
       return { ok: false, error: "No pudimos guardar el comprobante. Probá de nuevo." };
@@ -91,6 +105,9 @@ export async function findOrder(_prev: FindOrderState, formData: FormData): Prom
 
   const admin = createAdminClient();
   if (!admin) return { error: "La tienda no está configurada." };
+  if (!(await allowRequest("buscar-pedido", 15, 600))) {
+    return { error: "Hiciste muchas búsquedas seguidas. Esperá unos minutos y probá de nuevo." };
+  }
   const { data: order } = await admin
     .from("orders")
     .select("id")
@@ -98,5 +115,5 @@ export async function findOrder(_prev: FindOrderState, formData: FormData): Prom
     .eq("customer_phone", phone)
     .maybeSingle();
   if (!order) return { error: "No encontramos un pedido con ese código y ese WhatsApp." };
-  redirect(`/pedido/${order.id}`);
+  redirect(`/pedido/${order.id}?guardar=1`);
 }

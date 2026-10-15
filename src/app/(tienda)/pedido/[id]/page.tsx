@@ -157,7 +157,13 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
 
   return (
     <div className="mx-auto max-w-xl px-4 py-10 sm:py-14">
-      <OrderPageEffects id={order.id} code={order.code} createdAt={order.created_at} isNew={isNew} />
+      <OrderPageEffects
+        id={order.id}
+        code={order.code}
+        createdAt={order.created_at}
+        isNew={isNew}
+        remember={isNew || one(sp.guardar) === "1"}
+      />
       {state === "review" && !cancelled ? <AutoRefresh /> : null}
 
       <div className="rounded-3xl border-2 border-forest bg-warm-white p-6 shadow-[4px_4px_0_var(--forest)] sm:p-8">

@@ -17,7 +17,7 @@ const TEXTS: Record<DeleteKind, { one: string; many: string; warning: string }> 
     one: "pedido",
     many: "pedidos",
     warning:
-      "Se borran con todo: productos, pagos anotados y comprobante. Si habían descontado stock, se devuelve. No se puede deshacer.",
+      "Se borran con todo: productos, pagos anotados y comprobante. Si estaban confirmados (y no entregados), los productos vuelven al stock. Los entregados no cambian el stock. No se puede deshacer.",
   },
   restock: { one: "aviso", many: "avisos", warning: "Las clientas ya no van a figurar como esperando el producto. No se puede deshacer." },
   lots: { one: "vencimiento", many: "vencimientos", warning: "Se borran de la lista de vencimientos. El stock no cambia. No se puede deshacer." },
@@ -51,7 +51,11 @@ export function SelectToDelete({ kind, ids, children }: { kind: DeleteKind; ids:
     <SelectionContext.Provider value={{ selected, toggle }}>
       {children}
       {count > 0 ? (
-        <div className="fixed inset-x-3 bottom-3 z-40 mx-auto flex max-w-xl flex-wrap items-center justify-between gap-2 rounded-3xl bg-forest p-3 text-white shadow-lift">
+        // Espacio para que la barra no tape lo último de la lista.
+        <div aria-hidden="true" className="h-24" />
+      ) : null}
+      {count > 0 ? (
+        <div className="fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-40 mx-auto flex max-w-xl lg:left-64 flex-wrap items-center justify-between gap-2 rounded-3xl bg-forest p-3 text-white shadow-lift">
           <span className="pl-2 font-bold">
             {count} {count === 1 ? `${t.one} elegido` : `${t.many} elegidos`}
           </span>

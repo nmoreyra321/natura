@@ -1,7 +1,8 @@
 "use server";
 
 import { toWhatsAppPhone } from "@/lib/debts";
-import { createPublicClient } from "@/lib/supabase/server";
+import { allowRequest } from "@/lib/rate-limit";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export type RestockResult = { ok: true; message: string } | { ok: false; error: string };
 
@@ -10,8 +11,14 @@ export async function requestRestock(productId: string, name: string, phone: str
   if (!/^[0-9a-f-]{36}$/.test(String(productId))) return { ok: false, error: "Producto inválido." };
   const normalized = toWhatsAppPhone(String(phone));
   if (!normalized) return { ok: false, error: "Escribí tu celular con código de área, por ejemplo 11 2345-6789." };
-  const supabase = createPublicClient({ cached: false });
+  // Se anota desde el servidor (no directo desde el navegador) y con freno de intentos.
+  const supabase = createAdminClient();
   if (!supabase) return { ok: false, error: "La tienda no está disponible ahora." };
+  if (!(await allowRequest("aviso-stock", 10, 3600))) {
+    return { ok: false, error: "Te anotaste muchas veces seguidas. Probá de nuevo más tarde." };
+  }
+  const { data: product } = await supabase.from("products").select("id").eq("id", productId).eq("status", "published").maybeSingle();
+  if (!product) return { ok: false, error: "Producto inválido." };
 
   const { error } = await supabase.from("restock_requests").insert({
     product_id: productId,

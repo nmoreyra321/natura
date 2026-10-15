@@ -4,10 +4,10 @@ import { getProductsForCart } from "@/lib/catalog";
 import { getSiteUrl } from "@/lib/config";
 import { createPreference, isMercadoPagoEnabled } from "@/lib/mercadopago";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { createPublicClient } from "@/lib/supabase/server";
 import { surchargeCents, toCents } from "@/lib/pricing";
 import { getMercadoPagoSurcharge } from "@/lib/store-settings";
 import { toWhatsAppPhone } from "@/lib/debts";
+import { allowRequest } from "@/lib/rate-limit";
 import { cartRequestSchema, orderRequestSchema } from "@/lib/validation";
 
 export type CartValidationLine = {
@@ -56,6 +56,15 @@ export async function validateCart(input: unknown): Promise<CartValidationResult
   };
 }
 
+/** Mensaje claro para la clienta cuando el pedido no se pudo crear. */
+function orderError(message: string | undefined): string {
+  const short = message?.match(/sin stock suficiente: (.+)$/)?.[1];
+  if (short) return `Ya no queda stock suficiente de «${short}». Revisá el carrito.`;
+  if (message?.includes("demasiados pedidos")) return "Hay muchos pedidos en este momento. Probá de nuevo en un minuto.";
+  if (message?.includes("ya no están disponibles")) return "Algún producto del carrito ya no está disponible. Revisá el carrito.";
+  return "No pudimos registrar el pedido. Probá de nuevo.";
+}
+
 export type RegisterOrderResult = { ok: true; id: string; code: string | null } | { ok: false; error: string };
 
 /**
@@ -68,24 +77,26 @@ export async function registerOrder(input: unknown): Promise<RegisterOrderResult
   const phone = toWhatsAppPhone(parsed.data.customerPhone);
   if (!phone) return { ok: false, error: "Revisá tu número de WhatsApp (por ejemplo 11 2345-6789)." };
 
-  const supabase = createPublicClient({ cached: false });
-  if (!supabase) return { ok: false, error: "La tienda no está configurada." };
+  // Los pedidos se crean solo desde acá (con la clave secreta), nunca directo desde el navegador.
+  const admin = createAdminClient();
+  if (!admin) return { ok: false, error: "La tienda no está configurada." };
+  if (!(await allowRequest("pedido", 8, 600))) {
+    return { ok: false, error: "Hiciste muchos pedidos seguidos. Esperá unos minutos o escribile a Natu Mariel por WhatsApp." };
+  }
 
-  const { data, error } = await supabase.rpc("create_order", {
+  const { data, error } = await admin.rpc("create_order", {
     items: parsed.data.items,
     customer_name: parsed.data.customerName,
   });
   const row = data?.[0];
   if (error || !row) {
     console.error("[pedido] No se pudo registrar:", error?.message);
-    return { ok: false, error: "No pudimos registrar el pedido." };
+    return { ok: false, error: orderError(error?.message) };
   }
   // El código (al azar) y la forma de pago los maneja el servidor: la clienta no puede leer ni editar pedidos.
-  // Si algo de esto falla, el pedido igual queda registrado.
-  const admin = createAdminClient();
   let code: string | null = null;
-  if (admin) {
-    const { data: saved } = await admin
+  {
+    const { data: saved, error: saveError } = await admin
       .from("orders")
       .update({
         payment_method: parsed.data.paymentMethod === "transferencia" ? "transferencia" : "efectivo",
@@ -94,6 +105,7 @@ export async function registerOrder(input: unknown): Promise<RegisterOrderResult
       .eq("id", row.id)
       .select("code")
       .maybeSingle();
+    if (saveError) console.error("[pedido] No se pudo guardar la forma de pago o el teléfono:", saveError.message);
     code = saved?.code ?? null;
   }
   return { ok: true, id: row.id, code };
@@ -112,18 +124,20 @@ export async function payWithMercadoPago(input: unknown): Promise<MercadoPagoChe
   const phone = toWhatsAppPhone(parsed.data.customerPhone);
   if (!phone) return { ok: false, error: "Revisá tu número de WhatsApp (por ejemplo 11 2345-6789)." };
 
-  const supabase = createPublicClient({ cached: false });
   const admin = createAdminClient();
-  if (!supabase || !admin) return { ok: false, error: "La tienda no está configurada para cobrar online." };
+  if (!admin) return { ok: false, error: "La tienda no está configurada para cobrar online." };
+  if (!(await allowRequest("pedido", 8, 600))) {
+    return { ok: false, error: "Hiciste muchos pedidos seguidos. Esperá unos minutos o escribile a Natu Mariel por WhatsApp." };
+  }
 
-  const { data, error } = await supabase.rpc("create_order", {
+  const { data, error } = await admin.rpc("create_order", {
     items: parsed.data.items,
     customer_name: parsed.data.customerName,
   });
   const order = data?.[0];
   if (error || !order) {
     console.error("[pedido] No se pudo registrar:", error?.message);
-    return { ok: false, error: "No pudimos registrar el pedido." };
+    return { ok: false, error: orderError(error?.message) };
   }
 
   const [{ error: markError }, { data: items }] = await Promise.all([

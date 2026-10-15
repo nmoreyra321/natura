@@ -12,15 +12,28 @@ import { rememberOrder } from "@/lib/my-orders";
 import { MpLinkPay } from "./transfer-account";
 
 /** Guarda el pedido en este celular (para "Seguir mi pedido") y, si recién se hizo, vacía el carrito. */
-export function OrderPageEffects({ id, code, createdAt, isNew }: { id: string; code: string; createdAt: string; isNew: boolean }) {
+export function OrderPageEffects({
+  id,
+  code,
+  createdAt,
+  isNew,
+  remember,
+}: {
+  id: string;
+  code: string;
+  createdAt: string;
+  isNew: boolean;
+  /** Solo se guarda si la clienta lo acaba de hacer o lo buscó (no si alguien abre el enlace de otra). */
+  remember: boolean;
+}) {
   useEffect(() => {
-    rememberOrder({ id, code, at: createdAt });
+    if (remember) rememberOrder({ id, code, at: createdAt });
     if (isNew) {
       cart.clear();
       // Si recarga la página más adelante, no vuelve a vaciar un carrito nuevo.
       window.history.replaceState(null, "", window.location.pathname);
     }
-  }, [id, code, createdAt, isNew]);
+  }, [id, code, createdAt, isNew, remember]);
   return null;
 }
 

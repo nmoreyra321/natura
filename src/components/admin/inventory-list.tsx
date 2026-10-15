@@ -83,7 +83,11 @@ function InventoryItem({
   const src = row.image ? productImageUrl(row.image) : null;
 
   const save = async (raw: string) => {
-    const n = raw.trim() === "" ? 0 : Number(raw);
+    if (raw.trim() === "") {
+      setValue(String(saved));
+      return;
+    }
+    const n = Number(raw);
     if (!Number.isInteger(n) || n < 0 || n > 100_000) {
       toast.error("La cantidad tiene que ser un número entero, 0 o más.");
       setValue(String(saved));
