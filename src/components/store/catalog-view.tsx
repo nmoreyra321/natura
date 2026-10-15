@@ -139,6 +139,7 @@ export async function CatalogView({
             <option value="">Todos</option>
             <option value="mujer">Mujer</option>
             <option value="hombre">Hombre</option>
+            <option value="ninos">Niños</option>
           </select>
         </div>
         <div>

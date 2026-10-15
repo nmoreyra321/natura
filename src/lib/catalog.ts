@@ -59,7 +59,8 @@ export type CatalogFilters = {
   max?: number;
   offers?: boolean;
   /** "mujer" saca lo masculino, "hombre" saca lo femenino (lo que es para todos aparece en los dos). */
-  gender?: "mujer" | "hombre";
+  /** "ninos" = la categoría Infantiles (que no aparece en Mujer ni en Hombre). */
+  gender?: "mujer" | "hombre" | "ninos";
   sort?: SortOption;
   page?: number;
 };
@@ -103,7 +104,7 @@ export function parseCatalogFilters(
     min: num("min"),
     max: num("max"),
     offers: first("ofertas") === "1",
-    gender: first("para") === "mujer" || first("para") === "hombre" ? (first("para") as "mujer" | "hombre") : undefined,
+    gender: ["mujer", "hombre", "ninos"].includes(first("para") ?? "") ? (first("para") as "mujer" | "hombre" | "ninos") : undefined,
     sort: sortRaw && sortRaw in SORT_OPTIONS ? (sortRaw as SortOption) : "destacados",
     page: Number.isInteger(pageRaw) && pageRaw > 0 ? Math.min(pageRaw, 1000) : 1,
   };
@@ -140,8 +141,17 @@ export async function getCatalog(filters: CatalogFilters): Promise<CatalogResult
   if (filters.min !== undefined) query = query.gte("sale_price", filters.min);
   if (filters.max !== undefined) query = query.lte("sale_price", filters.max);
   if (filters.offers) query = query.eq("is_offer", true).gt("discount_percent", 0);
-  if (filters.gender === "mujer") query = query.or("gender.is.null,gender.eq.femenino");
-  if (filters.gender === "hombre") query = query.or("gender.is.null,gender.eq.masculino");
+  if (filters.gender) {
+    // Los productos de la categoría Infantiles son «Niños»: no aparecen en Mujer ni en Hombre.
+    const kids = await getCategoryBySlug("infantiles");
+    if (filters.gender === "ninos") {
+      if (!kids) return { products: [], total: 0, page, pageCount: 0, available: true };
+      query = query.eq("category_id", kids.id);
+    } else {
+      query = query.or(filters.gender === "mujer" ? "gender.is.null,gender.eq.femenino" : "gender.is.null,gender.eq.masculino");
+      if (kids) query = query.or(`category_id.is.null,category_id.neq.${kids.id}`);
+    }
+  }
 
   // Siempre primero lo que se puede comprar; después, el orden elegido.
   query = query.order("in_stock", { ascending: false });
