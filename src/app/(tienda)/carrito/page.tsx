@@ -13,7 +13,11 @@ export const metadata: Metadata = {
 
 export default async function CartPage() {
   const mercadoPago = isMercadoPagoEnabled();
-  const [transfer, mpSurcharge] = await Promise.all([getTransferDetails(), mercadoPago ? getMercadoPagoSurcharge() : 0]);
+  // Con Mercado Pago activo, la clienta paga con el link (se aprueba solo) y no se ofrece transferencia.
+  const [transfer, mpSurcharge] = await Promise.all([
+    mercadoPago ? null : getTransferDetails(),
+    mercadoPago ? getMercadoPagoSurcharge() : 0,
+  ]);
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-12">
       <h1 className="mb-6 font-display text-3xl font-bold sm:text-4xl">Mi carrito</h1>
