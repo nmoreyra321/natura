@@ -8,6 +8,7 @@ import { LotQuickEntry } from "@/components/admin/lot-quick-entry";
 import { ReceiptHistory } from "@/components/admin/receipt-history";
 import { ReceiptImport } from "@/components/admin/receipt-import";
 import { ProductRowActions } from "@/components/admin/product-row-actions";
+import { ProgressiveList } from "@/components/admin/progressive-list";
 import { AdminProductSearch } from "@/components/admin/admin-product-search";
 import { ProductsHeader } from "@/components/admin/product-tabs";
 import { LinkButton, buttonClasses } from "@/components/ui/button";
@@ -260,7 +261,7 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
             <SelectAllCheckbox />
             <p className="hidden text-xs text-muted sm:block">Elegí varios para publicar, pasar a borrador o cambiar la categoría.</p>
           </div>
-          <ul className="mt-2 divide-y divide-line/70 overflow-hidden rounded-2xl bg-warm-white shadow-soft mb-28">
+          <ProgressiveList className="mt-2 mb-28 divide-y divide-line/70 overflow-hidden rounded-2xl bg-warm-white shadow-soft">
             {products.map((p) => {
               const img = [...(p.images ?? [])].sort((a, b) => a.position - b.position)[0];
               const src = img ? productImageUrl(img.storage_path) : null;
@@ -304,7 +305,7 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
                 </li>
               );
             })}
-          </ul>
+          </ProgressiveList>
         </BulkSelectionProvider>
       )}
 
