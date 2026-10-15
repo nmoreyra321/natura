@@ -93,7 +93,7 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
                 </Link>
               </nav>
               {byHand ? (
-                <LotQuickEntry mode="llegada" />
+                <LotQuickEntry mode="llegada" categories={(await supabase.from("categories").select("id, name").order("position")).data ?? []} />
               ) : (
                 <>
                   <ReceiptImport />

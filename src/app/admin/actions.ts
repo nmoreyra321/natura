@@ -22,6 +22,7 @@ import {
   categorySchema,
   fieldErrors,
   loginSchema,
+  parseMoney,
   productSchema,
   socialLinksSchema,
   surchargeSchema,
@@ -110,6 +111,51 @@ export async function saveProduct(
     return { ok: true, data: saved, message: productId ? "Cambios guardados." : "Producto creado." };
   } catch (e) {
     return fail(e, "No pudimos guardar el producto.");
+  }
+}
+
+/**
+ * Crear un producto al vuelo (desde «Me llegó mercadería» o «Contar stock») cuando no está en la tienda.
+ * Queda como borrador con el stock que llegó; se publica cuando se le agrega la foto.
+ */
+export async function quickCreateProduct(input: {
+  name: string;
+  magazinePrice: string;
+  salePrice: string;
+  categoryId: string;
+  stock: number;
+}): Promise<ActionResult<{ id: string; name: string }>> {
+  try {
+    const { supabase } = await assertAdmin();
+    const name = String(input?.name ?? "").trim().replace(/\s+/g, " ");
+    if (name.length < 2 || name.length > 120) return { ok: false, error: "Escribí el nombre del producto (de 2 a 120 letras)." };
+    const magazine = parseMoney(String(input?.magazinePrice ?? ""));
+    if (!isValidPrice(magazine)) return { ok: false, error: "Escribí el precio de revista." };
+    const sale = String(input?.salePrice ?? "").trim() ? parseMoney(String(input.salePrice)) : magazine;
+    if (!isValidPrice(sale)) return { ok: false, error: "Revisá tu precio de venta." };
+    if (sale > magazine) return { ok: false, error: "Tu precio no puede ser mayor que el de revista." };
+    const stock = Number(input?.stock);
+    if (!Number.isInteger(stock) || stock < 0 || stock > 10_000) return { ok: false, error: "Revisá la cantidad." };
+    const categoryId = UUID_RE.test(String(input?.categoryId ?? "")) ? String(input.categoryId) : null;
+    const base = slugify(name) || "producto";
+    const { data, error } = await supabase
+      .from("products")
+      .insert({
+        name,
+        slug: `${base.slice(0, 120)}-${Math.random().toString(36).slice(2, 7)}`,
+        magazine_price: magazine,
+        sale_price: sale,
+        stock,
+        category_id: categoryId,
+        status: "draft",
+      })
+      .select("id, name")
+      .single();
+    if (error) return fail(error, "No pudimos crear el producto.");
+    refreshCatalog();
+    return { ok: true, data, message: "Producto creado." };
+  } catch (e) {
+    return fail(e, "No pudimos crear el producto.");
   }
 }
 

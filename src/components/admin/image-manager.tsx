@@ -61,7 +61,8 @@ async function isDecodable(file: File): Promise<boolean> {
   }
 }
 
-async function upload(productId: string, original: File): Promise<string> {
+/** Sube una foto de producto (achicada) y devuelve la ruta guardada. */
+export async function uploadProductPhoto(productId: string, original: File): Promise<string> {
   const problem = validateImageFile(original);
   if (problem) throw new Error(problem);
   if (!(await isDecodable(original))) throw new Error("El archivo no es una imagen válida o está dañado.");
@@ -97,7 +98,7 @@ export function ImageManager({ productId, images, productName }: { productId: st
     let added = 0;
     for (const file of list) {
       try {
-        const path = await upload(productId, file);
+        const path = await uploadProductPhoto(productId, file);
         const res = await addProductImage(productId, path, productName);
         if (!res.ok) throw new Error(res.error);
         added++;
@@ -118,7 +119,7 @@ export function ImageManager({ productId, images, productName }: { productId: st
     if (!file || !imageId) return;
     setBusy(true);
     try {
-      const path = await upload(productId, file);
+      const path = await uploadProductPhoto(productId, file);
       const res = await replaceProductImage(imageId, path);
       if (!res.ok) throw new Error(res.error);
       toast.success("Foto reemplazada.");

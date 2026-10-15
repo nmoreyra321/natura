@@ -7,6 +7,7 @@ import { toast } from "sonner";
 
 import { addProductLot, receiveStock, searchProductsForLots, type LotProductOption } from "@/app/admin/actions";
 import { buttonClasses } from "@/components/ui/button";
+import { QuickCreateProduct } from "./quick-create-product";
 import { productImageUrl } from "@/lib/images";
 import { formatExpiry, maskExpiry, monthsLeft, parseExpiry } from "@/lib/lots";
 
@@ -21,8 +22,18 @@ type Loaded = { key: number; name: string; expiry: string | null; quantity: numb
  * - "vencimiento": producto → Enter → vencimiento (0129) → Enter. Solo anota el vencimiento de algo
  *   que ya está en el stock (no lo cambia).
  */
-export function LotQuickEntry({ mode = "vencimiento" }: { mode?: "llegada" | "vencimiento" }) {
+export function LotQuickEntry({
+  mode = "vencimiento",
+  categories = [],
+}: {
+  mode?: "llegada" | "vencimiento";
+  /** Para crear al vuelo un producto que no está en la tienda (solo en "llegada"). */
+  categories?: { id: string; name: string }[];
+}) {
   const arrival = mode === "llegada";
+  /** Texto para el que ya volvió la búsqueda (para saber si "no hay resultados"). */
+  const [searched, setSearched] = useState("");
+  const [creating, setCreating] = useState(false);
   const router = useRouter();
   const listId = useId();
   const [q, setQ] = useState("");
@@ -45,6 +56,7 @@ export function LotQuickEntry({ mode = "vencimiento" }: { mode?: "llegada" | "ve
       const res = await searchProductsForLots(term);
       if (!cancelled) {
         setOptions(res);
+        setSearched(term);
         setActive(0);
       }
     }, 200);
@@ -244,6 +256,37 @@ export function LotQuickEntry({ mode = "vencimiento" }: { mode?: "llegada" | "ve
           {arrival ? "Sumar" : "Guardar"}
         </button>
       </form>
+
+      {arrival && !product && !creating && term.length >= 2 && searched === term && options.length === 0 ? (
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-sun/50 px-4 py-3 text-sm">
+          <span>
+            No encontramos <strong>«{term}»</strong> en la tienda.
+          </span>
+          <button type="button" onClick={() => setCreating(true)} className={buttonClasses("primary", "sm")}>
+            <Plus className="size-4" aria-hidden="true" /> Agregar producto nuevo
+          </button>
+        </div>
+      ) : null}
+      {arrival && creating ? (
+        <div className="mt-3">
+          <QuickCreateProduct
+            initialName={term}
+            initialQuantity={Number(quantity) || 1}
+            categories={categories}
+            onCancel={() => setCreating(false)}
+            onDone={(p) => {
+              setCreating(false);
+              setLoaded((prev) =>
+                [{ key: Date.now(), name: `${p.name} (nuevo${p.published ? "" : ", sin foto"})`, expiry: null, quantity: p.quantity, stock: p.quantity }, ...prev].slice(0, 8),
+              );
+              setQ("");
+              setQuantity("1");
+              router.refresh();
+              searchRef.current?.focus();
+            }}
+          />
+        </div>
+      ) : null}
 
       <p id="lote-vence-ayuda" className="mt-2 min-h-5 text-sm text-muted" aria-live="polite">
         {parsed

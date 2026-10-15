@@ -2,6 +2,7 @@ import { Search } from "lucide-react";
 import Link from "next/link";
 
 import { AdminProductSearch } from "@/components/admin/admin-product-search";
+import { InventoryCreate } from "@/components/admin/inventory-create";
 import { InventoryList, type InventoryRow } from "@/components/admin/inventory-list";
 import { buttonClasses } from "@/components/ui/button";
 import { inputClasses } from "@/components/ui/fields";
@@ -126,6 +127,8 @@ export async function InventoryView({ supabase, sp }: { supabase: Client; sp: Se
         <Link href={pageHref(sp, 1)} className="mt-3 inline-block font-semibold text-coral-deep hover:underline">
           Ir a la primera página
         </Link>
+      ) : q.length >= 2 ? (
+        <InventoryCreate name={q} categories={categories ?? []} />
       ) : null}
 
       {pageCount > 1 && rows.length > 0 ? (
