@@ -6,6 +6,7 @@ import { CancelledOrders } from "@/components/admin/cancelled-orders";
 import { OrderActions, PaymentControl } from "@/components/admin/order-actions";
 import { buttonClasses } from "@/components/ui/button";
 import { requireAdmin } from "@/lib/auth";
+import { cleanSearch, originLabel } from "@/lib/channels";
 import { formatARS } from "@/lib/format";
 import { formatExpiry } from "@/lib/lots";
 import { toCents } from "@/lib/pricing";
@@ -43,12 +44,6 @@ function paymentBadge(method: string, status: string | null, paidCents = 0, tota
   return PAYMENT_LABELS[status ?? "pending"] ?? PAYMENT_LABELS.pending;
 }
 
-const CHANNEL_LABELS: Record<string, string> = {
-  facebook: "Vivo de Facebook",
-  presencial: "En persona",
-  whatsapp: "WhatsApp",
-  otro: "Otro",
-};
 
 const FILTERS: { value: string; label: string }[] = [
   { value: "", label: "Todos" },
@@ -68,9 +63,10 @@ const dateFormatter = new Intl.DateTimeFormat("es-AR", {
 type Search = Record<string, string | string[] | undefined>;
 const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? "";
 
-function href(estado: string, page: number) {
+function href(estado: string, page: number, q = "") {
   const params = new URLSearchParams();
   if (estado) params.set("estado", estado);
+  if (q) params.set("q", q);
   if (page > 1) params.set("pagina", String(page));
   const qs = params.toString();
   return qs ? `/admin/pedidos?${qs}` : "/admin/pedidos";
@@ -83,6 +79,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
   const pageRaw = Number(one(sp.pagina) || "1");
   const page = Number.isInteger(pageRaw) && pageRaw >= 1 && pageRaw <= 10000 ? pageRaw : 1;
   const from = (page - 1) * PAGE_SIZE;
+  const q = cleanSearch(one(sp.q));
 
   let query = supabase
     .from("orders")
@@ -97,6 +94,14 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
     query = query.neq("status", "cancelled").or("payment_status.is.null,payment_status.neq.approved");
   } else if (estado) {
     query = query.eq("status", estado);
+  }
+  if (q) {
+    // Por código (NM-…), nombre o teléfono.
+    const digits = q.replace(/\D/g, "");
+    const like = `%${q}%`;
+    query = query.or(
+      [`code.ilike.${like}`, `customer_name.ilike.${like}`, ...(digits.length >= 4 ? [`customer_phone.ilike.%${digits}%`] : [])].join(","),
+    );
   }
   const { data, count, error } = await query.range(from, from + PAGE_SIZE - 1);
   const orders = error?.code === "PGRST103" ? [] : (data ?? []);
@@ -119,7 +124,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
         {FILTERS.map((f) => (
           <Link
             key={f.value}
-            href={href(f.value, 1)}
+            href={href(f.value, 1, q)}
             aria-current={estado === f.value ? "page" : undefined}
             className={`rounded-full px-4 py-2 text-sm font-bold ${estado === f.value ? "bg-forest text-white" : "bg-warm-white shadow-soft hover:bg-sun"}`}
           >
@@ -128,15 +133,38 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
         ))}
       </nav>
 
+      <form method="get" className="mt-3 flex gap-2">
+        {estado ? <input type="hidden" name="estado" value={estado} /> : null}
+        <label htmlFor="pq" className="sr-only">
+          Buscar pedido
+        </label>
+        <input
+          id="pq"
+          name="q"
+          type="search"
+          defaultValue={q}
+          placeholder="Buscar por código (NM-…), nombre o teléfono"
+          className="h-10 w-full max-w-md rounded-full border border-line bg-white px-4 text-sm focus:border-botanical focus:outline-none"
+        />
+        <button type="submit" className={buttonClasses("secondary", "sm")}>
+          Buscar
+        </button>
+        {q ? (
+          <Link href={href(estado, 1)} className="self-center text-sm font-semibold text-coral-deep hover:underline">
+            Limpiar
+          </Link>
+        ) : null}
+      </form>
+
       {error && error.code !== "PGRST103" ? (
         <p className="mt-6 rounded-2xl bg-coral-soft p-4 font-semibold">No pudimos cargar los pedidos.</p>
       ) : orders.length === 0 ? (
         <div className="mt-6 rounded-3xl border border-dashed border-line bg-warm-white p-10 text-center">
           <ClipboardList className="mx-auto size-10 text-muted" aria-hidden="true" />
           <p className="mt-3 font-display text-xl font-bold">
-            {estado ? "No hay pedidos con este estado." : "Todavía no hay pedidos."}
+            {q ? `No hay pedidos con “${q}”.` : estado ? "No hay pedidos con este estado." : "Todavía no hay pedidos."}
           </p>
-          {!estado ? (
+          {!estado && !q ? (
             <p className="mt-1 text-muted">Cuando una clienta envíe un pedido por WhatsApp, lo vas a ver acá.</p>
           ) : null}
         </div>
@@ -172,7 +200,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
                         {paymentBadge(o.payment_method, o.payment_status, toCents(o.amount_paid), toCents(o.total)).label}
                       </span>
                       <span className="rounded-full border border-line px-2.5 py-0.5 text-xs font-bold text-muted">
-                        {CHANNEL_LABELS[o.channel] ?? "Tienda web"}
+                        {originLabel(o.channel)}
                       </span>
                     </p>
                     <p className="text-sm text-muted">
@@ -235,7 +263,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
       {pageCount > 1 && orders.length > 0 ? (
         <nav aria-label="Paginación" className="mt-8 flex items-center justify-center gap-3">
           {page > 1 ? (
-            <Link href={href(estado, page - 1)} className={buttonClasses("outline")}>
+            <Link href={href(estado, page - 1, q)} className={buttonClasses("outline")}>
               Anterior
             </Link>
           ) : null}
@@ -243,7 +271,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
             Página {page} de {pageCount}
           </span>
           {page < pageCount ? (
-            <Link href={href(estado, page + 1)} className={buttonClasses("outline")}>
+            <Link href={href(estado, page + 1, q)} className={buttonClasses("outline")}>
               Siguiente
             </Link>
           ) : null}

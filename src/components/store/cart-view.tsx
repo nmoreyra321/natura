@@ -22,14 +22,25 @@ type Status = "idle" | "checking" | "ok" | "error";
 type PaymentChoice = "efectivo" | "transferencia" | "mercadopago";
 
 const NAME_KEY = "natu-mariel:nombre";
+const PHONE_KEY = "natu-mariel:telefono";
 
-function readSavedName(): string {
+function readSaved(key: string): string {
   try {
-    return typeof window === "undefined" ? "" : (window.localStorage.getItem(NAME_KEY) ?? "");
+    return typeof window === "undefined" ? "" : (window.localStorage.getItem(key) ?? "");
   } catch {
     return "";
   }
 }
+
+function saveContact(name: string, phone: string) {
+  try {
+    window.localStorage.setItem(NAME_KEY, name);
+    window.localStorage.setItem(PHONE_KEY, phone);
+  } catch {
+    // Sin almacenamiento: no pasa nada.
+  }
+}
+
 
 export function CartView({
   whatsappNumber,
@@ -53,7 +64,8 @@ export function CartView({
   const [notices, setNotices] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const requestId = useRef(0);
-  const [customerName, setCustomerName] = useState(readSavedName);
+  const [customerName, setCustomerName] = useState(() => readSaved(NAME_KEY));
+  const [customerPhone, setCustomerPhone] = useState(() => readSaved(PHONE_KEY));
   const [sending, setSending] = useState(false);
   const [payment, setPayment] = useState<PaymentChoice>("efectivo");
   const paymentOptions: { value: PaymentChoice; label: string; Icon: typeof Banknote }[] = [
@@ -300,6 +312,22 @@ export function CartView({
                   className="mt-1 h-11 w-full rounded-full border border-line bg-white px-4 text-base focus:border-botanical focus:ring-3 focus:ring-botanical/20 focus:outline-none"
                 />
               </div>
+              <div>
+                <label htmlFor="telefono-pedido" className="text-sm font-semibold">
+                  Tu WhatsApp <span className="font-normal text-muted">(opcional)</span>
+                </label>
+                <input
+                  id="telefono-pedido"
+                  type="tel"
+                  inputMode="tel"
+                  autoComplete="tel"
+                  maxLength={30}
+                  value={customerPhone}
+                  onChange={(e) => setCustomerPhone(e.target.value)}
+                  placeholder="Ej.: 11 2345-6789"
+                  className="mt-1 h-11 w-full rounded-full border border-line bg-white px-4 text-base focus:border-botanical focus:ring-3 focus:ring-botanical/20 focus:outline-none"
+                />
+              </div>
               {paymentOptions.length > 1 ? (
                 <fieldset>
                   <legend className="text-sm font-semibold">¿Cómo querés pagar?</legend>
@@ -345,14 +373,12 @@ export function CartView({
                     setSending(true);
                     setError(null);
                     const name = customerName.trim();
-                    try {
-                      window.localStorage.setItem(NAME_KEY, name);
-                    } catch {
-                      // Sin almacenamiento: no pasa nada.
-                    }
+                    const phone = customerPhone.trim();
+                    saveContact(name, phone);
                     const res = await payWithMercadoPago({
                       items: items.map((i) => ({ productId: i.productId, quantity: i.quantity })),
                       customerName: name || undefined,
+                      customerPhone: phone || undefined,
                     }).catch(() => null);
                     if (res?.ok) {
                       window.location.href = res.url;
@@ -383,14 +409,12 @@ export function CartView({
                   const win = window.open("", "_blank");
                   setSending(true);
                   const name = customerName.trim();
-                  try {
-                    window.localStorage.setItem(NAME_KEY, name);
-                  } catch {
-                    // Sin almacenamiento: no pasa nada.
-                  }
+                  const phone = customerPhone.trim();
+                  saveContact(name, phone);
                   const res = await registerOrder({
                     items: items.map((i) => ({ productId: i.productId, quantity: i.quantity })),
                     customerName: name || undefined,
+                    customerPhone: phone || undefined,
                     paymentMethod: payment === "transferencia" ? "transferencia" : "efectivo",
                   }).catch(() => null);
                   const message = buildOrderMessage(lines, siteUrl, {

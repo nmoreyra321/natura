@@ -2,8 +2,11 @@ import { ArrowDownRight, ArrowUpRight, ChevronLeft, ChevronRight, Clock } from "
 import Link from "next/link";
 
 import { SalesChart, type SalesBar } from "@/components/admin/sales-chart";
+import { SalesList, type SaleRow } from "@/components/admin/sales-list";
 import { requireAdmin } from "@/lib/auth";
+import { cleanSearch } from "@/lib/channels";
 import { formatARS } from "@/lib/format";
+import { toCents } from "@/lib/pricing";
 import {
   currentMonth,
   daysInMonth,
@@ -47,7 +50,10 @@ function Delta({ current, previous, previousLabel }: { current: number; previous
 export default async function SalesPage({ searchParams }: { searchParams: Promise<Search> }) {
   const { supabase } = await requireAdmin();
   const today = currentMonth();
-  const month = parseMonth(one((await searchParams).mes), today);
+  const sp = await searchParams;
+  const month = parseMonth(one(sp.mes), today);
+  const origin = one(sp.origen) === "web" || one(sp.origen) === "rapida" ? one(sp.origen)! : "";
+  const q = cleanSearch(one(sp.q));
   const isFuture = month > today;
   const prev = shiftMonth(month, -1);
   const next = shiftMonth(month, 1);
@@ -59,6 +65,39 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
     .lt("created_at", monthStartIso(next))
     .limit(10000);
   const orders = (data ?? []) as SalesOrder[];
+
+  // Listado: ventas del mes elegido (sin las canceladas), las más nuevas primero.
+  let listQuery = supabase
+    .from("orders")
+    .select("id, code, created_at, customer_name, customer_phone, channel, status, total, amount_paid, payment_method, payment_status, items:order_items(quantity)")
+    .gte("created_at", monthStartIso(month))
+    .lt("created_at", monthStartIso(next))
+    .neq("status", "cancelled")
+    .order("created_at", { ascending: false })
+    .limit(1000);
+  if (origin === "web") listQuery = listQuery.eq("channel", "web");
+  if (origin === "rapida") listQuery = listQuery.neq("channel", "web");
+  if (q) {
+    const digits = q.replace(/\D/g, "");
+    listQuery = listQuery.or(
+      [`code.ilike.%${q}%`, `customer_name.ilike.%${q}%`, ...(digits.length >= 4 ? [`customer_phone.ilike.%${digits}%`] : [])].join(","),
+    );
+  }
+  const { data: listData } = await listQuery;
+  const saleRows: SaleRow[] = (listData ?? []).map((o) => ({
+    id: o.id,
+    code: o.code,
+    createdAt: o.created_at,
+    customerName: o.customer_name,
+    customerPhone: o.customer_phone,
+    channel: o.channel,
+    status: o.status,
+    totalCents: toCents(o.total),
+    // Mercado Pago aprobado cuenta como cobrado completo.
+    paidCents: o.payment_method === "mercadopago" && o.payment_status === "approved" ? toCents(o.total) : toCents(o.amount_paid),
+    paymentMethod: o.payment_method,
+    units: (o.items ?? []).reduce((sum, i) => sum + i.quantity, 0),
+  }));
 
   const s = summarizeMonth(orders, month);
   const p = summarizeMonth(orders, prev);
@@ -88,7 +127,7 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="font-display text-3xl font-bold">Ventas</h1>
-          <p className="text-muted">Pedidos confirmados y entregados desde la tienda.</p>
+          <p className="text-muted">Lo vendido en la tienda web y con Venta rápida (pedidos confirmados y entregados).</p>
         </div>
         <nav aria-label="Elegir mes" className="flex items-center gap-1 rounded-full bg-warm-white p-1 shadow-soft">
           <Link
@@ -193,6 +232,8 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
               )}
             </section>
           </div>
+
+          <SalesList rows={saleRows} month={month} origin={origin} q={q} />
 
           {s.cancelledOrders > 0 ? (
             <p className="mt-4 text-sm text-muted">

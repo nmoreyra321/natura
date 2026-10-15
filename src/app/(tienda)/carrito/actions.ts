@@ -7,7 +7,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createPublicClient } from "@/lib/supabase/server";
 import { surchargeCents, toCents } from "@/lib/pricing";
 import { getMercadoPagoSurcharge } from "@/lib/store-settings";
-import { cartRequestSchema, orderRequestSchema } from "@/lib/validation";
+import { cartRequestSchema, cleanPhone, orderRequestSchema } from "@/lib/validation";
 
 export type CartValidationLine = {
   productId: string;
@@ -84,7 +84,10 @@ export async function registerOrder(input: unknown): Promise<RegisterOrderResult
   if (admin) {
     const { data: saved } = await admin
       .from("orders")
-      .update({ payment_method: parsed.data.paymentMethod === "transferencia" ? "transferencia" : "efectivo" })
+      .update({
+        payment_method: parsed.data.paymentMethod === "transferencia" ? "transferencia" : "efectivo",
+        customer_phone: cleanPhone(parsed.data.customerPhone),
+      })
       .eq("id", row.id)
       .select("code")
       .maybeSingle();
@@ -119,7 +122,10 @@ export async function payWithMercadoPago(input: unknown): Promise<MercadoPagoChe
   }
 
   const [{ error: markError }, { data: items }] = await Promise.all([
-    admin.from("orders").update({ payment_method: "mercadopago", payment_status: "pending" }).eq("id", order.id),
+    admin
+      .from("orders")
+      .update({ payment_method: "mercadopago", payment_status: "pending", customer_phone: cleanPhone(parsed.data.customerPhone) })
+      .eq("id", order.id),
     admin.from("order_items").select("product_id, name, size, quantity, unit_price").eq("order_id", order.id),
   ]);
   if (markError || !items || items.length === 0) {
