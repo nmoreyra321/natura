@@ -92,3 +92,14 @@ function recentSnapshot(): SavedOrder | null {
 export function useRecentOrder(): SavedOrder | null {
   return useSyncExternalStore(subscribe, recentSnapshot, () => null);
 }
+
+/** Saca un pedido de la lista de este celular (por ejemplo, si ya no existe). */
+export function forgetOrder(id: string) {
+  try {
+    const rest = readSavedOrders().filter((o) => o.id !== id);
+    window.localStorage.setItem(KEY, JSON.stringify(rest));
+    window.dispatchEvent(new Event(CHANGE));
+  } catch {
+    // Sin almacenamiento: no pasa nada.
+  }
+}

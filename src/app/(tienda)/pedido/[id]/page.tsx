@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { OrderMissing } from "@/components/store/order-missing";
 import { AutoRefresh, MpPayFlow, OrderPageEffects, ReportPayment } from "@/components/store/order-tracking";
 import { PaidOrderActions } from "@/components/store/paid-order-actions";
 import { TransferAccount } from "@/components/store/transfer-account";
@@ -62,7 +63,8 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
     )
     .eq("id", id)
     .maybeSingle();
-  if (!order) notFound();
+  // Ya no existe (por ejemplo, se borró desde el panel): en vez de un error, ofrecer ayuda.
+  if (!order) return <OrderMissing id={id} whatsapp={getWhatsAppNumber()} />;
 
   const isNew = one(sp.nuevo) === "1";
   const state = paymentState(order);
@@ -94,6 +96,12 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
     unitCents: toCents(i.unit_price),
     magazineUnitCents: toCents(i.magazine_price),
   }));
+  const helpUrl = whatsapp
+    ? buildWhatsAppUrl(
+        whatsapp,
+        `Hola Natu Mariel 👋 Tengo una consulta sobre mi pedido ${order.code}${cancelled ? " (figura como cancelado)" : ""}. ${trackUrl}`,
+      )
+    : null;
   const message = (extra: Parameters<typeof buildOrderMessage>[2]) =>
     whatsapp
       ? buildWhatsAppUrl(whatsapp, buildOrderMessage(lines, siteUrl, { orderCode: order.code, customerName: order.customer_name, trackUrl, ...extra }))
@@ -106,7 +114,7 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
   let text: React.ReactNode;
   if (cancelled) {
     [tone, Icon, title] = ["bad", XCircle, "Pedido cancelado"];
-    text = "Este pedido se canceló. Si tenés dudas, escribile a Natu Mariel.";
+    text = "Este pedido se canceló. Si ya lo pagaste o creés que es un error, tocá «Pedir ayuda por WhatsApp» y Natu Mariel lo resuelve con vos.";
   } else if (isMp) {
     if (state === "paid") {
       [tone, Icon, title] = ["good", CheckCircle2, "¡Pago aprobado!"];
@@ -298,6 +306,11 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
         ) : null}
 
         <div className="mt-6 flex flex-col gap-3 text-center">
+          {cancelled && helpUrl ? (
+            <a href={helpUrl} target="_blank" rel="noopener noreferrer" className={buttonClasses("primary", "lg")}>
+              <MessageCircle className="size-5" aria-hidden="true" /> Pedir ayuda por WhatsApp
+            </a>
+          ) : null}
           {isMp && state === "paid" ? <PaidOrderActions whatsappUrl={message({ paid: true })} /> : null}
           {isMp && state === "failed" ? (
             <Link href="/carrito" className={buttonClasses("primary", "lg")}>
@@ -321,6 +334,16 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
             </Link>
             .
           </p>
+          {!cancelled && helpUrl ? (
+            <a
+              href={helpUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center gap-1.5 text-sm font-semibold text-botanical-deep hover:underline"
+            >
+              <MessageCircle className="size-4" aria-hidden="true" /> ¿Necesitás ayuda con tu pedido? Escribile a Natu Mariel
+            </a>
+          ) : null}
           <Link href="/productos" className="text-sm font-semibold text-coral-deep hover:underline">
             Seguir mirando productos
           </Link>
