@@ -97,6 +97,20 @@ function OrderReminder() {
   );
 }
 
+/**
+ * ¿Este enlace del menú es la página donde está la clienta? «Ofertas» y «Todos los productos»
+ * comparten dirección: se distinguen por ?ofertas=1. Los enlaces a una parte de la página (#) no se marcan.
+ */
+function isCurrent(href: string, pathname: string, search: string): boolean {
+  if (href.includes("#")) return false;
+  const [path, query = ""] = href.split("?");
+  if (path !== pathname) return false;
+  const onOffers = new URLSearchParams(search).get("ofertas") === "1";
+  return query.includes("ofertas=1") ? onOffers : !onOffers;
+}
+
+const CURRENT = "bg-sky-100 font-bold text-sky-950";
+
 export function Header({ categories }: { categories: NavCategory[] }) {
   const [open, setOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -155,7 +169,10 @@ export function Header({ categories }: { categories: NavCategory[] }) {
               <li key={l.href} className={i >= 4 ? "hidden 2xl:block" : i >= 2 ? "hidden xl:block" : undefined}>
                 <Link
                   href={l.href}
-                  className="rounded-full px-3 py-2 text-[0.95rem] font-bold whitespace-nowrap text-forest transition-colors hover:bg-sun"
+                  aria-current={!l.href.includes("?") && l.href === pathname ? "page" : undefined}
+                  className={`rounded-full px-3 py-2 text-[0.95rem] font-bold whitespace-nowrap text-forest transition-colors hover:bg-sun ${
+                    !l.href.includes("?") && l.href === pathname ? CURRENT : ""
+                  }`}
                 >
                   {l.label}
                 </Link>
@@ -238,17 +255,22 @@ export function Header({ categories }: { categories: NavCategory[] }) {
                   { href: "/quienes-somos", label: "Quiénes somos" },
                   { href: "/contacto", label: "Contacto" },
                 ].map(
-                  (l) => (
+                  (l) => {
+                    // El menú solo existe en el navegador (se abre con un toque), así que se puede leer la dirección.
+                    const current = isCurrent(l.href, pathname, window.location.search);
+                    return (
                     <li key={l.href}>
                       <Link
                         href={l.href}
                         onClick={() => setOpen(false)}
-                        className="flex min-h-12 items-center rounded-2xl px-4 text-lg font-semibold hover:bg-sun"
+                        aria-current={current ? "page" : undefined}
+                        className={`flex min-h-12 items-center rounded-2xl px-4 text-lg hover:bg-sun ${current ? CURRENT : "font-semibold"}`}
                       >
                         {l.label}
                       </Link>
                     </li>
-                  ),
+                    );
+                  },
                 )}
               </ul>
             </nav>
@@ -258,7 +280,12 @@ export function Header({ categories }: { categories: NavCategory[] }) {
                 <ul className="flex flex-col gap-1">
                   {categories.slice(4).map((c) => (
                     <li key={c.slug}>
-                      <Link href={`/categorias/${c.slug}`} className="flex min-h-11 items-center rounded-2xl px-4 hover:bg-sun">
+                      <Link
+                        href={`/categorias/${c.slug}`}
+                        onClick={() => setOpen(false)}
+                        aria-current={pathname === `/categorias/${c.slug}` ? "page" : undefined}
+                        className={`flex min-h-11 items-center rounded-2xl px-4 hover:bg-sun ${pathname === `/categorias/${c.slug}` ? CURRENT : ""}`}
+                      >
                         {c.name}
                       </Link>
                     </li>
