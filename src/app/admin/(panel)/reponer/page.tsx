@@ -6,14 +6,14 @@ import { CopyOrderButtons } from "@/components/admin/copy-order-button";
 import { ProductImageFallback } from "@/components/store/product-card";
 import { requireAdmin } from "@/lib/auth";
 import { productImageUrl } from "@/lib/images";
-import { reorderText, salesWindowStart, suggestReorder, weeksText } from "@/lib/reorder";
+import { historyDays, reorderText, salesDays, salesPeriodText, salesWindowStart, suggestReorder } from "@/lib/reorder";
 
 export const metadata = { title: "Qué pedirle a Natura" };
 
 type Search = Record<string, string | string[] | undefined>;
 const WEEKS = [1, 2, 4, 6, 8] as const;
 
-/** Un número con su etiqueta chiquita arriba (para la cuenta vendiste − te queda = pedí). */
+/** Un número con su etiqueta chiquita arriba (para la cuenta necesitás − te queda = pedí). */
 function Figure({ label, value, tone = "plain" }: { label: string; value: number; tone?: "plain" | "alert" | "result" }) {
   return (
     <span
@@ -31,7 +31,7 @@ export default async function ReorderPage({ searchParams }: { searchParams: Prom
   const asked = Number(Array.isArray(sp.semanas) ? sp.semanas[0] : sp.semanas);
   const weeks = WEEKS.find((w) => w === asked) ?? 4;
 
-  const since = salesWindowStart(weeks * 7);
+  const since = salesWindowStart();
   const [{ data: products, error }, { data: sales }] = await Promise.all([
     supabase.from("products").select("id, name, size, stock, natura_sku, images:product_images(storage_path, position)").limit(3000),
     supabase
@@ -42,14 +42,22 @@ export default async function ReorderPage({ searchParams }: { searchParams: Prom
       .limit(20000),
   ]);
 
-  const past = weeksText(weeks, "pasadas");
-  const next = weeksText(weeks, "proximas");
+  // Base: desde la primera venta (si la tienda es nueva) hasta 3 meses atrás.
+  const firstSale = (sales ?? []).reduce<string | null>((min, s) => {
+    const at = (s.order as unknown as { created_at: string } | null)?.created_at ?? null;
+    return at && (!min || at < min) ? at : min;
+  }, null);
+  const history = historyDays(firstSale);
+  const past = salesPeriodText(salesDays(history));
+  const next = weeks === 1 ? "1 semana" : `${weeks} semanas`;
   const sold = new Map<string, number>();
   for (const s of sales ?? []) if (s.product_id) sold.set(s.product_id, (sold.get(s.product_id) ?? 0) + s.quantity);
 
   const byId = new Map((products ?? []).map((p) => [p.id, p]));
   const list = suggestReorder(
     (products ?? []).map((p) => ({ id: p.id, name: p.name, stock: p.stock, sold: sold.get(p.id) ?? 0 })),
+    weeks,
+    history,
   );
   const units = list.reduce((s, r) => s + r.order, 0);
   const text = reorderText(list.map((r) => ({ name: r.name, order: r.order, sku: byId.get(r.id)?.natura_sku ?? null })));
@@ -61,9 +69,9 @@ export default async function ReorderPage({ searchParams }: { searchParams: Prom
 
       <section aria-labelledby="periodo" className="mt-5 rounded-3xl bg-warm-white p-4 shadow-soft">
         <h2 id="periodo" className="text-sm font-bold">
-          Calcular con las ventas de:
+          Quiero que me alcance para:
         </h2>
-        <nav aria-label="Período de ventas" className="mt-2 flex flex-wrap gap-2">
+        <nav aria-label="Para cuántas semanas" className="mt-2 flex flex-wrap gap-2">
           {WEEKS.map((w) => (
             <Link
               key={w}
@@ -76,11 +84,12 @@ export default async function ReorderPage({ searchParams }: { searchParams: Prom
           ))}
         </nav>
         <p className="mt-3 text-sm text-muted">
-          Miramos cuánto vendiste de cada producto en <b className="text-forest">{past}</b> y te sugerimos pedir lo necesario
-          para que te alcance <b className="text-forest">{next}</b>:
+          Miramos cuánto vendiste de cada producto en <b className="text-forest">{past}</b>, calculamos cuántos vas a
+          necesitar para <b className="text-forest">{next}</b> (si elegís el doble de semanas, necesitás el doble) y le
+          restamos lo que te queda:
         </p>
-        <p className="mt-2 flex flex-wrap items-center gap-1.5 text-sm font-bold" aria-label="Vendiste menos te queda igual a pedí">
-          <span className="rounded-full bg-white px-3 py-1 ring-1 ring-line">Vendiste</span>
+        <p className="mt-2 flex flex-wrap items-center gap-1.5 text-sm font-bold" aria-label="Necesitás menos te queda igual a pedí">
+          <span className="rounded-full bg-white px-3 py-1 ring-1 ring-line">Necesitás</span>
           <span aria-hidden="true">−</span>
           <span className="rounded-full bg-white px-3 py-1 ring-1 ring-line">Te queda</span>
           <span aria-hidden="true">=</span>
@@ -96,7 +105,7 @@ export default async function ReorderPage({ searchParams }: { searchParams: Prom
           <p className="mt-3 font-display text-xl font-bold">Por ahora no hace falta pedir nada.</p>
           <p className="mt-1 text-muted">
             {sold.size === 0
-              ? `No hay ventas confirmadas en ${past}. Probá con más semanas.`
+              ? "Todavía no hay ventas confirmadas para calcular. Cuando vendas, acá vas a ver qué reponer."
               : `Con lo que tenés te alcanza para ${next}.`}
           </p>
         </div>
@@ -126,10 +135,13 @@ export default async function ReorderPage({ searchParams }: { searchParams: Prom
                     <Link href={`/admin/productos/${r.id}`} className="line-clamp-2 font-semibold leading-snug hover:text-coral-deep">
                       {r.name}
                     </Link>
+                    <p className="mt-0.5 text-xs text-muted">
+                      Vendiste {r.sold} en {past}
+                    </p>
                     {left === 0 ? <span className="mt-1 inline-block rounded-full bg-coral-soft px-2 py-0.5 text-xs font-bold text-coral-deep">Agotado</span> : null}
                   </div>
-                  <div className="flex w-full items-center justify-end gap-1.5 sm:w-auto" aria-label={`Vendiste ${r.sold}, te quedan ${left}, pedí ${r.order}`}>
-                    <Figure label="Vendiste" value={r.sold} />
+                  <div className="flex w-full items-center justify-end gap-1.5 sm:w-auto" aria-label={`Necesitás ${r.need}, te quedan ${left}, pedí ${r.order}`}>
+                    <Figure label="Necesitás" value={r.need} />
                     <span className="font-bold text-muted" aria-hidden="true">−</span>
                     <Figure label="Te queda" value={left} tone={left === 0 ? "alert" : "plain"} />
                     <span className="font-bold text-muted" aria-hidden="true">=</span>
