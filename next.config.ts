@@ -28,6 +28,11 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // En Vercel las fotos las achica el servicio de imágenes de Vercel, no la página: el programa
+  // «sharp» (unos 48 MB) no se usa y solo agrandaba cada copia publicada (el «Functions Storage»).
+  outputFileTracingExcludes: {
+    "/**": ["node_modules/sharp/**", "node_modules/@img/**"],
+  },
   experimental: {
     // Las fotos de la boleta de Natura viajan en una acción del panel (ya achicadas en el teléfono).
     serverActions: { bodySizeLimit: "4mb" },
