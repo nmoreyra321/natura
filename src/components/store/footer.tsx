@@ -74,6 +74,11 @@ export function Footer({ categories }: { categories: { name: string; slug: strin
               </Link>
             </li>
             <li>
+              <Link className="hover:text-sun" href="/#calificaciones">
+                Reseñas
+              </Link>
+            </li>
+            <li>
               <InstallAppButton className="inline-flex items-center gap-2 font-semibold hover:text-sun" />
             </li>
           </ul>

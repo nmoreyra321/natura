@@ -37,10 +37,10 @@ export type HomeData = {
 
 const reviewDateFmt = new Intl.DateTimeFormat("es-AR", { month: "long", year: "numeric", timeZone: "America/Argentina/Buenos_Aires" });
 
-/** «Calificaciones»: promedio de estrellas, carrusel de reseñas y botón para dejar una. */
+/** «Calificaciones»: franja de color con el promedio, carrusel de reseñas y botón para dejar una. */
 export function ReviewsSection({ r }: { r: ReviewSummary | null }) {
   const cards = (r?.latest ?? []).map((rev) => (
-    <li key={rev.id} className="flex w-[80%] shrink-0 snap-start flex-col rounded-3xl bg-warm-white p-5 shadow-soft sm:w-[45%] lg:w-[31%]">
+    <li key={rev.id} className="flex w-[80%] shrink-0 snap-start flex-col rounded-3xl bg-white p-5 shadow-soft sm:w-[45%] lg:w-[31%]">
       <Stars value={rev.rating} />
       {rev.comment ? <p className="mt-2 text-forest/90">“{rev.comment}”</p> : null}
       <p className="mt-3 text-sm font-bold">
@@ -58,34 +58,42 @@ export function ReviewsSection({ r }: { r: ReviewSummary | null }) {
   ));
 
   return (
-    <Section>
-      <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h2 id="resenas" className="font-display text-2xl font-bold sm:text-3xl">
-            Calificaciones ⭐
-          </h2>
-          {r ? (
-            <p className="mt-1 flex flex-wrap items-center gap-2 text-sm font-semibold text-muted sm:text-base">
-              <span className="font-display text-2xl font-bold text-forest tabular">{r.average.toLocaleString("es-AR", { maximumFractionDigits: 1 })}</span>
-              <Stars value={r.average} className="size-5" />
-              <span>
-                ({r.count} {r.count === 1 ? "reseña" : "reseñas"})
-              </span>
+    <section id="calificaciones" className="scroll-mt-24 px-3 py-4 sm:px-6" aria-labelledby="resenas">
+      <div className="relative mx-auto max-w-7xl overflow-hidden rounded-[2rem] bg-gradient-to-br from-lilac via-pink/70 to-blush p-6 sm:p-8">
+        <span aria-hidden="true" className="pointer-events-none absolute -top-20 -left-16 size-64 rounded-full bg-white/50 blur-3xl" />
+        <div className="relative mb-5 flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <p className="inline-flex items-center gap-1.5 rounded-full bg-white/80 px-3 py-1 text-sm font-extrabold text-coral-deep">
+              <MessageCircle className="size-4" aria-hidden="true" /> Opiniones reales
             </p>
-          ) : (
-            <p className="mt-1 text-sm font-semibold text-muted sm:text-base">Todavía no hay reseñas. ¡Dejá la primera!</p>
-          )}
+            <h2 id="resenas" className="mt-3 font-display text-3xl leading-tight font-bold sm:text-4xl">
+              Calificaciones ⭐
+            </h2>
+            {r ? (
+              <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+                <span className="font-display text-5xl leading-none font-bold tabular">{r.average.toLocaleString("es-AR", { maximumFractionDigits: 1 })}</span>
+                <span className="flex flex-col gap-0.5">
+                  <Stars value={r.average} className="size-6" />
+                  <span className="text-sm font-bold text-forest/70">
+                    de 5 · {r.count} {r.count === 1 ? "reseña" : "reseñas"} de clientas
+                  </span>
+                </span>
+              </p>
+            ) : (
+              <p className="mt-1 font-semibold text-forest/80">Todavía no hay reseñas. ¿Ya compraste? ¡Dejá la primera!</p>
+            )}
+          </div>
+          <AddReview />
         </div>
-        <AddReview />
+        {cards.length >= 3 ? (
+          <InfiniteCarousel label="Reseñas de clientas">{cards}</InfiniteCarousel>
+        ) : cards.length > 0 ? (
+          <ul aria-label="Reseñas de clientas" className="relative -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pt-2 pb-2 sm:mx-0 sm:px-1">
+            {cards}
+          </ul>
+        ) : null}
       </div>
-      {cards.length >= 3 ? (
-        <InfiniteCarousel label="Reseñas de clientas">{cards}</InfiniteCarousel>
-      ) : cards.length > 0 ? (
-        <ul aria-label="Reseñas de clientas" className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pt-2 pb-2 sm:mx-0 sm:px-1">
-          {cards}
-        </ul>
-      ) : null}
-    </Section>
+    </section>
   );
 }
 
@@ -202,6 +210,19 @@ export function HomeView({ d }: { d: HomeData }) {
                   ) : null}
                 </div>
               ) : null}
+              {d.reviews ? (
+                <a
+                  href="#calificaciones"
+                  className="mt-6 inline-flex flex-wrap items-center gap-2 rounded-full bg-white/85 px-4 py-2 text-sm font-bold shadow-soft transition hover:bg-white"
+                >
+                  <Stars value={d.reviews.average} />
+                  <span className="tabular">{d.reviews.average.toLocaleString("es-AR", { maximumFractionDigits: 1 })}</span>
+                  <span className="text-muted">
+                    · {d.reviews.count} {d.reviews.count === 1 ? "reseña" : "reseñas"}
+                  </span>
+                  <ArrowRight className="size-4 text-coral-deep" aria-hidden="true" />
+                </a>
+              ) : null}
               <ul aria-label="Por qué comprar acá" className="mt-6 grid max-w-lg gap-x-5 gap-y-2 text-sm font-bold text-forest sm:grid-cols-2">
                 {PERKS.map((perk) => (
                   <li key={perk} className="flex items-center gap-2">
@@ -270,6 +291,8 @@ export function HomeView({ d }: { d: HomeData }) {
             </Section>
           ) : null}
 
+          <ReviewsSection r={d.reviews} />
+
           {/* Club de clientas */}
           <section className="px-3 py-4 sm:px-6" aria-labelledby="club">
             <div className="relative mx-auto grid max-w-7xl gap-6 overflow-hidden rounded-[2rem] bg-gradient-to-br from-sun via-peach to-blush p-6 sm:p-8 md:grid-cols-[1.3fr_1fr] md:items-center">
@@ -322,8 +345,6 @@ export function HomeView({ d }: { d: HomeData }) {
               <ProductRail products={d.bestSellers.slice(0, 8)} />
             </Section>
           ) : null}
-
-          <ReviewsSection r={d.reviews} />
 
           {/* Llamado a WhatsApp */}
           {d.whatsappUrl ? (
