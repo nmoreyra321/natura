@@ -59,6 +59,8 @@ html {
 }
 
 body {
+  /* Nada puede ensanchar la página más que la pantalla (si no, al girar el celular queda achicada). */
+  overflow-x: clip;
   background: var(--cream);
   color: var(--forest);
   font-family: var(--font-sans);

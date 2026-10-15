@@ -42,6 +42,9 @@ export const viewport: Viewport = {
   themeColor: "#fff7ef",
   width: "device-width",
   initialScale: 1,
+  // Al girar el celular (horizontal → vertical) el iPhone a veces deja la página achicada;
+  // con esto vuelve siempre a su tamaño. Igual se puede agrandar con dos dedos.
+  maximumScale: 1,
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

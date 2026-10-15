@@ -12,6 +12,8 @@ export default function manifest(): MetadataRoute.Manifest {
     start_url: "/",
     scope: "/",
     display: "standalone",
+    // La app instalada se usa en vertical (en Android queda fija; el iPhone lo decide el sistema).
+    orientation: "portrait",
     background_color: "#fff7ef",
     theme_color: "#fff7ef",
     icons: [
