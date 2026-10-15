@@ -1985,3 +1985,25 @@ export async function deleteReview(id: unknown): Promise<ActionResult> {
     return fail(e, "No pudimos sacarla.");
   }
 }
+
+/** Contesta una reseña (o borra la respuesta si viene vacía). La respuesta se ve en la tienda. */
+export async function replyReview(id: unknown, reply: unknown): Promise<ActionResult> {
+  try {
+    const { supabase } = await assertAdmin();
+    if (typeof id !== "string" || !UUID_RE.test(id)) return { ok: false, error: "Reseña inválida." };
+    const text = typeof reply === "string" ? reply.trim() : "";
+    if (text.length > 500) return { ok: false, error: "La respuesta es muy larga (hasta 500 letras)." };
+    const { data, error } = await supabase
+      .from("reviews")
+      .update({ reply: text || null, replied_at: text ? new Date().toISOString() : null })
+      .eq("id", id)
+      .select("id");
+    if (error) return fail(error, "No pudimos guardar la respuesta.");
+    if (!data?.length) return { ok: false, error: "Esa reseña ya no está." };
+    revalidatePath("/admin/resenas");
+    revalidatePath("/");
+    return { ok: true, message: text ? "Respuesta publicada." : "Respuesta borrada." };
+  } catch (e) {
+    return fail(e, "No pudimos guardar la respuesta.");
+  }
+}

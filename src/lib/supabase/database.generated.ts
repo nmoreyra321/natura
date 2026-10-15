@@ -221,14 +221,14 @@ isOneToOne: false
                   ]
                 },"reviews": {
                   Row: {
-                    "comment": string | null,"created_at": string,"id": string,"name": string,"order_id": string | null,"rating": number
+                    "comment": string | null,"created_at": string,"id": string,"name": string,"order_id": string | null,"rating": number,"replied_at": string | null,"reply": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "comment"?: string | null,"created_at"?: string,"id"?: string,"name": string,"order_id"?: string | null,"rating": number
+                    "comment"?: string | null,"created_at"?: string,"id"?: string,"name": string,"order_id"?: string | null,"rating": number,"replied_at"?: string | null,"reply"?: string | null
                   }
                   Update: {
-                    "comment"?: string | null,"created_at"?: string,"id"?: string,"name"?: string,"order_id"?: string | null,"rating"?: number
+                    "comment"?: string | null,"created_at"?: string,"id"?: string,"name"?: string,"order_id"?: string | null,"rating"?: number,"replied_at"?: string | null,"reply"?: string | null
                   }
                   Relationships: [
                     {

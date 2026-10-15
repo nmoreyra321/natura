@@ -2,6 +2,7 @@ import { MessageSquareHeart } from "lucide-react";
 import Link from "next/link";
 
 import { ReviewDelete } from "@/components/admin/review-delete";
+import { ReviewReply } from "@/components/admin/review-reply";
 import { Stars } from "@/components/store/stars";
 import { requireAdmin } from "@/lib/auth";
 
@@ -18,7 +19,7 @@ export default async function ReviewsPage() {
   const { supabase } = await requireAdmin();
   const { data: reviews, error } = await supabase
     .from("reviews")
-    .select("id, name, rating, comment, created_at, order:orders(code)")
+    .select("id, name, rating, comment, reply, created_at, order:orders(code)")
     .order("created_at", { ascending: false })
     .limit(500);
   const list = reviews ?? [];
@@ -28,8 +29,8 @@ export default async function ReviewsPage() {
     <div className="mx-auto max-w-3xl">
       <h1 className="font-display text-3xl font-bold">Reseñas</h1>
       <p className="mt-1 text-muted">
-        Las clientas pueden dejar una reseña desde la página de su pedido. Se publican solas en el inicio de la tienda; si alguna no te
-        gusta, tocá <b className="text-forest">Sacar</b>.
+        Las clientas pueden dejar una reseña desde la página de su pedido. Se publican solas en el inicio de la tienda; podés
+        <b className="text-forest"> Contestar</b> cada una (tu respuesta se ve debajo) y, si alguna no te gusta, tocá <b className="text-forest">Sacar</b>.
       </p>
 
       {error ? (
@@ -66,6 +67,7 @@ export default async function ReviewsPage() {
                       </>
                     ) : null}
                   </p>
+                  <ReviewReply id={r.id} reply={r.reply} />
                 </div>
                 <ReviewDelete id={r.id} name={r.name} />
               </li>

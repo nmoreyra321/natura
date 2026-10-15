@@ -58,11 +58,18 @@ export function ReviewsSection({ r }: { r: ReviewSummary }) {
         {r.latest.map((rev) => (
           <li key={rev.id} className="flex w-[80%] shrink-0 snap-start flex-col rounded-3xl bg-warm-white p-5 shadow-soft sm:w-[45%] lg:w-[30%]">
             <Stars value={rev.rating} />
-            {rev.comment ? <p className="mt-2 flex-1 text-forest/90">“{rev.comment}”</p> : <span className="flex-1" />}
+            {rev.comment ? <p className="mt-2 text-forest/90">“{rev.comment}”</p> : null}
             <p className="mt-3 text-sm font-bold">
               {rev.name}
               <span className="block text-xs font-semibold text-muted first-letter:uppercase">{reviewDateFmt.format(new Date(rev.createdAt))}</span>
             </p>
+            <span className="flex-1" />
+            {rev.reply ? (
+              <p className="mt-3 rounded-2xl bg-blush/60 p-3 text-sm">
+                <b className="block text-coral-deep">Respuesta de Mariel</b>
+                {rev.reply}
+              </p>
+            ) : null}
           </li>
         ))}
       </ul>
