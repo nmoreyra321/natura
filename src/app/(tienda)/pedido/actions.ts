@@ -246,33 +246,53 @@ export async function clubProgress(orderIds: string[]): Promise<ClubProgress | n
 export type ReviewResult = { ok: true } | { ok: false; error: string };
 
 /**
- * Una clienta deja su reseña: desde la página de su pedido (una por pedido; los cancelados no)
- * o desde el botón «Dejar mi reseña» del inicio (sin pedido). Nombre, estrellas y comentario.
+ * Una clienta deja su reseña. Solo quien compró: el pedido tiene que estar confirmado o entregado.
+ * Desde la página de su pedido va con ese pedido; desde el inicio pone el WhatsApp con el que compró
+ * y la reseña queda en su última compra sin reseña. Una reseña por compra.
  */
-export async function submitReview(input: { orderId?: string | null; name: string; rating: number; comment: string }): Promise<ReviewResult> {
+export async function submitReview(input: {
+  orderId?: string | null;
+  phone?: string;
+  name: string;
+  rating: number;
+  comment: string;
+}): Promise<ReviewResult> {
   const name = input.name.trim().replace(/\s+/g, " ");
   const comment = input.comment.trim();
   const rating = Math.round(Number(input.rating));
+  const phone = input.orderId ? null : toWhatsAppPhone(input.phone ?? "");
   if (input.orderId && !UUID_RE.test(input.orderId)) return { ok: false, error: "No encontramos tu pedido." };
+  if (!input.orderId && !phone) return { ok: false, error: "Escribí el WhatsApp con el que compraste, con código de área." };
   if (name.length < 2 || name.length > 60) return { ok: false, error: "Escribí tu nombre." };
   if (!(rating >= 1 && rating <= 5)) return { ok: false, error: "Elegí cuántas estrellas le das." };
   if (comment.length < 3) return { ok: false, error: "Escribí tu reseña." };
   if (comment.length > 500) return { ok: false, error: "La reseña es muy larga (hasta 500 letras)." };
   const admin = createAdminClient();
   if (!admin) return { ok: false, error: "La tienda no está configurada." };
-  if (!(await allowRequest("resena", 5, 3600))) {
+  if (!(await allowRequest("resena", 8, 3600))) {
     return { ok: false, error: "Probaste muchas veces. Intentá más tarde." };
   }
-  let orderId: string | null = null;
-  if (input.orderId) {
-    const { data: order } = await admin.from("orders").select("id, status").eq("id", input.orderId).maybeSingle();
-    if (!order || order.status === "cancelled") return { ok: false, error: "Este pedido no puede dejar reseña." };
-    orderId = order.id;
+
+  // Compras de verdad (confirmadas o entregadas) de este pedido o de este teléfono.
+  let q = admin.from("orders").select("id").in("status", [...PURCHASE_STATUSES]).order("created_at", { ascending: false }).limit(50);
+  q = input.orderId ? q.eq("id", input.orderId) : q.eq("customer_phone", phone!);
+  const { data: bought } = await q;
+  if (!bought?.length) {
+    return {
+      ok: false,
+      error: input.orderId
+        ? "Vas a poder dejar tu reseña cuando Natu Mariel confirme tu pedido."
+        : "No encontramos compras con ese número. Las reseñas son para clientas que ya compraron: probá con el WhatsApp que usaste al comprar.",
+    };
   }
+  const { data: done } = await admin.from("reviews").select("order_id").in("order_id", bought.map((o) => o.id));
+  const reviewed = new Set((done ?? []).map((r) => r.order_id));
+  const orderId = bought.find((o) => !reviewed.has(o.id))?.id;
+  if (!orderId) return { ok: false, error: "Ya dejaste tu reseña de todas tus compras. ¡Gracias! 💖" };
 
   const { error } = await admin.from("reviews").insert({ order_id: orderId, name, rating, comment });
   if (error) {
-    if (error.code === "23505") return { ok: false, error: "Ya dejaste tu reseña para este pedido. ¡Gracias!" };
+    if (error.code === "23505") return { ok: false, error: "Ya dejaste tu reseña para esta compra. ¡Gracias!" };
     console.error("[reseña] No se pudo guardar:", error.message);
     return { ok: false, error: "No pudimos guardar tu reseña. Probá de nuevo." };
   }
@@ -281,10 +301,10 @@ export async function submitReview(input: { orderId?: string | null; name: strin
       title: `${"⭐".repeat(rating)} Nueva reseña`,
       body: `${name}: ${comment.slice(0, 100)}`,
       url: "/admin/resenas",
-      tag: `resena-${Date.now()}`,
+      tag: `resena-${orderId}`,
     }),
   );
-  if (orderId) revalidatePath(`/pedido/${orderId}`);
+  revalidatePath(`/pedido/${orderId}`);
   revalidatePath("/");
   revalidatePath("/admin/resenas");
   return { ok: true };

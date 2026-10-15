@@ -25,6 +25,7 @@ export function ReviewForm({
   const [rating, setRating] = useState(0);
   const [hover, setHover] = useState(0);
   const [comment, setComment] = useState("");
+  const [phone, setPhone] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
   const [pending, start] = useTransition();
@@ -53,6 +54,8 @@ export function ReviewForm({
         e.preventDefault();
         setError(null);
         if (name.trim().length < 2) return setError("Escribí tu nombre.");
+        if (!orderId && phone.replace(/\D/g, "").length < 8)
+          return setError("Escribí el WhatsApp con el que compraste.");
         if (!rating)
           return setError("Tocá las estrellas para elegir tu puntaje.");
         if (comment.trim().length < 3) return setError("Escribí tu reseña.");
@@ -124,6 +127,25 @@ export function ReviewForm({
           className="mt-1 h-11 w-full rounded-full border border-line bg-white px-4 text-base font-normal"
         />
       </label>
+      {orderId ? null : (
+        <label className="mt-3 block text-sm font-semibold">
+          Tu WhatsApp
+          <span className="block text-xs font-normal text-muted">
+            El mismo con el que compraste (no se publica). Así sabemos que sos
+            clienta.
+          </span>
+          <input
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            type="tel"
+            inputMode="tel"
+            autoComplete="tel"
+            required
+            placeholder="Ej.: 11 2345-6789"
+            className="mt-1 h-11 w-full rounded-full border border-line bg-white px-4 text-base font-normal"
+          />
+        </label>
+      )}
       <label className="mt-3 block text-sm font-semibold">
         Tu reseña
         <textarea
@@ -154,7 +176,8 @@ export function ReviewForm({
         Publicar mi reseña
       </button>
       <p className="mt-2 text-center text-xs text-muted">
-        Se publica en la tienda con tu nombre, tus estrellas y tu reseña.
+        Se publica en la tienda con tu nombre, tus estrellas y tu reseña (tu
+        WhatsApp no).
       </p>
     </form>
   );

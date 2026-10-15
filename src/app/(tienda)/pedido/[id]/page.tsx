@@ -90,8 +90,8 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
     ]);
     club = loyaltyStatus(purchases ?? 0, given ?? 0);
   }
-  // Reseña opcional: una por pedido, y no en los cancelados.
-  const { count: reviewed } = cancelled
+  // Reseña opcional: solo cuando ya es una compra (confirmada o entregada), una por pedido.
+  const { count: reviewed } = !(PURCHASE_STATUSES as readonly string[]).includes(order.status)
     ? { count: 1 }
     : await admin.from("reviews").select("id", { count: "exact", head: true }).eq("order_id", order.id);
   const siteUrl = getSiteUrl();
