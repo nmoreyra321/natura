@@ -99,7 +99,7 @@ export function buildOrderMessage(
       const label = {
         efectivo: "Efectivo",
         transferencia: extra.transferReported
-          ? "Transferencia. Ya hice la transferencia y cargué el comprobante en la tienda."
+          ? "Transferencia o Mercado Pago. Ya hice el pago y lo avisé en la tienda."
           : "Transferencia",
         mercadopago: "Mercado Pago",
       };

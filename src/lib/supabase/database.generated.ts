@@ -202,14 +202,14 @@ isOneToOne: false
                   ]
                 },"store_settings": {
                   Row: {
-                    "id": number,"mp_surcharge_percent": number,"transfer_alias": string | null,"transfer_bank": string | null,"transfer_cbu": string | null,"transfer_holder": string | null,"updated_at": string
+                    "id": number,"mp_link": string | null,"mp_surcharge_percent": number,"transfer_alias": string | null,"transfer_bank": string | null,"transfer_cbu": string | null,"transfer_holder": string | null,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "id"?: number,"mp_surcharge_percent"?: number,"transfer_alias"?: string | null,"transfer_bank"?: string | null,"transfer_cbu"?: string | null,"transfer_holder"?: string | null,"updated_at"?: string
+                    "id"?: number,"mp_link"?: string | null,"mp_surcharge_percent"?: number,"transfer_alias"?: string | null,"transfer_bank"?: string | null,"transfer_cbu"?: string | null,"transfer_holder"?: string | null,"updated_at"?: string
                   }
                   Update: {
-                    "id"?: number,"mp_surcharge_percent"?: number,"transfer_alias"?: string | null,"transfer_bank"?: string | null,"transfer_cbu"?: string | null,"transfer_holder"?: string | null,"updated_at"?: string
+                    "id"?: number,"mp_link"?: string | null,"mp_surcharge_percent"?: number,"transfer_alias"?: string | null,"transfer_bank"?: string | null,"transfer_cbu"?: string | null,"transfer_holder"?: string | null,"updated_at"?: string
                   }
                   Relationships: [
                     

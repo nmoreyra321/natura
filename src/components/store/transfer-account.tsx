@@ -119,3 +119,40 @@ function CopyButton({ text, label }: { text: string; label: string }) {
     </button>
   );
 }
+
+/**
+ * Botón para pagar con el link de Mercado Pago (sin monto fijo): copia el monto, para que la
+ * clienta solo lo pegue, y abre el link.
+ */
+export function MpLinkPay({ link, totalCents }: { link: string; totalCents: number }) {
+  const amount = plainAmount(totalCents);
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center justify-between gap-2 rounded-xl bg-white/80 px-3 py-2">
+        <span className="text-muted">Monto a pagar</span>
+        <span className="flex items-center gap-1 font-display text-xl font-bold tabular">
+          {formatARS(totalCents)}
+          <CopyButton text={amount} label="Monto" />
+        </span>
+      </div>
+      <a
+        href={link}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={() => {
+          navigator.clipboard
+            ?.writeText(amount)
+            .then(() => toast.success("Monto copiado: pegalo en Mercado Pago."))
+            .catch(() => {});
+        }}
+        className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[#009ee3] px-4 text-base font-bold text-white transition-colors hover:bg-[#0089c7]"
+      >
+        Pagar con Mercado Pago
+      </a>
+      <p className="text-xs text-muted">
+        Se abre Mercado Pago: escribí <strong>{formatARS(totalCents)}</strong> (ya lo copiamos) y pagá con tarjeta o dinero
+        en cuenta. Después volvé a esta página.
+      </p>
+    </div>
+  );
+}

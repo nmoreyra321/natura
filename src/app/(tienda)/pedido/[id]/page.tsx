@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 
 import { AutoRefresh, OrderPageEffects, ReportPayment } from "@/components/store/order-tracking";
 import { PaidOrderActions } from "@/components/store/paid-order-actions";
-import { TransferAccount } from "@/components/store/transfer-account";
+import { MpLinkPay, TransferAccount } from "@/components/store/transfer-account";
 import { buttonClasses } from "@/components/ui/button";
 import { getSiteUrl } from "@/lib/config";
 import { formatARS } from "@/lib/format";
@@ -109,12 +109,12 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
     }
   } else if (isTransfer && state === "paid") {
     [tone, Icon, title] = ["good", CheckCircle2, "¡Pago aprobado!"];
-    text = "Natu Mariel ya recibió tu transferencia. Te escribe por WhatsApp para coordinar la entrega.";
+    text = "Natu Mariel ya recibió tu pago. Te escribe por WhatsApp para coordinar la entrega.";
   } else if (state === "review") {
     [tone, Icon, title] = ["wait", Clock, "Estamos revisando tu pago"];
     text = (
       <>
-        Natu Mariel está controlando que la transferencia haya llegado. Cuando la apruebe lo vas a ver en esta página y te
+        Natu Mariel está controlando que el pago haya llegado. Cuando la apruebe lo vas a ver en esta página y te
         avisa por WhatsApp.
         {order.payment_reported_at ? (
           <span className="mt-1 block text-sm text-muted">Avisaste el {dateFormatter.format(new Date(order.payment_reported_at))}.</span>
@@ -126,21 +126,22 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
     text = (
       <>
         <strong>{order.payment_rejection}</strong>
-        <span className="mt-1 block">Revisá la transferencia y volvé a avisar acá abajo, o escribile a Natu Mariel.</span>
+        <span className="mt-1 block">Revisá el pago y volvé a avisar acá abajo, o escribile a Natu Mariel.</span>
       </>
     );
   } else if (isTransfer && state === "partial") {
     [tone, Icon, title] = ["todo", Wallet, "Recibimos una parte del pago"];
     text = (
       <>
-        Falta transferir <strong>{formatARS(owed)}</strong>. Cuando lo hagas, avisá acá abajo.
+        Falta pagar <strong>{formatARS(owed)}</strong>. Cuando lo hagas, avisá acá abajo.
       </>
     );
   } else if (isTransfer) {
-    [tone, Icon, title] = ["todo", Wallet, isNew ? "¡Pedido guardado! Falta tu pago" : "Falta tu transferencia"];
+    [tone, Icon, title] = ["todo", Wallet, isNew ? "¡Pedido guardado! Falta tu pago" : "Falta tu pago"];
     text = (
       <>
-        Transferí <strong>{formatARS(owed)}</strong> y avisanos acá abajo con la captura del comprobante.
+        {transfer?.mpLink ? "Pagá" : "Transferí"} <strong>{formatARS(owed)}</strong> acá abajo y después tocá{" "}
+        <strong>Ya pagué</strong>.
       </>
     );
   } else if (order.status === "delivered") {
@@ -199,15 +200,21 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
 
         {canReportPayment(order) ? (
           <div className="mt-6 rounded-2xl border-2 border-dashed border-botanical/60 bg-sage/40 p-4 text-sm">
-            {transfer ? (
+            {transfer?.mpLink ? (
+              <>
+                <p className="mb-2 font-bold">1. Pagá con Mercado Pago</p>
+                <MpLinkPay link={transfer.mpLink} totalCents={owed} />
+              </>
+            ) : transfer ? (
               <>
                 <p className="font-bold">1. Transferí {formatARS(owed)} a esta cuenta</p>
                 <TransferAccount transfer={transfer} totalCents={owed} />
               </>
             ) : null}
-            <p className="mt-4 mb-2 font-bold">{transfer ? "2. " : ""}Avisá que ya transferiste</p>
+            <p className="mt-5 mb-2 font-bold">{transfer ? "2. " : ""}Avisá que ya pagaste</p>
             <ReportPayment
               orderId={order.id}
+              proofOptional={Boolean(transfer?.mpLink)}
               again={state === "rejected"}
               whatsappUrl={message({ paymentMethod: "transferencia", transferReported: true })}
             />

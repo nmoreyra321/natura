@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { isValidProductImagePath, validateImageFile } from "@/lib/images";
 import { slugify } from "@/lib/slug";
-import { loginIdentifierToEmail, parseMoney, productSchema } from "@/lib/validation";
+import { loginIdentifierToEmail, normalizeMpLink, parseMoney, productSchema } from "@/lib/validation";
 
 const base = {
   name: "Crema corporal",
@@ -88,5 +88,18 @@ describe("login con usuario o correo", () => {
     expect(loginIdentifierToEmail("ab")).toBeNull();
     expect(loginIdentifierToEmail("con espacio")).toBeNull();
     expect(loginIdentifierToEmail("mal@")).toBeNull();
+  });
+});
+
+describe("normalizeMpLink", () => {
+  it("acepta el link como lo pegue", () => {
+    expect(normalizeMpLink("link.mercadopago.com.ar/natumariel")).toBe("https://link.mercadopago.com.ar/natumariel");
+    expect(normalizeMpLink(" https://LINK.mercadopago.com.ar/natumariel ")).toBe("https://link.mercadopago.com.ar/natumariel");
+    expect(normalizeMpLink("https://mpago.la/2abc3")).toBe("https://mpago.la/2abc3");
+  });
+  it("vacío es null y otra página no sirve", () => {
+    expect(normalizeMpLink("")).toBeNull();
+    expect(normalizeMpLink("https://otra-pagina.com/natumariel")).toBe(false);
+    expect(normalizeMpLink("link.mercadopago.com.ar/")).toBe(false);
   });
 });

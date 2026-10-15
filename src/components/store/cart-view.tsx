@@ -87,7 +87,14 @@ export function CartView({
   const [payment, setPayment] = useState<PaymentChoice>("efectivo");
   const paymentOptions: { value: PaymentChoice; label: string; Icon: typeof Banknote }[] = [
     { value: "efectivo", label: "Efectivo", Icon: Banknote },
-    ...(transfer ? [{ value: "transferencia" as const, label: "Transferencia", Icon: ArrowLeftRight }] : []),
+    // Con link de Mercado Pago, la clienta lo ve como "Mercado Pago" (por dentro se maneja igual que una transferencia).
+    ...(transfer
+      ? [
+          transfer.mpLink
+            ? { value: "transferencia" as const, label: "Mercado Pago", Icon: CreditCard }
+            : { value: "transferencia" as const, label: "Transferencia", Icon: ArrowLeftRight },
+        ]
+      : []),
     ...(mercadoPago
       ? [{ value: "mercadopago" as const, label: mpSurcharge > 0 ? `Mercado Pago (+${mpSurcharge}%)` : "Mercado Pago", Icon: CreditCard }]
       : []),
@@ -399,10 +406,18 @@ export function CartView({
               {payment === "transferencia" && transfer ? (
                 <p className="flex gap-2 rounded-2xl bg-sage/50 p-3 text-sm">
                   <ArrowLeftRight className="mt-0.5 size-4 shrink-0 text-botanical-deep" aria-hidden="true" />
-                  <span>
-                    Tocá <strong>Hacer pedido</strong> y en el paso siguiente te mostramos el alias para transferir{" "}
-                    <strong>{formatARS(totals.totalCents)}</strong> (sin recargo). Ahí mismo subís el comprobante.
-                  </span>
+                  {transfer.mpLink ? (
+                    <span>
+                      Tocá <strong>Hacer pedido</strong> y en el paso siguiente pagás{" "}
+                      <strong>{formatARS(totals.totalCents)}</strong> con Mercado Pago (tarjeta o dinero en cuenta, sin
+                      recargo).
+                    </span>
+                  ) : (
+                    <span>
+                      Tocá <strong>Hacer pedido</strong> y en el paso siguiente te mostramos el alias para transferir{" "}
+                      <strong>{formatARS(totals.totalCents)}</strong> (sin recargo). Ahí mismo subís el comprobante.
+                    </span>
+                  )}
                 </p>
               ) : null}
               {payment === "mercadopago" && mercadoPago ? (
@@ -543,7 +558,7 @@ export function CartView({
             {payment === "mercadopago" && mercadoPago
               ? "Te llevamos a la página segura de Mercado Pago para pagar con tarjeta, dinero en cuenta o efectivo en puntos de pago. Cuando termines, volvés a la tienda y Natu Mariel coordina la entrega con vos."
               : payment === "transferencia"
-                ? "Al tocar el botón se guarda tu pedido y pasás a su página: ahí subís el comprobante y ves cuándo se aprueba el pago."
+                ? "Al tocar el botón se guarda tu pedido y pasás a su página: ahí pagás y ves cuándo se aprueba el pago."
                 : "Al enviar el pedido se abre WhatsApp con el detalle. Natu Mariel te confirmará disponibilidad, pago y entrega. El pedido queda confirmado y el stock reservado recién con esa confirmación."}
           </p>
           <Link href="/productos" className="text-center text-sm font-semibold text-coral-deep hover:underline">

@@ -48,7 +48,7 @@ const faqs = [
   },
   {
     q: "¿Cómo pago y cómo recibo el pedido?",
-    a: "En el carrito elegís cómo pagar: en efectivo o por transferencia (sin recargo: ves el alias ahí mismo, lo copiás con un toque y después subís el comprobante en la página de tu pedido). Cuando Mariel aprueba el pago lo ves ahí mismo, y la entrega la coordinan por WhatsApp.",
+    a: "En el carrito elegís cómo pagar: en efectivo o con Mercado Pago (sin recargo: en la página de tu pedido tocás «Pagar con Mercado Pago», pagás con tarjeta o dinero en cuenta y después tocás «Ya pagué»). Cuando Mariel aprueba el pago lo ves ahí mismo, y la entrega la coordinan por WhatsApp.",
   },
   {
     q: "¿Cómo sé en qué está mi pedido?",

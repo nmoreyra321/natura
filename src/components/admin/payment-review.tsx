@@ -10,7 +10,7 @@ import { buttonClasses } from "@/components/ui/button";
 import { inputClasses } from "@/components/ui/fields";
 import { toWhatsAppPhone } from "@/lib/debts";
 
-const REASONS = ["No me llegó la transferencia", "El monto no coincide con el pedido", "No se ve bien el comprobante"];
+const REASONS = ["No me llegó el pago", "El monto no coincide con el pedido", "No se ve bien el comprobante"];
 
 /**
  * La clienta avisó que transfirió: la administradora mira el comprobante y su cuenta, y aprueba
@@ -68,9 +68,9 @@ export function PaymentReview({
 
   return (
     <div className="rounded-2xl border-2 border-grape/40 bg-lilac/40 p-3 sm:p-4">
-      <p className="font-bold text-grape">💸 La clienta avisó que transfirió {total}</p>
+      <p className="font-bold text-grape">💸 La clienta avisó que pagó {total}</p>
       <p className="text-sm text-muted">
-        El {reportedAt}. Fijate en tu cuenta que haya llegado y aprobalo.
+        El {reportedAt}. Fijate en Mercado Pago o en tu cuenta que haya llegado y aprobalo.
       </p>
       <div className="mt-3 flex flex-wrap gap-2">
         {proofUrl ? (
@@ -86,7 +86,7 @@ export function PaymentReview({
           onClick={() =>
             run(
               () => approveTransferPayment(orderId),
-              `${hi} Soy Mariel de Natu Mariel 🌸 Recibí tu transferencia del pedido ${code} ✅ Ya está confirmado. ¿Coordinamos la entrega?`,
+              `${hi} Soy Mariel de Natu Mariel 🌸 Recibí tu pago del pedido ${code} ✅ Ya está confirmado. ¿Coordinamos la entrega?`,
             )
           }
           className={buttonClasses("primary", "md")}

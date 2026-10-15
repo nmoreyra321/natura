@@ -801,6 +801,7 @@ export async function saveTransferSettings(input: unknown): Promise<ActionResult
         transfer_cbu: d.cbu,
         transfer_holder: d.holder,
         transfer_bank: d.bank,
+        mp_link: d.mpLink,
         updated_at: new Date().toISOString(),
       })
       .eq("id", 1);
@@ -808,7 +809,11 @@ export async function saveTransferSettings(input: unknown): Promise<ActionResult
     refreshCatalog();
     return {
       ok: true,
-      message: d.alias || d.cbu ? "Listo: las clientas ya pueden elegir Transferencia." : "Transferencia desactivada.",
+      message: d.mpLink
+        ? "Listo: las clientas pagan con tu link de Mercado Pago."
+        : d.alias || d.cbu
+          ? "Listo: las clientas ya pueden elegir Transferencia."
+          : "Transferencia desactivada.",
     };
   } catch (e) {
     return fail(e, "No pudimos guardar los datos.");

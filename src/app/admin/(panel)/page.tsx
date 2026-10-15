@@ -101,7 +101,7 @@ export default async function DashboardPage() {
       href: "/admin/pedidos?estado=revisar",
       icon: BadgeDollarSign,
       tone: "urgent",
-      text: `${paymentsToReview} ${paymentsToReview === 1 ? "clienta avisó que transfirió" : "clientas avisaron que transfirieron"}: revisá y aprobá el pago`,
+      text: `${paymentsToReview} ${paymentsToReview === 1 ? "clienta avisó que pagó" : "clientas avisaron que pagaron"}: revisá y aprobá el pago`,
     });
   }
   if (pendingOrders) {

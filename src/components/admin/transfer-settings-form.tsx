@@ -9,7 +9,7 @@ import { saveTransferSettings } from "@/app/admin/actions";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/fields";
 
-type Values = { alias: string; cbu: string; holder: string; bank: string };
+type Values = { mpLink: string; alias: string; cbu: string; holder: string; bank: string };
 
 /** Alias / CBU para que las clientas paguen por transferencia, sin comisión. */
 export function TransferSettingsForm({ defaults }: { defaults: Values }) {
@@ -38,6 +38,16 @@ export function TransferSettingsForm({ defaults }: { defaults: Values }) {
         });
       }}
     >
+      <div className="sm:col-span-2">
+        <Field
+          label="Link de pago de Mercado Pago"
+          htmlFor="t-link"
+          error={errors.mpLink}
+          hint="El link sin monto fijo, ej.: link.mercadopago.com.ar/natumariel. Si está cargado, la clienta paga con el link."
+        >
+          <Input id="t-link" autoComplete="off" inputMode="url" value={values.mpLink} onChange={set("mpLink")} />
+        </Field>
+      </div>
       <Field label="Alias" htmlFor="t-alias" error={errors.alias} hint="Ej.: natu.mariel.mp">
         <Input id="t-alias" autoComplete="off" value={values.alias} onChange={set("alias")} />
       </Field>
@@ -53,7 +63,7 @@ export function TransferSettingsForm({ defaults }: { defaults: Values }) {
       <div className="sm:col-span-2">
         <Button type="submit" disabled={pending}>
           {pending ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : <Save className="size-4" aria-hidden="true" />}
-          Guardar datos de transferencia
+          Guardar datos de pago
         </Button>
       </div>
     </form>

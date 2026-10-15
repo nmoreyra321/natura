@@ -31,7 +31,7 @@ export default async function SettingsPage() {
   const { supabase } = await requireAdmin();
   const { data: settings } = await supabase
     .from("store_settings")
-    .select("transfer_alias, transfer_cbu, transfer_holder, transfer_bank, mp_surcharge_percent")
+    .select("transfer_alias, transfer_cbu, transfer_holder, transfer_bank, mp_link, mp_surcharge_percent")
     .eq("id", 1)
     .maybeSingle();
   const whatsapp = getWhatsAppNumber();
@@ -42,14 +42,15 @@ export default async function SettingsPage() {
       <p className="text-muted">Estado de las integraciones de la tienda.</p>
 
       <section className="mt-6 rounded-3xl bg-warm-white p-5 shadow-soft">
-        <h2 className="font-display text-xl font-bold">Cobrar por transferencia</h2>
+        <h2 className="font-display text-xl font-bold">Cobrar con link de Mercado Pago o transferencia</h2>
         <p className="mt-1 mb-4 text-sm text-muted">
-          Sin comisión. Cuando cargás tu alias, en el carrito aparece la opción <strong>Transferencia</strong>: la clienta
-          ve estos datos, te transfiere y te manda el comprobante por WhatsApp. Si borrás el alias y el CBU, la opción
-          desaparece.
+          Con el <strong>link de pago</strong> cargado, en el carrito aparece <strong>Mercado Pago</strong>: en la página
+          de su pedido la clienta abre tu link, paga y toca «Ya pagué». Vos lo aprobás en Pedidos. Si no hay link, se
+          ofrece <strong>Transferencia</strong> con el alias. Si borrás todo, la opción desaparece.
         </p>
         <TransferSettingsForm
           defaults={{
+            mpLink: settings?.mp_link ?? "",
             alias: settings?.transfer_alias ?? "",
             cbu: settings?.transfer_cbu ?? "",
             holder: settings?.transfer_holder ?? "",

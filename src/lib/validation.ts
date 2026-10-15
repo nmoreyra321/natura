@@ -127,7 +127,25 @@ export const transferSettingsSchema = z
       .string()
       .transform(blankToNull)
       .refine((v) => v === null || (v.length >= 2 && v.length <= 40), "El banco puede tener hasta 40 letras."),
+    mpLink: z
+      .string()
+      .optional()
+      .transform((v) => normalizeMpLink(v ?? ""))
+      .refine((v) => v !== false, "Pegá el link de pago de Mercado Pago (ej.: link.mercadopago.com.ar/tunombre).")
+      .transform((v) => (typeof v === "string" ? v : null)),
   });
+
+/**
+ * Link de pago de Mercado Pago como lo pegue la administradora → "https://link.mercadopago.com.ar/…".
+ * null si está vacío; false si no es un link de pago de Mercado Pago.
+ */
+export function normalizeMpLink(raw: string): string | null | false {
+  const v = raw.trim();
+  if (!v) return null;
+  const url = /^https?:\/\//i.test(v) ? v : `https://${v}`;
+  const m = url.match(/^https?:\/\/(link\.mercadopago\.com\.ar|mpago\.la|mpago\.li)(\/[\w.\-/]{1,120})$/i);
+  return m ? `https://${m[1].toLowerCase()}${m[2]}` : false;
+}
 
 export const surchargeSchema = z.coerce
   .number({ message: "Escribí un número." })

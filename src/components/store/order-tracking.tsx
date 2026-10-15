@@ -59,7 +59,18 @@ async function shrinkPhoto(file: File): Promise<File | null> {
 }
 
 /** La clienta sube el comprobante y avisa que ya transfirió. Después se abre WhatsApp para avisarle a Mariel. */
-export function ReportPayment({ orderId, whatsappUrl, again }: { orderId: string; whatsappUrl: string | null; again: boolean }) {
+export function ReportPayment({
+  orderId,
+  whatsappUrl,
+  again,
+  proofOptional = false,
+}: {
+  orderId: string;
+  whatsappUrl: string | null;
+  again: boolean;
+  /** Pago con link de Mercado Pago: el comprobante es opcional y se muestra chiquito. */
+  proofOptional?: boolean;
+}) {
   const router = useRouter();
   const input = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
@@ -127,7 +138,7 @@ export function ReportPayment({ orderId, whatsappUrl, again }: { orderId: string
             <X className="size-4" aria-hidden="true" />
           </button>
         </div>
-      ) : (
+      ) : proofOptional ? null : (
         <label
           htmlFor="comprobante"
           className="flex cursor-pointer flex-col items-center gap-1 rounded-2xl border-2 border-dashed border-botanical/60 bg-white/70 p-4 text-center transition-colors hover:bg-white"
@@ -139,8 +150,16 @@ export function ReportPayment({ orderId, whatsappUrl, again }: { orderId: string
       )}
       <button type="button" disabled={sending} onClick={send} className={buttonClasses("primary", "lg")}>
         {sending ? <Loader2 className="size-5 animate-spin" aria-hidden="true" /> : <Send className="size-5" aria-hidden="true" />}
-        {sending ? "Avisando…" : again ? "Ya transferí de nuevo" : "Ya transferí"}
+        {sending ? "Avisando…" : again ? "Ya pagué de nuevo" : "Ya pagué"}
       </button>
+      {proofOptional && !file ? (
+        <label
+          htmlFor="comprobante"
+          className="inline-flex cursor-pointer items-center justify-center gap-1.5 text-sm font-semibold text-coral-deep hover:underline"
+        >
+          <ImageUp className="size-4" aria-hidden="true" /> Adjuntar comprobante (opcional)
+        </label>
+      ) : null}
       {error ? (
         <p className="text-sm font-semibold text-coral-deep" role="alert">
           {error}
@@ -149,7 +168,9 @@ export function ReportPayment({ orderId, whatsappUrl, again }: { orderId: string
       <p className="text-xs text-muted">
         {file
           ? "Al tocar el botón se guarda el comprobante y se abre WhatsApp para avisarle a Natu Mariel."
-          : "Si no tenés la captura, igual podés avisar: Natu Mariel lo controla en su cuenta."}
+          : proofOptional
+            ? "Natu Mariel ve el pago en su cuenta de Mercado Pago y lo aprueba. Te avisamos acá y por WhatsApp."
+            : "Si no tenés la captura, igual podés avisar: Natu Mariel lo controla en su cuenta."}
       </p>
     </div>
   );

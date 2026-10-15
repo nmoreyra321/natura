@@ -38,7 +38,7 @@ const PAYMENT_LABELS: Record<string, { label: string; tone: string }> = {
 
 function paymentBadge(method: string, status: string | null, paidCents = 0, totalCents = 0, review = false) {
   if (method !== "mercadopago") {
-    const label = method === "transferencia" ? "Transferencia" : "Efectivo";
+    const label = method === "transferencia" ? "Transferencia / link MP" : "Efectivo";
     if (status === "approved") return { label: `${label} · Pagado ✓`, tone: "bg-botanical-deep text-white" };
     if (review) return { label: `${label} · Avisó que pagó: revisar`, tone: "bg-grape text-white" };
     if (paidCents > 0) {
