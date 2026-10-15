@@ -154,7 +154,7 @@ export default async function ReorderPage({ searchParams }: { searchParams: Prom
           <p className="mt-4 text-sm text-muted">
             Es una sugerencia: cambiala con lo que sabés vos. Las clientas que pidieron aviso cuando vuelva un producto están en{" "}
             <Link href="/admin/avisos" className="font-semibold text-coral-deep underline">
-              Avisos de stock
+              Lista de espera de stock
             </Link>
             .
           </p>

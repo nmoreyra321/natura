@@ -6,7 +6,7 @@ import { SelectToDelete } from "@/components/admin/select-to-delete";
 import { requireAdmin } from "@/lib/auth";
 import { getSiteUrl } from "@/lib/config";
 
-export const metadata = { title: "Avisos de stock" };
+export const metadata = { title: "Lista de espera de stock" };
 
 const dateFmt = new Intl.DateTimeFormat("es-AR", { dateStyle: "short", timeZone: "America/Argentina/Buenos_Aires" });
 
@@ -32,14 +32,14 @@ export default async function RestockPage() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <h1 className="font-display text-3xl font-bold">Avisos de stock</h1>
+      <h1 className="font-display text-3xl font-bold">Lista de espera de stock</h1>
       <p className="text-muted">
         Clientas que pidieron que les avises cuando vuelva un producto. Cuando cargues stock, tocá <strong>Avisar</strong>:
         se abre WhatsApp con el mensaje listo y queda marcada como avisada.
       </p>
 
       {error ? (
-        <p className="mt-6 rounded-2xl bg-coral-soft p-4 font-semibold">No pudimos cargar los avisos.</p>
+        <p className="mt-6 rounded-2xl bg-coral-soft p-4 font-semibold">No pudimos cargar la lista de espera.</p>
       ) : list.length === 0 ? (
         <div className="mt-6 rounded-3xl border border-dashed border-line bg-warm-white p-10 text-center">
           <BellRing className="mx-auto size-10 text-muted" aria-hidden="true" />

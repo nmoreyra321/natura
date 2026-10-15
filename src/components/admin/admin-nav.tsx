@@ -29,7 +29,7 @@ const groups: { title: string | null; items: NavItem[] }[] = [
       { href: "/admin/productos", label: "Productos", icon: Package, also: ["/admin/categorias", "/admin/precios"] },
       { href: "/admin/reponer", label: "Qué pedirle a Natura", icon: ShoppingBasket },
       { href: "/admin/vencimientos", label: "Próximos a vencer", icon: CalendarClock },
-      { href: "/admin/avisos", label: "Avisos de stock", icon: BellRing },
+      { href: "/admin/avisos", label: "Lista de espera de stock", icon: BellRing },
     ],
   },
   { title: "Ajustes", items: [{ href: "/admin/configuracion", label: "Configuración", icon: Settings }] },
