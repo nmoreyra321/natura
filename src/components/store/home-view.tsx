@@ -169,12 +169,12 @@ export function HomeView({ d }: { d: HomeData }) {
             <div className="absolute -right-20 -bottom-24 size-96 rounded-full bg-sun/50 blur-3xl" />
             <LeafMark className="absolute top-6 right-[42%] hidden size-10 rotate-12 opacity-40 md:block" />
           </div>
-          <div className="relative grid items-center gap-8 px-5 py-8 sm:px-10 sm:py-12 md:grid-cols-[1.05fr_1fr] md:py-16">
+          <div className="relative grid items-center gap-5 px-5 py-6 sm:gap-8 sm:px-10 sm:py-12 md:grid-cols-[1.05fr_1fr] md:py-16">
             <div className="animate-rise">
-              <p className="inline-flex items-center gap-2 rounded-full bg-white/80 px-3.5 py-1.5 text-sm font-extrabold text-coral-deep shadow-soft backdrop-blur">
+              <p className="inline-flex items-center gap-2 rounded-full bg-white/80 px-3 py-1 text-xs font-extrabold text-coral-deep shadow-soft backdrop-blur sm:px-3.5 sm:py-1.5 sm:text-sm">
                 <Sparkles className="size-4" aria-hidden="true" /> Belleza natural a precios especiales
               </p>
-              <h1 className="mt-5 font-display text-[2.5rem] leading-[1.02] font-bold tracking-tight sm:text-6xl lg:text-[4.2rem]">
+              <h1 className="mt-3 font-display text-[2.1rem] leading-[1.02] font-bold tracking-tight sm:mt-5 sm:text-6xl lg:text-[4.2rem]">
                 Natura te encanta.{" "}
                 <span className="text-coral-deep">Nuestros precios,</span>{" "}
                 <span className="relative inline-block">
@@ -182,25 +182,25 @@ export function HomeView({ d }: { d: HomeData }) {
                   <span aria-hidden="true" className="absolute inset-x-0 bottom-1 h-3.5 -rotate-1 rounded-full bg-sun sm:h-5" />
                 </span>
               </h1>
-              <p className="mt-5 max-w-lg text-base font-semibold text-muted sm:text-lg">
+              <p className="mt-3 max-w-lg text-[0.95rem] font-semibold text-muted sm:mt-5 sm:text-lg">
                 Tus productos favoritos de perfumería, cuidado de la piel y maquillaje, más baratos que en la revista.
               </p>
               {d.hasProducts ? (
-                <div className="mt-7 flex flex-wrap gap-3">
-                  <LinkButton href="/productos" size="lg" className="shadow-lift">
+                <div className="mt-5 flex flex-wrap gap-2 sm:mt-7 sm:gap-3">
+                  <LinkButton href="/productos" size="md" className="shadow-lift sm:h-13 sm:px-7 sm:text-base">
                     Ver productos <ArrowRight className="size-5" aria-hidden="true" />
                   </LinkButton>
                   {hasOffers ? (
-                    <LinkButton href="/productos?ofertas=1" size="lg" variant="outline" className="bg-white/70">
+                    <LinkButton href="/productos?ofertas=1" size="md" variant="outline" className="bg-white/70 sm:h-13 sm:px-7 sm:text-base">
                       Ver ofertas
                     </LinkButton>
                   ) : null}
                 </div>
               ) : null}
-              <ul aria-label="Por qué comprar acá" className="mt-6 grid max-w-lg gap-x-5 gap-y-2 text-sm font-bold text-forest sm:grid-cols-2">
+              <ul aria-label="Por qué comprar acá" className="mt-5 grid max-w-lg grid-cols-2 gap-x-3 gap-y-1.5 text-xs font-bold text-forest sm:mt-6 sm:gap-x-5 sm:gap-y-2 sm:text-sm">
                 {PERKS.map((perk) => (
                   <li key={perk} className="flex items-center gap-2">
-                    <CircleCheck className="size-[1.1rem] shrink-0 text-botanical-deep" aria-hidden="true" />
+                    <CircleCheck className="size-4 shrink-0 text-botanical-deep sm:size-[1.1rem]" aria-hidden="true" />
                     {perk}
                   </li>
                 ))}
@@ -208,13 +208,13 @@ export function HomeView({ d }: { d: HomeData }) {
             </div>
 
             {a ? (
-              <div className="relative mx-auto aspect-[1.1] w-full max-w-md md:max-w-none" aria-label="Algunos de nuestros productos">
+              <div className="relative mx-auto aspect-[1.1] w-full max-w-[250px] sm:max-w-md md:max-w-none" aria-label="Algunos de nuestros productos">
                 <HeroProduct product={a} className="top-[4%] left-[20%] z-10 w-[56%] -rotate-3" />
                 {b ? <HeroProduct product={b} className="top-[40%] left-0 w-[40%] rotate-[-8deg]" /> : null}
                 {c ? <HeroProduct product={c} className="top-[46%] right-0 w-[40%] rotate-[7deg]" /> : null}
               </div>
             ) : (
-              <HeroArt className="mx-auto w-full max-w-md md:max-w-none" />
+              <HeroArt className="mx-auto w-full max-w-[220px] sm:max-w-md md:max-w-none" />
             )}
           </div>
         </div>
@@ -269,22 +269,22 @@ export function HomeView({ d }: { d: HomeData }) {
 
           {/* Club de clientas */}
           <section className="px-3 py-4 sm:px-6" aria-labelledby="club">
-            <div className="relative mx-auto grid max-w-7xl gap-6 overflow-hidden rounded-[2rem] bg-gradient-to-br from-sun via-peach to-blush p-6 sm:p-8 md:grid-cols-[1.3fr_1fr] md:items-center">
+            <div className="relative mx-auto grid max-w-7xl gap-4 overflow-hidden rounded-[2rem] bg-gradient-to-br from-sun via-peach to-blush p-5 sm:gap-6 sm:p-8 md:grid-cols-[1.3fr_1fr] md:items-center">
               <span aria-hidden="true" className="pointer-events-none absolute -right-16 -bottom-20 size-64 rounded-full bg-white/50 blur-3xl" />
               <div className="relative">
-                <p className="inline-flex items-center gap-1.5 rounded-full bg-white/80 px-3 py-1 text-sm font-extrabold text-coral-deep">
+                <p className="inline-flex items-center gap-1.5 rounded-full bg-white/80 px-3 py-1 text-xs font-extrabold text-coral-deep sm:text-sm">
                   <Gift className="size-4" aria-hidden="true" /> Club Natu Mariel
                 </p>
-                <h2 id="club" className="mt-3 font-display text-3xl leading-tight font-bold sm:text-4xl">
+                <h2 id="club" className="mt-2 font-display text-2xl leading-tight font-bold sm:mt-3 sm:text-4xl">
                   Cada {GIFT_EVERY} compras, <span className="text-coral-deep">¡un regalo!</span>
                 </h2>
                 {d.clubMinCents > 0 ? (
-                  <p className="mt-1 text-sm font-bold text-forest/70">Suman las compras de {formatARS(d.clubMinCents)} o más.</p>
+                  <p className="mt-1 text-xs font-bold text-forest/70 sm:text-sm">Suman las compras de {formatARS(d.clubMinCents)} o más.</p>
                 ) : null}
-                <p className="mt-2 max-w-lg font-semibold text-forest/80">
+                <p className="mt-2 max-w-lg text-sm font-semibold text-forest/80 sm:text-base">
                   No tenés que anotarte en nada: tus compras se suman solas con tu número de WhatsApp.
                 </p>
-                <ol className="mt-4 flex flex-col gap-2 text-sm font-bold sm:text-base">
+                <ol className="mt-4 hidden flex-col gap-2 text-base font-bold sm:flex">
                   {[
                     "Comprá como siempre: en la tienda, por WhatsApp o en los vivos.",
                     d.clubMinCents > 0
@@ -298,7 +298,7 @@ export function HomeView({ d }: { d: HomeData }) {
                     </li>
                   ))}
                 </ol>
-                <Link href="/productos" className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-full bg-coral-deep px-6 font-bold text-white shadow-lift transition hover:-translate-y-0.5">
+                <Link href="/productos" className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-full bg-coral-deep px-5 text-sm font-bold text-white shadow-lift transition hover:-translate-y-0.5 sm:mt-5 sm:min-h-11 sm:px-6 sm:text-base">
                   Empezar a sumar <ArrowRight className="size-4" aria-hidden="true" />
                 </Link>
               </div>
