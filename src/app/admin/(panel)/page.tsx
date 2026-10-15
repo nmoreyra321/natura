@@ -98,7 +98,7 @@ export default async function DashboardPage() {
   const tasks: DashboardTask[] = [];
   if (paymentsToReview) {
     tasks.push({
-      href: "/admin/pedidos?estado=revisar",
+      href: "/admin/pedidos",
       icon: BadgeDollarSign,
       tone: "urgent",
       text: `${paymentsToReview} ${paymentsToReview === 1 ? "clienta avisó que pagó" : "clientas avisaron que pagaron"}: revisá y confirmá el pago`,
@@ -106,7 +106,7 @@ export default async function DashboardPage() {
   }
   if (pendingOrders) {
     tasks.push({
-      href: "/admin/pedidos?estado=pending",
+      href: "/admin/pedidos",
       icon: ClipboardList,
       tone: "urgent",
       text: `${pendingOrders} ${pendingOrders === 1 ? "pedido nuevo para confirmar" : "pedidos nuevos para confirmar"}`,

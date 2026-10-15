@@ -1,5 +1,4 @@
 import { HandCoins } from "lucide-react";
-import Link from "next/link";
 
 import { DebtCard } from "@/components/admin/debt-card";
 import { requireAdmin } from "@/lib/auth";
@@ -29,11 +28,7 @@ export default async function DebtsPage() {
     <div className="mx-auto max-w-3xl">
       <h1 className="font-display text-3xl font-bold">Quién me debe</h1>
       <p className="text-muted">
-        Clientas con pedidos sin cobrar o pagados en parte. Para anotar un pago, entrá a{" "}
-        <Link href="/admin/pedidos?estado=sin-cobrar" className="font-semibold text-coral-deep underline">
-          Pedidos → Sin cobrar
-        </Link>
-        .
+        Clientas con pedidos sin cobrar o pagados en parte. Para anotar un pago, tocá el código del pedido.
       </p>
 
       {error ? (

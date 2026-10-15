@@ -50,14 +50,13 @@ function paymentBadge(method: string, status: string | null, paidCents = 0, tota
 }
 
 
+// "atender" (lo que hay que hacer) es lo que se ve al entrar.
 const FILTERS: { value: string; label: string }[] = [
-  { value: "", label: "Todos" },
-  { value: "revisar", label: "Pagos por revisar" },
-  { value: "pending", label: "Pendientes" },
+  { value: "atender", label: "Por atender" },
   { value: "confirmed", label: "Confirmados" },
   { value: "delivered", label: "Entregados" },
   { value: "cancelled", label: "Cancelados" },
-  { value: "sin-cobrar", label: "Sin cobrar" },
+  { value: "todos", label: "Todos" },
 ];
 
 const dateFormatter = new Intl.DateTimeFormat("es-AR", {
@@ -71,7 +70,7 @@ const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) 
 
 function href(estado: string, page: number, q = "") {
   const params = new URLSearchParams();
-  if (estado) params.set("estado", estado);
+  if (estado && estado !== "atender") params.set("estado", estado);
   if (q) params.set("q", q);
   if (page > 1) params.set("pagina", String(page));
   const qs = params.toString();
@@ -81,11 +80,13 @@ function href(estado: string, page: number, q = "") {
 export default async function OrdersPage({ searchParams }: { searchParams: Promise<Search> }) {
   const { supabase } = await requireAdmin();
   const sp = await searchParams;
-  const estado = one(sp.estado) in STATUS_LABELS || ["sin-cobrar", "revisar"].includes(one(sp.estado)) ? one(sp.estado) : "";
+  const q = cleanSearch(one(sp.q));
+  // Por defecto, lo que hay que atender; al buscar, en todos. (pending/revisar/sin-cobrar son direcciones viejas.)
+  const raw = { pending: "atender", revisar: "atender", "sin-cobrar": "todos" }[one(sp.estado)] ?? one(sp.estado);
+  const estado = FILTERS.some((f) => f.value === raw) ? raw : q ? "todos" : "atender";
   const pageRaw = Number(one(sp.pagina) || "1");
   const page = Number.isInteger(pageRaw) && pageRaw >= 1 && pageRaw <= 10000 ? pageRaw : 1;
   const from = (page - 1) * PAGE_SIZE;
-  const q = cleanSearch(one(sp.q));
 
   let query = supabase
     .from("orders")
@@ -95,17 +96,10 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
     )
     .order("created_at", { ascending: false })
     .order("id");
-  if (estado === "revisar") {
-    // Transferencias que la clienta avisó y falta aprobar o rechazar.
-    query = query
-      .eq("payment_method", "transferencia")
-      .not("payment_reported_at", "is", null)
-      .neq("status", "cancelled")
-      .or("payment_status.is.null,payment_status.neq.approved");
-  } else if (estado === "sin-cobrar") {
-    // Pedidos vigentes cuyo pago todavía no se marcó (o Mercado Pago no aprobó).
-    query = query.neq("status", "cancelled").or("payment_status.is.null,payment_status.neq.approved");
-  } else if (estado) {
+  if (estado === "atender") {
+    // Pedidos nuevos sin confirmar y pagos que la clienta avisó y falta confirmar.
+    query = query.neq("status", "cancelled").or("status.eq.pending,payment_reported_at.not.is.null");
+  } else if (estado !== "todos") {
     query = query.eq("status", estado);
   }
   if (q) {
@@ -156,7 +150,8 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
       </nav>
 
       <form method="get" className="mt-3 flex gap-2">
-        {estado ? <input type="hidden" name="estado" value={estado} /> : null}
+        {/* La búsqueda es siempre en todos los pedidos. */}
+        <input type="hidden" name="estado" value="todos" />
         <label htmlFor="pq" className="sr-only">
           Buscar pedido
         </label>
@@ -186,14 +181,14 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
           <p className="mt-3 font-display text-xl font-bold">
             {q
               ? `No hay pedidos con “${q}”.`
-              : estado === "revisar"
-                ? "No hay pagos para revisar. ¡Todo al día!"
-                : estado
-                  ? "No hay pedidos con este estado."
-                  : "Todavía no hay pedidos."}
+              : estado === "atender"
+                ? "No hay nada para atender. ¡Todo al día! 🎉"
+                : estado === "todos"
+                  ? "Todavía no hay pedidos."
+                  : "No hay pedidos con este estado."}
           </p>
-          {!estado && !q ? (
-            <p className="mt-1 text-muted">Cuando una clienta envíe un pedido por WhatsApp, lo vas a ver acá.</p>
+          {estado === "atender" && !q ? (
+            <p className="mt-1 text-muted">Cuando una clienta haga un pedido o avise que pagó, lo vas a ver acá.</p>
           ) : null}
         </div>
       ) : estado === "cancelled" ? (

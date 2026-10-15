@@ -1,6 +1,7 @@
 "use client";
 
 import { MessageCircle, Phone } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
@@ -48,7 +49,10 @@ export function DebtCard({ debt, today }: { debt: CustomerDebt; today: number })
         {debt.orders.map((o) => (
           <li key={o.id} className="flex flex-wrap justify-between gap-x-3 px-3 py-2">
             <span>
-              Pedido <strong>{o.code}</strong>
+              Pedido{" "}
+              <Link href={`/admin/pedidos?estado=todos&q=${encodeURIComponent(o.code)}`} className="font-bold text-coral-deep hover:underline">
+                {o.code}
+              </Link>
               {o.note ? <span className="text-muted"> · {o.note}</span> : null}
             </span>
             <span className="tabular">falta {formatARS(o.owedCents)}</span>
