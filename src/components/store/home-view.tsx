@@ -8,6 +8,7 @@ import { GIFT_EVERY } from "@/lib/loyalty";
 import { productImageUrl } from "@/lib/images";
 import { getPriceInfo } from "@/lib/pricing";
 import { LinkButton } from "@/components/ui/button";
+import { ClubProgressCard } from "./club-progress";
 import { EmptyStore } from "./empty-store";
 import { HeroArt } from "./hero-art";
 import { LeafMark } from "./logo";
@@ -245,24 +246,7 @@ export function HomeView({ d }: { d: HomeData }) {
                   Empezar a sumar <ArrowRight className="size-4" aria-hidden="true" />
                 </Link>
               </div>
-              <div className="relative flex flex-col items-center gap-3 rounded-3xl bg-white/70 p-5 text-center backdrop-blur" aria-hidden="true">
-                <span className="rounded-full bg-cream px-2.5 py-0.5 text-xs font-extrabold tracking-wide text-muted uppercase">Ejemplo</span>
-                <div className="flex items-center gap-2">
-                  {Array.from({ length: GIFT_EVERY }, (_, i) =>
-                    i < GIFT_EVERY - 1 ? (
-                      <span key={i} className="flex size-10 items-center justify-center rounded-full bg-botanical-deep text-white sm:size-12">
-                        <CircleCheck className="size-5" />
-                      </span>
-                    ) : (
-                      <span key={i} className="flex size-12 animate-pulse items-center justify-center rounded-full bg-coral-deep text-white shadow-lift sm:size-14">
-                        <Gift className="size-6" />
-                      </span>
-                    ),
-                  )}
-                </div>
-                <p className="font-display text-lg font-bold">Con 4 compras, ¡te falta 1 para tu regalo!</p>
-                <p className="text-xs text-muted">Así vas a ver tu avance en la página de cada pedido.</p>
-              </div>
+              <ClubProgressCard minCents={d.clubMinCents} />
             </div>
           </section>
 

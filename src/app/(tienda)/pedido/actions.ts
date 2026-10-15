@@ -7,7 +7,9 @@ import { redirect } from "next/navigation";
 import { toWhatsAppPhone } from "@/lib/debts";
 import { canCustomerCancel, canReportPayment, normalizeOrderCode, paymentState } from "@/lib/order-tracking";
 import { toCents } from "@/lib/pricing";
+import { loyaltyKey, loyaltyStatus, PURCHASE_STATUSES } from "@/lib/loyalty";
 import { notifyAdmins } from "@/lib/push";
+import { getLoyaltyMinTotal } from "@/lib/store-settings";
 import { allowRequest } from "@/lib/rate-limit";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -210,4 +212,33 @@ export async function myOrdersStatus(ids: string[]): Promise<MyOrderStatus[]> {
       items: (o.items ?? []).reduce((s, i) => s + i.quantity, 0),
     };
   });
+}
+
+export type ClubProgress = { progress: number; left: number; pending: number; minCents: number };
+
+/**
+ * Avance en el Club de la clienta que usa este celular, a partir de sus pedidos guardados
+ * (quien tiene el enlace del pedido es quien lo hizo). null si no hay pedidos con WhatsApp.
+ */
+export async function clubProgress(orderIds: string[]): Promise<ClubProgress | null> {
+  const ids = orderIds.filter((id) => UUID_RE.test(id)).slice(0, 10);
+  if (ids.length === 0) return null;
+  const admin = createAdminClient();
+  if (!admin) return null;
+  const { data: own } = await admin.from("orders").select("customer_phone, created_at").in("id", ids).order("created_at", { ascending: false });
+  const key = (own ?? []).map((o) => loyaltyKey(o.customer_phone)).find(Boolean);
+  if (!key) return null;
+  const min = await getLoyaltyMinTotal();
+  const [{ count: purchases }, { count: given }] = await Promise.all([
+    admin
+      .from("orders")
+      .select("id", { count: "exact", head: true })
+      .eq("customer_phone", key)
+      .in("status", [...PURCHASE_STATUSES])
+      .eq("payment_status", "approved")
+      .gte("total", min),
+    admin.from("loyalty_gifts").select("id", { count: "exact", head: true }).eq("phone", key),
+  ]);
+  const s = loyaltyStatus(purchases ?? 0, given ?? 0);
+  return { progress: s.progress, left: s.left, pending: s.pending, minCents: Math.round(min * 100) };
 }
