@@ -24,6 +24,12 @@ export function parseExpiry(input: string): string | null {
   return `${year}-${String(month).padStart(2, "0")}-${String(last).padStart(2, "0")}`;
 }
 
+/** "0129" → "01/29" mientras se escribe. */
+export function maskExpiry(raw: string): string {
+  const d = raw.replace(/\D/g, "").slice(0, 6);
+  return d.length > 2 ? `${d.slice(0, 2)}/${d.slice(2)}` : d;
+}
+
 /** "2029-01-31" → "01/29", como figura en el envase. */
 export function formatExpiry(date: string): string {
   return `${date.slice(5, 7)}/${date.slice(2, 4)}`;

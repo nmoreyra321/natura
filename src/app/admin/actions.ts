@@ -5,7 +5,7 @@ import { revalidatePath, updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
-import { assertAdmin, UnauthorizedError } from "@/lib/auth";
+import { assertAdmin, UnauthorizedError, type AdminContext } from "@/lib/auth";
 import { PRODUCT_IMAGES_BUCKET } from "@/lib/config";
 import { isValidProductImagePath, MAX_IMAGES_PER_PRODUCT } from "@/lib/images";
 import type { NaturaLookup } from "@/lib/natura";
@@ -692,7 +692,65 @@ export async function searchProductsForLots(q: string): Promise<LotProductOption
   }
 }
 
-/** Carga un lote: producto, vencimiento como en el envase ("01/29") y cantidad. */
+/** Suma unidades a un lote (producto + vencimiento); si no existe, lo crea. Devuelve el error, si hubo. */
+async function addLot(supabase: AdminContext["supabase"], productId: string, expiresOn: string, quantity: number) {
+  const { data: existing } = await supabase
+    .from("product_lots")
+    .select("id, quantity")
+    .eq("product_id", productId)
+    .eq("expires_on", expiresOn)
+    .maybeSingle();
+  const { error } = existing
+    ? await supabase.from("product_lots").update({ quantity: Math.min(existing.quantity + quantity, 10000) }).eq("id", existing.id)
+    : await supabase.from("product_lots").insert({ product_id: productId, expires_on: expiresOn, quantity });
+  return error;
+}
+
+/**
+ * «Me llegó mercadería», a mano: suma unidades al stock y, si se escribe el vencimiento,
+ * las anota en ese lote. Si el producto era borrador y `publish` está activo, se publica.
+ */
+export async function receiveStock(
+  productId: string,
+  quantity: number,
+  expiry: string,
+  publish: boolean,
+): Promise<ActionResult<{ stock: number }>> {
+  try {
+    const { supabase } = await assertAdmin();
+    if (!UUID_RE.test(productId)) return { ok: false, error: "Elegí un producto de la lista." };
+    if (!Number.isInteger(quantity) || quantity < 1 || quantity > 10000) {
+      return { ok: false, error: "La cantidad tiene que ser un número entero, 1 o más." };
+    }
+    const expiresOn = String(expiry ?? "").trim() ? parseExpiry(String(expiry)) : null;
+    if (String(expiry ?? "").trim() && !expiresOn) {
+      return { ok: false, error: "Escribí el vencimiento como en el envase, por ejemplo 01/29 (o dejalo vacío)." };
+    }
+    const { data: product, error: readError } = await supabase.from("products").select("stock, status").eq("id", productId).maybeSingle();
+    if (readError) return fail(readError, "No pudimos leer el producto.");
+    if (!product) return { ok: false, error: "Ese producto ya no existe." };
+    const stock = Math.min(product.stock + quantity, 100_000);
+    const patch: { stock: number; status?: "published" } = { stock };
+    if (publish && product.status !== "published") patch.status = "published";
+    const { error } = await supabase.from("products").update(patch).eq("id", productId);
+    if (error) return fail(error, "No pudimos sumar el stock.");
+    if (expiresOn) {
+      const lotError = await addLot(supabase, productId, expiresOn, quantity);
+      if (lotError) {
+        refreshCatalog();
+        return { ok: false, error: "Se sumó el stock, pero no pudimos guardar el vencimiento. Cargalo en Vencimientos." };
+      }
+      revalidatePath("/admin/vencimientos");
+    }
+    refreshCatalog();
+    revalidatePath("/admin");
+    return { ok: true, data: { stock } };
+  } catch (e) {
+    return fail(e, "No pudimos sumar el stock.");
+  }
+}
+
+/** Carga un lote: producto, vencimiento como en el envase ("01/29") y cantidad. No cambia el stock. */
 export async function addProductLot(productId: string, expiry: string, quantity: number): Promise<ActionResult> {
   try {
     const { supabase } = await assertAdmin();
@@ -702,16 +760,7 @@ export async function addProductLot(productId: string, expiry: string, quantity:
     if (!Number.isInteger(quantity) || quantity < 1 || quantity > 10000) {
       return { ok: false, error: "La cantidad tiene que ser un número entero, 1 o más." };
     }
-    // Si ya hay un lote del mismo producto con el mismo vencimiento, se suman las unidades.
-    const { data: existing } = await supabase
-      .from("product_lots")
-      .select("id, quantity")
-      .eq("product_id", productId)
-      .eq("expires_on", expiresOn)
-      .maybeSingle();
-    const { error } = existing
-      ? await supabase.from("product_lots").update({ quantity: Math.min(existing.quantity + quantity, 10000) }).eq("id", existing.id)
-      : await supabase.from("product_lots").insert({ product_id: productId, expires_on: expiresOn, quantity });
+    const error = await addLot(supabase, productId, expiresOn, quantity);
     if (error) return fail(error, "No pudimos guardar el vencimiento.");
     revalidatePath("/admin/vencimientos");
     revalidatePath("/admin");
@@ -1317,8 +1366,8 @@ export async function readReceipt(formData: FormData): Promise<ActionResult<Rece
 
 export type ReceiptApplyInput = {
   lines: (
-    | { kind: "existing"; productId: string; quantity: number; description?: string }
-    | { kind: "new"; name: string; code: string; price: number; quantity: number; description?: string }
+    | { kind: "existing"; productId: string; quantity: number; description?: string; expiry?: string }
+    | { kind: "new"; name: string; code: string; price: number; quantity: number; description?: string; expiry?: string }
   )[];
   publish: boolean;
   /** Factura a la que pertenecen (para el historial). El id lo genera la pantalla al leerla. */
@@ -1336,15 +1385,23 @@ export async function applyReceipt(
     const adds = new Map<string, number>();
     const descriptions = new Map<string, string>();
     const history: { product_id: string; product_name: string; quantity: number; description: string | null }[] = [];
-    const news: { name: string; sku: string | null; price: number; quantity: number; alias: string }[] = [];
+    const news: { name: string; sku: string | null; price: number; quantity: number; alias: string; expiresOn: string | null }[] = [];
+    // Vencimientos escritos en la pantalla (opcionales): se anotan como lotes.
+    const lots: { productId: string; expiresOn: string; quantity: number }[] = [];
     // Descripciones de la factura confirmadas por la administradora: se recuerdan para la próxima.
     const learn = new Map<string, string>();
     for (const l of lines) {
       const qty = Number(l?.quantity);
       if (!Number.isInteger(qty) || qty < 1 || qty > 1000) return { ok: false, error: "Revisá las cantidades: tienen que ser 1 o más." };
+      const expiryText = String(l?.expiry ?? "").trim();
+      const expiresOn = expiryText ? parseExpiry(expiryText) : null;
+      if (expiryText && !expiresOn) {
+        return { ok: false, error: "Revisá los vencimientos: se escriben como en el envase, por ejemplo 01/29." };
+      }
       if (l.kind === "existing") {
         if (!UUID_RE.test(String(l.productId))) return { ok: false, error: "Hay un producto inválido en la lista." };
         adds.set(l.productId, (adds.get(l.productId) ?? 0) + qty);
+        if (expiresOn) lots.push({ productId: l.productId, expiresOn, quantity: qty });
         const alias = aliasKey(String(l.description ?? ""));
         if (alias) {
           learn.set(alias, l.productId);
@@ -1354,7 +1411,14 @@ export async function applyReceipt(
         const name = String(l.name ?? "").trim().replace(/\s+/g, " ");
         if (name.length < 2 || name.length > 120) return { ok: false, error: "Poné un nombre (de 2 a 120 letras) a cada producto nuevo." };
         if (!isValidPrice(l.price)) return { ok: false, error: `Poné el precio de revista de «${name}».` };
-        news.push({ name, sku: skuFromCode(l.code), price: toCents(l.price) / 100, quantity: qty, alias: aliasKey(String(l.description ?? "")) });
+        news.push({
+          name,
+          sku: skuFromCode(l.code),
+          price: toCents(l.price) / 100,
+          quantity: qty,
+          alias: aliasKey(String(l.description ?? "")),
+          expiresOn,
+        });
       }
     }
     if (adds.size === 0 && news.length === 0) return { ok: false, error: "La lista está vacía." };
@@ -1405,9 +1469,17 @@ export async function applyReceipt(
       }
       created.push({ id: data.id, name: data.name, sku: data.natura_sku });
       units += n.quantity;
+      if (n.expiresOn) lots.push({ productId: data.id, expiresOn: n.expiresOn, quantity: n.quantity });
       if (n.alias) learn.set(n.alias, data.id);
       history.push({ product_id: data.id, product_name: data.name, quantity: n.quantity, description: n.alias || null });
     }
+
+    for (const lot of lots) {
+      // Un vencimiento que no se pudo guardar no deshace el stock: se avisa en el registro.
+      const lotError = await addLot(supabase, lot.productId, lot.expiresOn, lot.quantity);
+      if (lotError) console.error("[admin] vencimiento de factura:", lotError.message);
+    }
+    if (lots.length > 0) revalidatePath("/admin/vencimientos");
 
     if (learn.size > 0) {
       const now = new Date().toISOString();

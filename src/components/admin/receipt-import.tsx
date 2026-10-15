@@ -23,6 +23,7 @@ import { ProductImageFallback } from "@/components/store/product-card";
 import { NaturaPhoto } from "./natura-photo";
 import { formatARS } from "@/lib/format";
 import { productImageUrl } from "@/lib/images";
+import { maskExpiry, parseExpiry } from "@/lib/lots";
 import { titleCase } from "@/lib/receipt";
 import { parseMoney } from "@/lib/validation";
 
@@ -47,6 +48,8 @@ type Row = {
   kit: string;
   newName: string;
   newPrice: string;
+  /** Vencimiento como en el envase ("01/29"); opcional. */
+  expiry: string;
 };
 
 type Done = { units: number; updated: number; created: { id: string; name: string; sku: string | null }[] };
@@ -61,8 +64,16 @@ const addDone = (a: Done, b: Done): Done => ({ units: a.units + b.units, updated
 /** Un renglón revisado, tal como lo espera la acción que suma el stock. */
 function toLine(r: Row) {
   return r.mode === "existing" && r.match
-    ? { kind: "existing" as const, productId: r.match.id, quantity: r.quantity, description: r.description }
-    : { kind: "new" as const, name: r.newName, code: r.code, price: parseMoney(r.newPrice), quantity: r.quantity, description: r.description };
+    ? { kind: "existing" as const, productId: r.match.id, quantity: r.quantity, description: r.description, expiry: r.expiry }
+    : {
+        kind: "new" as const,
+        name: r.newName,
+        code: r.code,
+        price: parseMoney(r.newPrice),
+        quantity: r.quantity,
+        description: r.description,
+        expiry: r.expiry,
+      };
 }
 
 /** Qué le falta a un renglón para poder cargarlo (null si está listo). */
@@ -71,6 +82,7 @@ function pendingReason(r: Row): string | null {
     return `Confirmá si «${r.description}» es «${r.match.name}» (tocá «Sí, es este» o «No»).`;
   }
   if (r.mode === "existing" && !r.match) return `Elegí a qué producto corresponde «${r.description}», o crealo como nuevo.`;
+  if (r.expiry && !parseExpiry(r.expiry)) return `Revisá el vencimiento de «${r.description || r.newName}» (por ejemplo 01/29), o borralo.`;
   return null;
 }
 
@@ -106,6 +118,7 @@ function toRow(line: ReceiptLine, i: number): Row {
     kit: line.kit,
     newName: titleCase(line.description),
     newPrice: line.unitPrice ? String(line.unitPrice).replace(".", ",") : "",
+    expiry: "",
   };
 }
 
@@ -305,6 +318,7 @@ export function ReceiptImport() {
           kit: "",
           newName: "",
           newPrice: "",
+          expiry: "",
         },
       ];
     });
@@ -583,6 +597,20 @@ export function ReceiptImport() {
                 <span className="text-sm font-semibold">Llegaron:</span>
                 <Stepper value={r.quantity} onChange={(n) => update(r.key, { quantity: n })} />
               </div>
+              <label className="mt-2 flex items-center justify-between gap-2 text-sm">
+                <span className="font-semibold">
+                  Vence <span className="font-normal text-muted">(opcional)</span>
+                </span>
+                <input
+                  inputMode="numeric"
+                  autoComplete="off"
+                  placeholder="01/29"
+                  value={r.expiry}
+                  onChange={(e) => update(r.key, { expiry: maskExpiry(e.target.value) })}
+                  aria-invalid={r.expiry.length >= 5 && !parseExpiry(r.expiry)}
+                  className="h-10 w-24 rounded-full border border-line bg-white px-3 text-center tabular focus:border-botanical focus:outline-none aria-[invalid=true]:border-coral-deep"
+                />
+              </label>
               <button
                 type="button"
                 onClick={() => void confirmOne(r)}

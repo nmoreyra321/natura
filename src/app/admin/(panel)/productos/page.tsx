@@ -1,8 +1,9 @@
-import { Plus, Search } from "lucide-react";
+import { Camera, Keyboard, Plus, Search } from "lucide-react";
 import Link from "next/link";
 
 import { BulkSelectionProvider, SelectAllCheckbox, SelectProductCheckbox } from "@/components/admin/bulk-selection";
 import { InventoryView } from "@/components/admin/inventory-view";
+import { LotQuickEntry } from "@/components/admin/lot-quick-entry";
 import { ReceiptHistory } from "@/components/admin/receipt-history";
 import { ReceiptImport } from "@/components/admin/receipt-import";
 import { ProductRowActions } from "@/components/admin/product-row-actions";
@@ -54,19 +55,52 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
   const { supabase } = await requireAdmin();
   const sp = await searchParams;
 
-  const vista = one(sp.vista);
-  if (vista === "stock" || vista === "boleta") {
+  // "boleta" es la dirección vieja de «Me llegó mercadería».
+  const vista = one(sp.vista) === "boleta" ? "llego" : one(sp.vista);
+  if (vista === "stock" || vista === "llego") {
+    const byHand = one(sp.modo) === "mano";
+    const modeClass = (on: boolean) =>
+      `inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-full text-sm font-bold sm:flex-none sm:px-5 ${on ? "bg-forest text-white" : "bg-warm-white shadow-soft hover:bg-sun"}`;
     return (
       <div className="mx-auto max-w-6xl">
         <ProductsHeader active={vista} action={<NewProductButton />} />
         <div className="mt-5">
           {vista === "stock" ? (
-            <InventoryView supabase={supabase} sp={sp} />
+            <>
+              <p className="mb-4 rounded-2xl bg-sun/50 px-4 py-3 text-sm">
+                <strong>Contar stock</strong> es para corregir: el número que escribas <strong>reemplaza</strong> al que
+                había. Si te llegó mercadería, usá{" "}
+                <Link href="/admin/productos?vista=llego" className="font-bold text-coral-deep underline">
+                  Me llegó mercadería
+                </Link>
+                , que suma.
+              </p>
+              <InventoryView supabase={supabase} sp={sp} />
+            </>
           ) : (
             <div className="mx-auto max-w-3xl">
-              <ReceiptImport />
-              <h2 className="mt-10 mb-3 font-display text-xl font-bold">Facturas cargadas</h2>
-              <ReceiptHistory supabase={supabase} />
+              <p className="text-sm text-muted">Todo lo que cargues acá se suma al stock que ya tenías.</p>
+              <nav aria-label="Cómo cargar" className="mt-3 mb-5 flex gap-2">
+                <Link href="/admin/productos?vista=llego" aria-current={!byHand ? "page" : undefined} className={modeClass(!byHand)}>
+                  <Camera className="size-4" aria-hidden="true" /> Con la factura
+                </Link>
+                <Link
+                  href="/admin/productos?vista=llego&modo=mano"
+                  aria-current={byHand ? "page" : undefined}
+                  className={modeClass(byHand)}
+                >
+                  <Keyboard className="size-4" aria-hidden="true" /> A mano
+                </Link>
+              </nav>
+              {byHand ? (
+                <LotQuickEntry mode="llegada" />
+              ) : (
+                <>
+                  <ReceiptImport />
+                  <h2 className="mt-10 mb-3 font-display text-xl font-bold">Facturas cargadas</h2>
+                  <ReceiptHistory supabase={supabase} />
+                </>
+              )}
             </div>
           )}
         </div>

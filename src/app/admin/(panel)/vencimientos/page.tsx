@@ -97,13 +97,20 @@ export default async function ExpiryPage() {
     <div className="mx-auto max-w-5xl">
       <h1 className="font-display text-3xl font-bold">Vencimientos</h1>
       <p className="text-muted">
-        Cargá las fechas de vencimiento por lote. Lo que vence en los próximos {EXPIRY_WARNING_MONTHS} meses aparece en «Por
-        vencer».
+        Lo que vence en los próximos {EXPIRY_WARNING_MONTHS} meses aparece en «Por vencer». Los vencimientos se cargan cuando
+        te llega la mercadería, en{" "}
+        <Link href="/admin/productos?vista=llego" className="font-semibold text-coral-deep underline">
+          Me llegó mercadería
+        </Link>
+        .
       </p>
 
-      <div className="mt-6">
+      <details className="group mt-6">
+        <summary className="cursor-pointer list-none rounded-full bg-warm-white px-4 py-2.5 text-sm font-bold shadow-soft hover:bg-sun group-open:mb-3 [&::-webkit-details-marker]:hidden">
+          + Anotar el vencimiento de algo que ya tenés en el stock
+        </summary>
         <LotQuickEntry />
-      </div>
+      </details>
 
       {error ? (
         <p className="mt-6 rounded-2xl bg-coral-soft p-4 font-semibold">No pudimos cargar los vencimientos.</p>

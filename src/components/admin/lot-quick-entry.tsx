@@ -5,26 +5,24 @@ import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 
-import { addProductLot, searchProductsForLots, type LotProductOption } from "@/app/admin/actions";
+import { addProductLot, receiveStock, searchProductsForLots, type LotProductOption } from "@/app/admin/actions";
 import { buttonClasses } from "@/components/ui/button";
 import { productImageUrl } from "@/lib/images";
-import { formatExpiry, monthsLeft, parseExpiry } from "@/lib/lots";
+import { formatExpiry, maskExpiry, monthsLeft, parseExpiry } from "@/lib/lots";
 
 const monthName = new Intl.DateTimeFormat("es-AR", { month: "long", year: "numeric", timeZone: "UTC" });
 
-/** "0129" → "01/29" mientras se escribe. */
-function maskExpiry(raw: string): string {
-  const d = raw.replace(/\D/g, "").slice(0, 6);
-  return d.length > 2 ? `${d.slice(0, 2)}/${d.slice(2)}` : d;
-}
-
-type Loaded = { key: number; name: string; expiry: string; quantity: number };
+type Loaded = { key: number; name: string; expiry: string | null; quantity: number; stock?: number };
 
 /**
- * Carga rápida de vencimientos con el teclado:
- * nombre → Enter → vencimiento (0129) → Enter. El cursor vuelve al buscador.
+ * Carga rápida con el teclado. El cursor vuelve solo al buscador.
+ * - "llegada" («Me llegó mercadería», a mano): producto → Enter → cantidad → Enter. Suma al stock;
+ *   el vencimiento es opcional y, si se escribe, queda anotado.
+ * - "vencimiento": producto → Enter → vencimiento (0129) → Enter. Solo anota el vencimiento de algo
+ *   que ya está en el stock (no lo cambia).
  */
-export function LotQuickEntry() {
+export function LotQuickEntry({ mode = "vencimiento" }: { mode?: "llegada" | "vencimiento" }) {
+  const arrival = mode === "llegada";
   const router = useRouter();
   const listId = useId();
   const [q, setQ] = useState("");
@@ -37,6 +35,7 @@ export function LotQuickEntry() {
   const [pending, start] = useTransition();
   const searchRef = useRef<HTMLInputElement>(null);
   const expiryRef = useRef<HTMLInputElement>(null);
+  const quantityRef = useRef<HTMLInputElement>(null);
 
   const term = q.trim();
   useEffect(() => {
@@ -61,14 +60,16 @@ export function LotQuickEntry() {
     setOptions([]);
     // Si ya hay un vencimiento escrito (el del producto anterior), queda seleccionado para pisarlo o reusarlo.
     setTimeout(() => {
-      expiryRef.current?.focus();
-      expiryRef.current?.select();
+      const next = arrival ? quantityRef.current : expiryRef.current;
+      next?.focus();
+      next?.select();
     }, 0);
   };
 
   const parsed = parseExpiry(expiry);
   const qty = Number(quantity);
-  const ready = Boolean(product && parsed && Number.isInteger(qty) && qty >= 1);
+  const expiryOk = arrival ? !expiry.trim() || Boolean(parsed) : Boolean(parsed);
+  const ready = Boolean(product && expiryOk && Number.isInteger(qty) && qty >= 1);
 
   const submit = () => {
     if (!product) {
@@ -76,18 +77,22 @@ export function LotQuickEntry() {
       searchRef.current?.focus();
       return;
     }
-    if (!parsed) {
-      toast.error("Escribí el vencimiento como en el envase, por ejemplo 01/29.");
+    if (!expiryOk) {
+      toast.error(arrival ? "Revisá el vencimiento (por ejemplo 01/29) o dejalo vacío." : "Escribí el vencimiento como en el envase, por ejemplo 01/29.");
       expiryRef.current?.focus();
       return;
     }
     start(async () => {
-      const res = await addProductLot(product.id, expiry, qty);
+      const res = arrival ? await receiveStock(product.id, qty, expiry, true) : await addProductLot(product.id, expiry, qty);
       if (!res.ok) {
         toast.error(res.error);
         return;
       }
-      setLoaded((prev) => [{ key: Date.now(), name: product.name, expiry: formatExpiry(parsed), quantity: qty }, ...prev].slice(0, 8));
+      const stock = arrival && res.data && "stock" in res.data ? res.data.stock : undefined;
+      setLoaded((prev) =>
+        [{ key: Date.now(), name: product.name, expiry: parsed ? formatExpiry(parsed) : null, quantity: qty, stock }, ...prev].slice(0, 8),
+      );
+      if (arrival) setExpiry("");
       setProduct(null);
       setQ("");
       setQuantity("1");
@@ -102,10 +107,20 @@ export function LotQuickEntry() {
   return (
     <section aria-labelledby="carga" className="rounded-3xl border-2 border-forest bg-warm-white p-5 shadow-[4px_4px_0_var(--forest)]">
       <h2 id="carga" className="font-display text-xl font-bold">
-        Cargar vencimientos
+        {arrival ? "Cargar a mano" : "Anotar vencimientos"}
       </h2>
       <p className="text-sm text-muted">
-        Escribí el producto, Enter, el vencimiento como figura en el envase (por ejemplo <strong>0129</strong> para 01/29) y Enter.
+        {arrival ? (
+          <>
+            Escribí el producto, Enter, la cantidad que llegó y Enter: <strong>se suma al stock</strong>. Si querés,
+            antes de Enter poné el vencimiento (por ejemplo <strong>0129</strong> para 01/29).
+          </>
+        ) : (
+          <>
+            Para algo que <strong>ya está en el stock</strong> (no lo cambia): escribí el producto, Enter, el vencimiento
+            como figura en el envase (por ejemplo <strong>0129</strong> para 01/29) y Enter.
+          </>
+        )}
       </p>
 
       <form
@@ -188,9 +203,9 @@ export function LotQuickEntry() {
           ) : null}
         </div>
 
-        <div>
+        <div className={arrival ? "order-3" : undefined}>
           <label htmlFor="lote-vence" className="text-sm font-semibold">
-            Vence (MM/AA)
+            {arrival ? "Vence (opcional)" : "Vence (MM/AA)"}
           </label>
           <input
             id="lote-vence"
@@ -212,6 +227,7 @@ export function LotQuickEntry() {
           </label>
           <input
             id="lote-cantidad"
+            ref={quantityRef}
             type="number"
             inputMode="numeric"
             min={1}
@@ -222,9 +238,9 @@ export function LotQuickEntry() {
           />
         </div>
 
-        <button type="submit" disabled={pending || !ready} className={buttonClasses("primary", "md")}>
+        <button type="submit" disabled={pending || !ready} className={buttonClasses("primary", "md", arrival ? "order-4" : "")}>
           {pending ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : <Plus className="size-4" aria-hidden="true" />}
-          Guardar
+          {arrival ? "Sumar" : "Guardar"}
         </button>
       </form>
 
@@ -247,7 +263,9 @@ export function LotQuickEntry() {
                 <Check className="mt-0.5 size-4 shrink-0 text-botanical-deep" aria-hidden="true" />
                 <span className="min-w-0 flex-1">{l.name}</span>
                 <span className="tabular text-muted">
-                  {l.quantity} u. · {l.expiry}
+                  {arrival ? `+${l.quantity}` : `${l.quantity} u.`}
+                  {l.expiry ? ` · vence ${l.expiry}` : ""}
+                  {l.stock !== undefined ? ` · ahora hay ${l.stock}` : ""}
                 </span>
               </li>
             ))}
