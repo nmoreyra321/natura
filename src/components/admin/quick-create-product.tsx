@@ -5,8 +5,11 @@ import Link from "next/link";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 
-import { addProductImage, quickCreateProduct, updateProductQuick } from "@/app/admin/actions";
+import { addProductImage, importNaturaPhotos, quickCreateProduct, updateProductQuick } from "@/app/admin/actions";
 import { buttonClasses } from "@/components/ui/button";
+import { formatARS } from "@/lib/format";
+import { salePriceFromDiscount } from "@/lib/pricing";
+import { parseMoney } from "@/lib/validation";
 import { uploadProductPhoto } from "./image-manager";
 
 type Category = { id: string; name: string };
@@ -36,9 +39,14 @@ export function QuickCreateProduct({
   const [name, setName] = useState(initialName);
   const [magazine, setMagazine] = useState("");
   const [sale, setSale] = useState("");
+  const [priceMode, setPriceMode] = useState<"descuento" | "precio">("descuento");
+  const [percent, setPercent] = useState("");
+  const discounted = salePriceFromDiscount(parseMoney(magazine), Number(percent.replace(",", ".") || "0"));
   const [categoryId, setCategoryId] = useState("");
   const [quantity, setQuantity] = useState(String(initialQuantity));
   const [photo, setPhoto] = useState<File | null>(null);
+  /** Código o enlace de Natura: si no hay foto propia, se baja la foto oficial. */
+  const [naturaRef, setNaturaRef] = useState("");
   const [saving, setSaving] = useState(false);
   const photoRef = useRef<HTMLInputElement>(null);
 
@@ -46,7 +54,8 @@ export function QuickCreateProduct({
     if (saving) return;
     setSaving(true);
     const qty = Number(quantity);
-    const res = await quickCreateProduct({ name, magazinePrice: magazine, salePrice: sale, categoryId, stock: qty });
+    const salePrice = priceMode === "descuento" ? (Number.isFinite(discounted) ? String(discounted) : "") : sale;
+    const res = await quickCreateProduct({ name, magazinePrice: magazine, salePrice, categoryId, stock: qty });
     if (!res.ok || !res.data) {
       toast.error(res.ok ? "No pudimos crear el producto." : res.error);
       setSaving(false);
@@ -54,6 +63,15 @@ export function QuickCreateProduct({
     }
     const product = res.data;
     let published = false;
+    if (!photo && naturaRef.trim()) {
+      const nat = await importNaturaPhotos(product.id, naturaRef);
+      if (nat.ok && (nat.data?.added || nat.data?.same)) {
+        const pub = await updateProductQuick(product.id, { status: "published" });
+        published = pub.ok;
+      } else if (!nat.ok) {
+        toast.error(`El producto se creó, pero no pudimos traer la foto de Natura: ${nat.error}`);
+      }
+    }
     if (photo) {
       try {
         const path = await uploadProductPhoto(product.id, photo);
@@ -112,10 +130,69 @@ export function QuickCreateProduct({
           Precio de revista
           <input value={magazine} onChange={(e) => setMagazine(e.target.value)} inputMode="decimal" placeholder="$ 20.000" required className={field} />
         </label>
-        <label className="text-sm font-semibold">
-          Tu precio <span className="font-normal text-muted">(si lo dejás vacío, el de revista)</span>
-          <input value={sale} onChange={(e) => setSale(e.target.value)} inputMode="decimal" placeholder="$ 17.000" className={field} />
-        </label>
+        <div className="text-sm font-semibold">
+          <div className="flex items-center justify-between gap-2">
+            <span>Tu precio</span>
+            <span role="radiogroup" aria-label="Forma de poner el precio" className="inline-flex rounded-full bg-white p-0.5 text-xs">
+              {(
+                [
+                  ["descuento", "% descuento"],
+                  ["precio", "$ precio"],
+                ] as const
+              ).map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  role="radio"
+                  aria-checked={priceMode === value}
+                  onClick={() => setPriceMode(value)}
+                  className={`rounded-full px-2.5 py-1 font-bold ${priceMode === value ? "bg-forest text-white" : "text-forest"}`}
+                >
+                  {label}
+                </button>
+              ))}
+            </span>
+          </div>
+          {priceMode === "descuento" ? (
+            <>
+              <div className="mt-1 flex items-center gap-2">
+                <input
+                  value={percent}
+                  onChange={(e) => setPercent(e.target.value)}
+                  inputMode="decimal"
+                  placeholder="Ej.: 20"
+                  aria-label="Descuento sobre la revista (%)"
+                  className={`${field} mt-0 max-w-24`}
+                />
+                <span className="font-bold">%</span>
+                <span className="text-xs font-normal text-muted">
+                  {Number.isFinite(discounted) ? `= ${formatARS(Math.round(discounted * 100))}` : "sobre la revista"}
+                </span>
+              </div>
+              <div className="mt-1.5 flex flex-wrap gap-1">
+                {[10, 15, 20, 25, 30].map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => setPercent(String(n))}
+                    className={`rounded-full border px-2.5 py-0.5 text-xs font-bold ${percent === String(n) ? "border-forest bg-forest text-white" : "border-line bg-white"}`}
+                  >
+                    {n}%
+                  </button>
+                ))}
+              </div>
+            </>
+          ) : (
+            <input
+              value={sale}
+              onChange={(e) => setSale(e.target.value)}
+              inputMode="decimal"
+              placeholder="$ 17.000 (vacío = el de revista)"
+              aria-label="Tu precio"
+              className={field}
+            />
+          )}
+        </div>
         <label className="text-sm font-semibold">
           Categoría
           <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} className={field}>
@@ -164,11 +241,23 @@ export function QuickCreateProduct({
               <span className="font-normal text-muted">(para publicarlo)</span>
             </label>
           )}
+          {!photo ? (
+            <label className="mt-2 block text-sm font-semibold">
+              …o pegá el link (o el código) del producto en Natura y bajamos la foto sola
+              <input
+                value={naturaRef}
+                onChange={(e) => setNaturaRef(e.target.value)}
+                placeholder="https://www.naturacosmeticos.com.ar/… o 72197"
+                autoComplete="off"
+                className={field}
+              />
+            </label>
+          ) : null}
         </div>
       </div>
       <button type="submit" disabled={saving} className={buttonClasses("primary", "md", "mt-4 w-full sm:w-auto")}>
         {saving ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : <PackagePlus className="size-4" aria-hidden="true" />}
-        {photo ? "Crear y publicar" : "Crear (borrador, sin foto)"}
+        {photo || naturaRef.trim() ? "Crear y publicar" : "Crear (borrador, sin foto)"}
       </button>
     </form>
   );

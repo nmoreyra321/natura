@@ -1539,7 +1539,7 @@ export async function readReceipt(formData: FormData): Promise<ActionResult<Rece
 export type ReceiptApplyInput = {
   lines: (
     | { kind: "existing"; productId: string; quantity: number; description?: string; expiry?: string }
-    | { kind: "new"; name: string; code: string; price: number; quantity: number; description?: string; expiry?: string }
+    | { kind: "new"; name: string; code: string; price: number; salePrice?: number; quantity: number; description?: string; expiry?: string }
   )[];
   publish: boolean;
   /** Factura a la que pertenecen (para el historial). El id lo genera la pantalla al leerla. */
@@ -1557,7 +1557,7 @@ export async function applyReceipt(
     const adds = new Map<string, number>();
     const descriptions = new Map<string, string>();
     const history: { product_id: string; product_name: string; quantity: number; description: string | null }[] = [];
-    const news: { name: string; sku: string | null; price: number; quantity: number; alias: string; expiresOn: string | null }[] = [];
+    const news: { name: string; sku: string | null; price: number; sale: number; quantity: number; alias: string; expiresOn: string | null }[] = [];
     // Vencimientos escritos en la pantalla (opcionales): se anotan como lotes.
     const lots: { productId: string; expiresOn: string; quantity: number }[] = [];
     // Descripciones de la factura confirmadas por la administradora: se recuerdan para la próxima.
@@ -1583,10 +1583,13 @@ export async function applyReceipt(
         const name = String(l.name ?? "").trim().replace(/\s+/g, " ");
         if (name.length < 2 || name.length > 120) return { ok: false, error: "Poné un nombre (de 2 a 120 letras) a cada producto nuevo." };
         if (!isValidPrice(l.price)) return { ok: false, error: `Poné el precio de revista de «${name}».` };
+        // Precio de venta con el descuento elegido (si no hay, el de revista; nunca más caro).
+        const sale = isValidPrice(l.salePrice) && Number(l.salePrice) <= Number(l.price) ? toCents(l.salePrice) / 100 : toCents(l.price) / 100;
         news.push({
           name,
           sku: skuFromCode(l.code),
           price: toCents(l.price) / 100,
+          sale,
           quantity: qty,
           alias: aliasKey(String(l.description ?? "")),
           expiresOn,
@@ -1625,7 +1628,7 @@ export async function applyReceipt(
           slug: `${base.slice(0, 120)}-${Math.random().toString(36).slice(2, 7)}`,
           natura_sku: n.sku,
           magazine_price: n.price,
-          sale_price: n.price,
+          sale_price: n.sale,
           stock: n.quantity,
           status: "draft",
         })

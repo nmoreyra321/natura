@@ -24,6 +24,7 @@ import { NaturaPhoto } from "./natura-photo";
 import { formatARS } from "@/lib/format";
 import { productImageUrl } from "@/lib/images";
 import { maskExpiry, parseExpiry } from "@/lib/lots";
+import { salePriceFromDiscount } from "@/lib/pricing";
 import { titleCase } from "@/lib/receipt";
 import { parseMoney } from "@/lib/validation";
 
@@ -48,6 +49,8 @@ type Row = {
   kit: string;
   newName: string;
   newPrice: string;
+  /** % de descuento sobre la revista para el producto nuevo ("" = sin descuento). */
+  newDiscount: string;
   /** Vencimiento como en el envase ("01/29"); opcional. */
   expiry: string;
 };
@@ -70,6 +73,7 @@ function toLine(r: Row) {
         name: r.newName,
         code: r.code,
         price: parseMoney(r.newPrice),
+        salePrice: salePriceFromDiscount(parseMoney(r.newPrice), Number(r.newDiscount.replace(",", ".") || "0")),
         quantity: r.quantity,
         description: r.description,
         expiry: r.expiry,
@@ -118,6 +122,7 @@ function toRow(line: ReceiptLine, i: number): Row {
     kit: line.kit,
     newName: titleCase(line.description),
     newPrice: line.unitPrice ? String(line.unitPrice).replace(".", ",") : "",
+    newDiscount: "",
     expiry: "",
   };
 }
@@ -318,6 +323,7 @@ export function ReceiptImport() {
           kit: "",
           newName: "",
           newPrice: "",
+          newDiscount: "",
           expiry: "",
         },
       ];
@@ -575,8 +581,38 @@ export function ReceiptImport() {
                         className={`${inputClasses} mt-1 h-11`}
                       />
                     </label>
+                    <div className="text-sm font-semibold sm:col-span-2">
+                      Tu descuento sobre la revista
+                      <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                        <input
+                          value={r.newDiscount}
+                          onChange={(e) => update(r.key, { newDiscount: e.target.value })}
+                          inputMode="decimal"
+                          placeholder="0"
+                          aria-label="Descuento (%)"
+                          className={`${inputClasses} h-10 w-20`}
+                        />
+                        <span className="font-bold">%</span>
+                        {[10, 15, 20, 25, 30].map((n) => (
+                          <button
+                            key={n}
+                            type="button"
+                            onClick={() => update(r.key, { newDiscount: String(n) })}
+                            className={`rounded-full border px-2.5 py-1 text-xs font-bold ${r.newDiscount === String(n) ? "border-forest bg-forest text-white" : "border-line bg-white"}`}
+                          >
+                            {n}%
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                     {Number.isFinite(parseMoney(r.newPrice)) && parseMoney(r.newPrice) > 0 ? (
-                      <p className="text-xs text-muted sm:col-span-2">Se va a vender a {formatARS(Math.round(parseMoney(r.newPrice) * 100))}.</p>
+                      <p className="text-xs text-muted sm:col-span-2">
+                        Se va a vender a{" "}
+                        {formatARS(
+                          Math.round(salePriceFromDiscount(parseMoney(r.newPrice), Number(r.newDiscount.replace(",", ".") || "0")) * 100),
+                        )}
+                        .
+                      </p>
                     ) : null}
                   </div>
                 </div>
