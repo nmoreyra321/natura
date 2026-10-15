@@ -169,10 +169,7 @@ export function Header({ categories }: { categories: NavCategory[] }) {
               <li key={l.href} className={i >= 4 ? "hidden 2xl:block" : i >= 2 ? "hidden xl:block" : undefined}>
                 <Link
                   href={l.href}
-                  aria-current={!l.href.includes("?") && l.href === pathname ? "page" : undefined}
-                  className={`rounded-full px-3 py-2 text-[0.95rem] font-bold whitespace-nowrap text-forest transition-colors hover:bg-sun ${
-                    !l.href.includes("?") && l.href === pathname ? CURRENT : ""
-                  }`}
+                  className="rounded-full px-3 py-2 text-[0.95rem] font-bold whitespace-nowrap text-forest transition-colors hover:bg-sun"
                 >
                   {l.label}
                 </Link>
