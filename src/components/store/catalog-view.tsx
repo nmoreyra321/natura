@@ -25,6 +25,7 @@ function pageHref(base: string, filters: CatalogFilters, page: number, fixedCate
   if (filters.min !== undefined) p.set("min", String(filters.min));
   if (filters.max !== undefined) p.set("max", String(filters.max));
   if (filters.offers) p.set("ofertas", "1");
+  if (filters.gender) p.set("para", filters.gender);
   if (filters.sort && filters.sort !== "destacados") p.set("orden", filters.sort);
   if (page > 1) p.set("pagina", String(page));
   const qs = p.toString();
@@ -67,6 +68,7 @@ export async function CatalogView({
       filters.min !== undefined ||
       filters.max !== undefined ||
       filters.offers ||
+      filters.gender ||
       (!fixedCategory && filters.category),
   );
 
@@ -75,6 +77,7 @@ export async function CatalogView({
     filters.refills,
     filters.min !== undefined || filters.max !== undefined,
     filters.offers,
+    filters.gender,
     !fixedCategory && filters.category,
     filters.sort !== "destacados",
   ].filter(Boolean).length;
@@ -87,7 +90,7 @@ export async function CatalogView({
       <form
         method="get"
         action={basePath}
-        className={`mt-4 grid grid-cols-2 gap-3 md:mt-6 md:rounded-3xl md:border md:border-line md:bg-warm-white md:p-4 md:shadow-soft ${fixedCategory ? "md:grid-cols-[2fr_1.3fr_1fr_1fr_1.3fr]" : "md:grid-cols-3 lg:grid-cols-[2fr_1.2fr_1.2fr_1fr_1fr_1.2fr]"}`}
+        className={`mt-4 grid grid-cols-2 gap-3 md:mt-6 md:rounded-3xl md:border md:border-line md:bg-warm-white md:p-4 md:shadow-soft ${fixedCategory ? "md:grid-cols-[2fr_1.3fr_1fr_1fr_1fr_1.3fr]" : "md:grid-cols-3 lg:grid-cols-[1.8fr_1.2fr_1.1fr_1fr_0.9fr_0.9fr_1.1fr]"}`}
       >
         <CatalogFiltersToggle
           activeCount={activeCount}
@@ -126,6 +129,16 @@ export async function CatalogView({
                 {l.name}
               </option>
             ))}
+          </select>
+        </div>
+        <div className="col-span-2 md:col-span-1">
+          <label htmlFor="f-para" className="mb-1 block text-sm font-semibold">
+            Para
+          </label>
+          <select id="f-para" name="para" defaultValue={filters.gender ?? ""} className={`${inputClasses} h-11`}>
+            <option value="">Todos</option>
+            <option value="mujer">Mujer</option>
+            <option value="hombre">Hombre</option>
           </select>
         </div>
         <div>

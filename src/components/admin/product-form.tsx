@@ -29,6 +29,7 @@ export type ProductFormValues = {
   status: "draft" | "published";
   is_featured: boolean;
   is_offer: boolean;
+  gender: "" | "femenino" | "masculino";
 };
 
 export function ProductForm({
@@ -276,6 +277,13 @@ export function ProductForm({
           <Select id="status" {...register("status")}>
             <option value="draft">Borrador (no se ve en la tienda)</option>
             <option value="published">Publicado (visible en la tienda)</option>
+          </Select>
+        </Field>
+        <Field label="Para quién es (filtro «Para» de la tienda)" htmlFor="gender" className="sm:col-span-2">
+          <Select id="gender" {...register("gender")}>
+            <option value="">Para todos (aparece en Mujer y en Hombre)</option>
+            <option value="femenino">Mujer</option>
+            <option value="masculino">Hombre</option>
           </Select>
         </Field>
         <Checkbox label="Destacado" description="Aparece en “Los más elegidos” del inicio." {...register("is_featured")} />

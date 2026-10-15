@@ -89,6 +89,11 @@ export const productSchema = z
     status: z.enum(["draft", "published"]),
     is_featured: z.coerce.boolean(),
     is_offer: z.coerce.boolean(),
+    /** Para quién es: "" = para todos. */
+    gender: z
+      .enum(["", "femenino", "masculino"])
+      .optional()
+      .transform((v) => (v ? v : null)),
   })
   .superRefine((data, ctx) => {
     if (data.is_offer && !(data.sale_price < data.magazine_price)) {

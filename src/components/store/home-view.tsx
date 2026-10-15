@@ -10,6 +10,7 @@ import { getPriceInfo } from "@/lib/pricing";
 import { LinkButton } from "@/components/ui/button";
 import { ClubProgressCard } from "./club-progress";
 import { EmptyStore } from "./empty-store";
+import { InfiniteCarousel } from "./infinite-carousel";
 import { HeroArt } from "./hero-art";
 import { LeafMark } from "./logo";
 import { ProductRail } from "./product-card";
@@ -184,11 +185,11 @@ export function HomeView({ d }: { d: HomeData }) {
           {d.categories.length > 0 ? (
             <Section>
               <SectionHeader title="Comprá por categoría" href="/productos" />
-              <ul className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0 md:grid-cols-4 lg:grid-cols-6">
+              <InfiniteCarousel label="Categorías">
                 {d.categories.map((cat, i) => {
                   const src = cat.image ? productImageUrl(cat.image) : null;
                   return (
-                    <li key={cat.id} className="w-[30%] shrink-0 snap-start sm:w-auto">
+                    <li key={cat.id} className="w-[30%] shrink-0 snap-start sm:w-[22%] md:w-[18%] lg:w-[15%]">
                       <Link href={`/categorias/${cat.slug}`} className="group flex flex-col items-center gap-2 text-center">
                         <span
                           className={`relative block aspect-square w-full overflow-hidden rounded-[1.75rem] ${CATEGORY_TINTS[i % CATEGORY_TINTS.length]} ring-1 ring-line/70 transition duration-300 group-hover:-translate-y-1 group-hover:shadow-lift`}
@@ -207,7 +208,7 @@ export function HomeView({ d }: { d: HomeData }) {
                     </li>
                   );
                 })}
-              </ul>
+              </InfiniteCarousel>
             </Section>
           ) : null}
 

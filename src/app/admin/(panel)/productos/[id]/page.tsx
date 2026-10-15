@@ -88,6 +88,7 @@ export default async function EditProductPage({
             status: product.status as "draft" | "published",
             is_featured: product.is_featured,
             is_offer: product.is_offer,
+            gender: product.gender === "femenino" || product.gender === "masculino" ? product.gender : "",
           }}
         />
       </div>

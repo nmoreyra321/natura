@@ -295,14 +295,14 @@ isOneToOne: false
                   ]
                 },"products": {
                   Row: {
-                    "category_id": string | null,"created_at": string,"description": string,"discount_percent": number | null,"id": string,"in_stock": boolean | null,"is_featured": boolean,"is_offer": boolean,"is_refill": boolean | null,"line": string | null,"magazine_price": number,"name": string,"natura_sku": string | null,"sale_price": number,"size": string | null,"slug": string,"status": string,"stock": number,"updated_at": string
+                    "category_id": string | null,"created_at": string,"description": string,"discount_percent": number | null,"gender": string | null,"id": string,"in_stock": boolean | null,"is_featured": boolean,"is_offer": boolean,"is_refill": boolean | null,"line": string | null,"magazine_price": number,"name": string,"natura_sku": string | null,"sale_price": number,"size": string | null,"slug": string,"status": string,"stock": number,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "category_id"?: string | null,"created_at"?: string,"description"?: string,"discount_percent"?: never,"id"?: string,"in_stock"?: never,"is_featured"?: boolean,"is_offer"?: boolean,"is_refill"?: never,"line"?: string | null,"magazine_price": number,"name": string,"natura_sku"?: string | null,"sale_price": number,"size"?: string | null,"slug": string,"status"?: string,"stock"?: number,"updated_at"?: string
+                    "category_id"?: string | null,"created_at"?: string,"description"?: string,"discount_percent"?: never,"gender"?: string | null,"id"?: string,"in_stock"?: never,"is_featured"?: boolean,"is_offer"?: boolean,"is_refill"?: never,"line"?: string | null,"magazine_price": number,"name": string,"natura_sku"?: string | null,"sale_price": number,"size"?: string | null,"slug": string,"status"?: string,"stock"?: number,"updated_at"?: string
                   }
                   Update: {
-                    "category_id"?: string | null,"created_at"?: string,"description"?: string,"discount_percent"?: never,"id"?: string,"in_stock"?: never,"is_featured"?: boolean,"is_offer"?: boolean,"is_refill"?: never,"line"?: string | null,"magazine_price"?: number,"name"?: string,"natura_sku"?: string | null,"sale_price"?: number,"size"?: string | null,"slug"?: string,"status"?: string,"stock"?: number,"updated_at"?: string
+                    "category_id"?: string | null,"created_at"?: string,"description"?: string,"discount_percent"?: never,"gender"?: string | null,"id"?: string,"in_stock"?: never,"is_featured"?: boolean,"is_offer"?: boolean,"is_refill"?: never,"line"?: string | null,"magazine_price"?: number,"name"?: string,"natura_sku"?: string | null,"sale_price"?: number,"size"?: string | null,"slug"?: string,"status"?: string,"stock"?: number,"updated_at"?: string
                   }
                   Relationships: [
                     {

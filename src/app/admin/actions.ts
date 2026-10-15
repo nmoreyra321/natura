@@ -12,6 +12,7 @@ import type { NaturaLookup } from "@/lib/natura";
 import { parseExpiry } from "@/lib/lots";
 import { toWhatsAppPhone } from "@/lib/debts";
 import { campaignSlug } from "@/lib/campaigns";
+import { guessGender } from "@/lib/gender";
 import { getLoyaltyMinTotal } from "@/lib/store-settings";
 import { notifyAdmins } from "@/lib/push";
 import { formatARS } from "@/lib/format";
@@ -152,6 +153,7 @@ export async function quickCreateProduct(input: {
         stock,
         category_id: categoryId,
         status: "draft",
+        gender: guessGender(name),
       })
       .select("id, name")
       .single();

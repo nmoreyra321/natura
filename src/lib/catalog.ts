@@ -58,6 +58,8 @@ export type CatalogFilters = {
   min?: number;
   max?: number;
   offers?: boolean;
+  /** "mujer" saca lo masculino, "hombre" saca lo femenino (lo que es para todos aparece en los dos). */
+  gender?: "mujer" | "hombre";
   sort?: SortOption;
   page?: number;
 };
@@ -101,6 +103,7 @@ export function parseCatalogFilters(
     min: num("min"),
     max: num("max"),
     offers: first("ofertas") === "1",
+    gender: first("para") === "mujer" || first("para") === "hombre" ? (first("para") as "mujer" | "hombre") : undefined,
     sort: sortRaw && sortRaw in SORT_OPTIONS ? (sortRaw as SortOption) : "destacados",
     page: Number.isInteger(pageRaw) && pageRaw > 0 ? Math.min(pageRaw, 1000) : 1,
   };
@@ -137,6 +140,8 @@ export async function getCatalog(filters: CatalogFilters): Promise<CatalogResult
   if (filters.min !== undefined) query = query.gte("sale_price", filters.min);
   if (filters.max !== undefined) query = query.lte("sale_price", filters.max);
   if (filters.offers) query = query.eq("is_offer", true).gt("discount_percent", 0);
+  if (filters.gender === "mujer") query = query.or("gender.is.null,gender.eq.femenino");
+  if (filters.gender === "hombre") query = query.or("gender.is.null,gender.eq.masculino");
 
   // Siempre primero lo que se puede comprar; después, el orden elegido.
   query = query.order("in_stock", { ascending: false });

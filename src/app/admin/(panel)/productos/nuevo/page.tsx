@@ -38,6 +38,7 @@ export default async function NewProductPage() {
           status: "draft",
           is_featured: false,
           is_offer: false,
+          gender: "",
         }}
       />
     </div>
