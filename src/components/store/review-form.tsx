@@ -8,8 +8,19 @@ import { buttonClasses } from "@/components/ui/button";
 
 const LABELS = ["", "Mala", "Regular", "Buena", "Muy buena", "¡Excelente!"];
 
-/** Reseña opcional en la página del pedido: nombre (obligatorio), estrellas (obligatorias) y comentario. */
-export function ReviewForm({ orderId, defaultName }: { orderId: string; defaultName: string }) {
+/**
+ * Formulario de reseña: nombre, estrellas y reseña (las tres obligatorias). En la página del pedido
+ * va con el pedido; en el inicio, sin pedido (`bare`: sin recuadro, para ir dentro de una ventana).
+ */
+export function ReviewForm({
+  orderId,
+  defaultName = "",
+  bare = false,
+}: {
+  orderId?: string;
+  defaultName?: string;
+  bare?: boolean;
+}) {
   const [name, setName] = useState(defaultName);
   const [rating, setRating] = useState(0);
   const [hover, setHover] = useState(0);
@@ -21,33 +32,63 @@ export function ReviewForm({ orderId, defaultName }: { orderId: string; defaultN
 
   if (done) {
     return (
-      <p className="mt-6 flex items-center justify-center gap-2 rounded-3xl bg-sage p-4 text-center font-bold text-botanical-deep" role="status">
-        <Heart className="size-5" fill="currentColor" aria-hidden="true" /> ¡Gracias por tu reseña!
+      <p
+        className={`${bare ? "" : "mt-6 "}flex items-center justify-center gap-2 rounded-3xl bg-sage p-4 text-center font-bold text-botanical-deep`}
+        role="status"
+      >
+        <Heart className="size-5" fill="currentColor" aria-hidden="true" />{" "}
+        ¡Gracias por tu reseña!
       </p>
     );
   }
 
   return (
     <form
-      className="mt-6 rounded-3xl border-2 border-dashed border-line bg-white/70 p-4 text-left"
+      className={
+        bare
+          ? "text-left"
+          : "mt-6 rounded-3xl border-2 border-dashed border-line bg-white/70 p-4 text-left"
+      }
       onSubmit={(e) => {
         e.preventDefault();
         setError(null);
         if (name.trim().length < 2) return setError("Escribí tu nombre.");
-        if (!rating) return setError("Tocá las estrellas para elegir tu puntaje.");
+        if (!rating)
+          return setError("Tocá las estrellas para elegir tu puntaje.");
+        if (comment.trim().length < 3) return setError("Escribí tu reseña.");
         start(async () => {
-          const res = await submitReview({ orderId, name, rating, comment }).catch(() => null);
+          const res = await submitReview({
+            orderId: orderId ?? null,
+            name,
+            rating,
+            comment,
+          }).catch(() => null);
           if (res?.ok) setDone(true);
-          else setError(res?.error ?? "No pudimos guardar tu reseña. Revisá tu conexión y probá de nuevo.");
+          else
+            setError(
+              res?.error ??
+                "No pudimos guardar tu reseña. Revisá tu conexión y probá de nuevo.",
+            );
         });
       }}
     >
-      <h2 className="font-display text-lg font-bold">¿Cómo fue tu compra?</h2>
-      <p className="text-sm text-muted">Si querés, dejá tu reseña. Nos ayuda muchísimo 💖</p>
+      {bare ? null : (
+        <>
+          <h2 className="font-display text-lg font-bold">
+            ¿Cómo fue tu compra?
+          </h2>
+          <p className="text-sm text-muted">
+            Si querés, dejá tu reseña. Nos ayuda muchísimo 💖
+          </p>
+        </>
+      )}
 
       <fieldset className="mt-3">
         <legend className="text-sm font-semibold">Tu puntaje</legend>
-        <div className="mt-1 flex items-center gap-1" onMouseLeave={() => setHover(0)}>
+        <div
+          className="mt-1 flex items-center gap-1"
+          onMouseLeave={() => setHover(0)}
+        >
           {[1, 2, 3, 4, 5].map((n) => (
             <button
               key={n}
@@ -58,10 +99,17 @@ export function ReviewForm({ orderId, defaultName }: { orderId: string; defaultN
               aria-pressed={rating === n}
               className="rounded-full p-0.5 transition-transform hover:scale-110"
             >
-              <Star className={`size-9 ${n <= shown ? "text-amber-400" : "text-line"}`} fill="currentColor" strokeWidth={0} aria-hidden="true" />
+              <Star
+                className={`size-9 ${n <= shown ? "text-amber-400" : "text-line"}`}
+                fill="currentColor"
+                strokeWidth={0}
+                aria-hidden="true"
+              />
             </button>
           ))}
-          <span className="ml-2 text-sm font-bold text-forest/80">{LABELS[shown]}</span>
+          <span className="ml-2 text-sm font-bold text-forest/80">
+            {LABELS[shown]}
+          </span>
         </div>
       </fieldset>
 
@@ -77,9 +125,10 @@ export function ReviewForm({ orderId, defaultName }: { orderId: string; defaultN
         />
       </label>
       <label className="mt-3 block text-sm font-semibold">
-        Comentario <span className="font-normal text-muted">(opcional)</span>
+        Tu reseña
         <textarea
           value={comment}
+          required
           onChange={(e) => setComment(e.target.value)}
           maxLength={500}
           rows={3}
@@ -92,10 +141,21 @@ export function ReviewForm({ orderId, defaultName }: { orderId: string; defaultN
           {error}
         </p>
       ) : null}
-      <button type="submit" disabled={pending} className={buttonClasses("primary", "md", "mt-3 w-full")}>
-        {pending ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : <Star className="size-4" aria-hidden="true" />} Publicar mi reseña
+      <button
+        type="submit"
+        disabled={pending}
+        className={buttonClasses("primary", "md", "mt-3 w-full")}
+      >
+        {pending ? (
+          <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+        ) : (
+          <Star className="size-4" aria-hidden="true" />
+        )}{" "}
+        Publicar mi reseña
       </button>
-      <p className="mt-2 text-center text-xs text-muted">Se publica en la tienda con tu nombre, tus estrellas y tu comentario.</p>
+      <p className="mt-2 text-center text-xs text-muted">
+        Se publica en la tienda con tu nombre, tus estrellas y tu reseña.
+      </p>
     </form>
   );
 }

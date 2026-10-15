@@ -8,6 +8,7 @@ import { GIFT_EVERY } from "@/lib/loyalty";
 import { productImageUrl } from "@/lib/images";
 import { getPriceInfo } from "@/lib/pricing";
 import { LinkButton } from "@/components/ui/button";
+import { AddReview } from "./add-review";
 import { ClubProgressCard } from "./club-progress";
 import { EmptyStore } from "./empty-store";
 import { InfiniteCarousel } from "./infinite-carousel";
@@ -36,8 +37,26 @@ export type HomeData = {
 
 const reviewDateFmt = new Intl.DateTimeFormat("es-AR", { month: "long", year: "numeric", timeZone: "America/Argentina/Buenos_Aires" });
 
-/** «Calificaciones»: promedio de estrellas y una fila de reseñas para deslizar. */
-export function ReviewsSection({ r }: { r: ReviewSummary }) {
+/** «Calificaciones»: promedio de estrellas, carrusel de reseñas y botón para dejar una. */
+export function ReviewsSection({ r }: { r: ReviewSummary | null }) {
+  const cards = (r?.latest ?? []).map((rev) => (
+    <li key={rev.id} className="flex w-[80%] shrink-0 snap-start flex-col rounded-3xl bg-warm-white p-5 shadow-soft sm:w-[45%] lg:w-[31%]">
+      <Stars value={rev.rating} />
+      {rev.comment ? <p className="mt-2 text-forest/90">“{rev.comment}”</p> : null}
+      <p className="mt-3 text-sm font-bold">
+        {rev.name}
+        <span className="block text-xs font-semibold text-muted first-letter:uppercase">{reviewDateFmt.format(new Date(rev.createdAt))}</span>
+      </p>
+      <span className="flex-1" />
+      {rev.reply ? (
+        <p className="mt-3 rounded-2xl bg-blush/60 p-3 text-sm">
+          <b className="block text-coral-deep">Respuesta de Mariel</b>
+          {rev.reply}
+        </p>
+      ) : null}
+    </li>
+  ));
+
   return (
     <Section>
       <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
@@ -45,34 +64,27 @@ export function ReviewsSection({ r }: { r: ReviewSummary }) {
           <h2 id="resenas" className="font-display text-2xl font-bold sm:text-3xl">
             Calificaciones ⭐
           </h2>
-          <p className="mt-1 flex flex-wrap items-center gap-2 text-sm font-semibold text-muted sm:text-base">
-            <span className="font-display text-2xl font-bold text-forest tabular">{r.average.toLocaleString("es-AR", { maximumFractionDigits: 1 })}</span>
-            <Stars value={r.average} className="size-5" />
-            <span>
-              ({r.count} {r.count === 1 ? "reseña" : "reseñas"})
-            </span>
-          </p>
-        </div>
-      </div>
-      <ul className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-3 [scrollbar-width:thin]" aria-labelledby="resenas">
-        {r.latest.map((rev) => (
-          <li key={rev.id} className="flex w-[80%] shrink-0 snap-start flex-col rounded-3xl bg-warm-white p-5 shadow-soft sm:w-[45%] lg:w-[30%]">
-            <Stars value={rev.rating} />
-            {rev.comment ? <p className="mt-2 text-forest/90">“{rev.comment}”</p> : null}
-            <p className="mt-3 text-sm font-bold">
-              {rev.name}
-              <span className="block text-xs font-semibold text-muted first-letter:uppercase">{reviewDateFmt.format(new Date(rev.createdAt))}</span>
+          {r ? (
+            <p className="mt-1 flex flex-wrap items-center gap-2 text-sm font-semibold text-muted sm:text-base">
+              <span className="font-display text-2xl font-bold text-forest tabular">{r.average.toLocaleString("es-AR", { maximumFractionDigits: 1 })}</span>
+              <Stars value={r.average} className="size-5" />
+              <span>
+                ({r.count} {r.count === 1 ? "reseña" : "reseñas"})
+              </span>
             </p>
-            <span className="flex-1" />
-            {rev.reply ? (
-              <p className="mt-3 rounded-2xl bg-blush/60 p-3 text-sm">
-                <b className="block text-coral-deep">Respuesta de Mariel</b>
-                {rev.reply}
-              </p>
-            ) : null}
-          </li>
-        ))}
-      </ul>
+          ) : (
+            <p className="mt-1 text-sm font-semibold text-muted sm:text-base">Todavía no hay reseñas. ¡Dejá la primera!</p>
+          )}
+        </div>
+        <AddReview />
+      </div>
+      {cards.length >= 3 ? (
+        <InfiniteCarousel label="Reseñas de clientas">{cards}</InfiniteCarousel>
+      ) : cards.length > 0 ? (
+        <ul aria-label="Reseñas de clientas" className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pt-2 pb-2 sm:mx-0 sm:px-1">
+          {cards}
+        </ul>
+      ) : null}
     </Section>
   );
 }
@@ -311,7 +323,7 @@ export function HomeView({ d }: { d: HomeData }) {
             </Section>
           ) : null}
 
-          {d.reviews ? <ReviewsSection r={d.reviews} /> : null}
+          <ReviewsSection r={d.reviews} />
 
           {/* Llamado a WhatsApp */}
           {d.whatsappUrl ? (

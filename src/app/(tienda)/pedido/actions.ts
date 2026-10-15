@@ -246,26 +246,31 @@ export async function clubProgress(orderIds: string[]): Promise<ClubProgress | n
 export type ReviewResult = { ok: true } | { ok: false; error: string };
 
 /**
- * La clienta deja su reseña desde la página de su pedido (opcional): nombre, estrellas y
- * comentario. Una por pedido; los pedidos cancelados no pueden dejar reseña.
+ * Una clienta deja su reseña: desde la página de su pedido (una por pedido; los cancelados no)
+ * o desde el botón «Dejar mi reseña» del inicio (sin pedido). Nombre, estrellas y comentario.
  */
-export async function submitReview(input: { orderId: string; name: string; rating: number; comment: string }): Promise<ReviewResult> {
+export async function submitReview(input: { orderId?: string | null; name: string; rating: number; comment: string }): Promise<ReviewResult> {
   const name = input.name.trim().replace(/\s+/g, " ");
   const comment = input.comment.trim();
   const rating = Math.round(Number(input.rating));
-  if (!UUID_RE.test(input.orderId)) return { ok: false, error: "No encontramos tu pedido." };
+  if (input.orderId && !UUID_RE.test(input.orderId)) return { ok: false, error: "No encontramos tu pedido." };
   if (name.length < 2 || name.length > 60) return { ok: false, error: "Escribí tu nombre." };
   if (!(rating >= 1 && rating <= 5)) return { ok: false, error: "Elegí cuántas estrellas le das." };
-  if (comment.length > 500) return { ok: false, error: "El comentario es muy largo (hasta 500 letras)." };
+  if (comment.length < 3) return { ok: false, error: "Escribí tu reseña." };
+  if (comment.length > 500) return { ok: false, error: "La reseña es muy larga (hasta 500 letras)." };
   const admin = createAdminClient();
   if (!admin) return { ok: false, error: "La tienda no está configurada." };
   if (!(await allowRequest("resena", 5, 3600))) {
     return { ok: false, error: "Probaste muchas veces. Intentá más tarde." };
   }
-  const { data: order } = await admin.from("orders").select("id, status").eq("id", input.orderId).maybeSingle();
-  if (!order || order.status === "cancelled") return { ok: false, error: "Este pedido no puede dejar reseña." };
+  let orderId: string | null = null;
+  if (input.orderId) {
+    const { data: order } = await admin.from("orders").select("id, status").eq("id", input.orderId).maybeSingle();
+    if (!order || order.status === "cancelled") return { ok: false, error: "Este pedido no puede dejar reseña." };
+    orderId = order.id;
+  }
 
-  const { error } = await admin.from("reviews").insert({ order_id: order.id, name, rating, comment: comment || null });
+  const { error } = await admin.from("reviews").insert({ order_id: orderId, name, rating, comment });
   if (error) {
     if (error.code === "23505") return { ok: false, error: "Ya dejaste tu reseña para este pedido. ¡Gracias!" };
     console.error("[reseña] No se pudo guardar:", error.message);
@@ -274,12 +279,12 @@ export async function submitReview(input: { orderId: string; name: string; ratin
   after(() =>
     notifyAdmins({
       title: `${"⭐".repeat(rating)} Nueva reseña`,
-      body: `${name}${comment ? `: ${comment.slice(0, 100)}` : ""}`,
+      body: `${name}: ${comment.slice(0, 100)}`,
       url: "/admin/resenas",
-      tag: `resena-${order.id}`,
+      tag: `resena-${Date.now()}`,
     }),
   );
-  revalidatePath(`/pedido/${order.id}`);
+  if (orderId) revalidatePath(`/pedido/${orderId}`);
   revalidatePath("/");
   revalidatePath("/admin/resenas");
   return { ok: true };
