@@ -1,3 +1,4 @@
+import { BackButton } from "@/components/store/back-button";
 import { Footer } from "@/components/store/footer";
 import { Header } from "@/components/store/header";
 import { getActiveCategories } from "@/lib/catalog";
@@ -15,6 +16,7 @@ export default async function StoreLayout({ children }: { children: React.ReactN
       </a>
       <Header categories={nav} />
       <main id="contenido" className="flex-1">
+        <BackButton />
         {children}
       </main>
       <Footer categories={nav} />
