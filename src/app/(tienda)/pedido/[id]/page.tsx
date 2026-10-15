@@ -90,8 +90,8 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
     ]);
     club = loyaltyStatus(purchases ?? 0, given ?? 0);
   }
-  // Reseña opcional: solo cuando ya es una compra (confirmada o entregada), una por pedido.
-  const { count: reviewed } = !(PURCHASE_STATUSES as readonly string[]).includes(order.status)
+  // Reseña opcional: una por pedido, y no en los cancelados.
+  const { count: reviewed } = cancelled
     ? { count: 1 }
     : await admin.from("reviews").select("id", { count: "exact", head: true }).eq("order_id", order.id);
   const siteUrl = getSiteUrl();
@@ -320,7 +320,7 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
           </section>
         ) : null}
 
-        {!reviewed ? <ReviewForm orderId={order.id} defaultName={order.customer_name?.trim().split(" ")[0] ?? ""} /> : null}
+        {!reviewed ? <ReviewForm orderId={order.id} defaultName={order.customer_name?.trim() ?? ""} /> : null}
 
         <div className="mt-6 flex flex-col gap-3 text-center">
           {cancelled && helpUrl ? (
