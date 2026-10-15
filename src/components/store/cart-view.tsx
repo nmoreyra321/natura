@@ -16,7 +16,6 @@ import { surchargeCents, toCents } from "@/lib/pricing";
 import { buildOrderMessage, buildWhatsAppUrl, getOrderTotals, type OrderLine } from "@/lib/whatsapp";
 import type { TransferDetails } from "@/lib/store-settings";
 import { QuantityInput } from "./add-to-cart";
-import { TransferAccount } from "./transfer-account";
 import { SavingsCelebration } from "./savings-celebration";
 import { ProductImageFallback } from "./product-card";
 
@@ -398,7 +397,13 @@ export function CartView({
                 </p>
               ) : null}
               {payment === "transferencia" && transfer ? (
-                <TransferBox transfer={transfer} totalCents={totals.totalCents} />
+                <p className="flex gap-2 rounded-2xl bg-sage/50 p-3 text-sm">
+                  <ArrowLeftRight className="mt-0.5 size-4 shrink-0 text-botanical-deep" aria-hidden="true" />
+                  <span>
+                    Tocá <strong>Hacer pedido</strong> y en el paso siguiente te mostramos el alias para transferir{" "}
+                    <strong>{formatARS(totals.totalCents)}</strong> (sin recargo). Ahí mismo subís el comprobante.
+                  </span>
+                </p>
               ) : null}
               {payment === "mercadopago" && mercadoPago ? (
                 <button
@@ -546,49 +551,6 @@ export function CartView({
           </Link>
         </div>
       </aside>
-    </div>
-  );
-}
-
-/** Cómo pagar por transferencia: datos de la cuenta y los pasos. */
-function TransferBox({ transfer, totalCents }: { transfer: TransferDetails; totalCents: number }) {
-  const step = (n: number) => (
-    <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-botanical-deep text-xs font-bold text-white">
-      {n}
-    </span>
-  );
-  return (
-    <div className="rounded-2xl border-2 border-dashed border-botanical/60 bg-sage/40 p-3 text-sm">
-      <p className="font-bold">
-        Cómo pagar por transferencia <span className="font-normal text-muted">(sin recargo)</span>
-      </p>
-      <ol className="mt-3 flex flex-col gap-3">
-        <li className="flex gap-2.5">
-          {step(1)}
-          <div className="min-w-0 flex-1">
-            <p>
-              Transferí <strong>{formatARS(totalCents)}</strong> a esta cuenta:
-            </p>
-            <TransferAccount transfer={transfer} totalCents={totalCents} />
-          </div>
-        </li>
-        <li className="flex gap-2.5">
-          {step(2)}
-          <p>
-            Volvé a esta página y tocá <strong>Hacer pedido</strong> (acá abajo).
-          </p>
-        </li>
-        <li className="flex gap-2.5">
-          {step(3)}
-          <p>
-            En la página de tu pedido subí la <strong>captura del comprobante</strong> y tocá <strong>Ya transferí</strong>.
-          </p>
-        </li>
-      </ol>
-      <p className="mt-3 border-t border-botanical/30 pt-2 text-xs text-muted">
-        Natu Mariel revisa el pago y te avisa cuando está aprobado. En la página de tu pedido vas a ver cuándo se confirma.
-        Tu carrito queda guardado mientras transferís.
-      </p>
     </div>
   );
 }
