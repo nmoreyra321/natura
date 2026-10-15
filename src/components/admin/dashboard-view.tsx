@@ -232,7 +232,7 @@ export function DashboardView({ d, imageUrl }: { d: DashboardData; imageUrl: (pa
           </h2>
           <span className="flex gap-4 text-sm font-semibold">
             <Link href="/admin/reponer" className="text-coral-deep hover:underline">
-              Qué pedir →
+              Qué pedirle a Natura →
             </Link>
             <Link href="/admin/productos?vista=llego" className="text-coral-deep hover:underline">
               Me llegó mercadería →

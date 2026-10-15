@@ -27,7 +27,7 @@ const groups: { title: string | null; items: NavItem[] }[] = [
     title: "Mercadería",
     items: [
       { href: "/admin/productos", label: "Productos", icon: Package, also: ["/admin/categorias", "/admin/precios"] },
-      { href: "/admin/reponer", label: "Qué pedir", icon: ShoppingBasket },
+      { href: "/admin/reponer", label: "Qué pedirle a Natura", icon: ShoppingBasket },
       { href: "/admin/vencimientos", label: "Próximos a vencer", icon: CalendarClock },
       { href: "/admin/avisos", label: "Avisos de stock", icon: BellRing },
     ],

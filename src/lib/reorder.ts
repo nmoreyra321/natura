@@ -1,4 +1,4 @@
-/** Cálculo de "Qué pedir en el próximo pedido" a partir de las ventas recientes. */
+/** Cálculo de "Qué pedirle a Natura" a partir de las ventas recientes y el stock. */
 
 /** Días de ventas que se miran para calcular el ritmo (unos 3 meses). */
 export const SALES_WINDOW_DAYS = 90;
@@ -7,48 +7,50 @@ export type ReorderInput = {
   id: string;
   name: string;
   stock: number;
-  /** Unidades vendidas en los últimos SALES_WINDOW_DAYS días. */
+  /** Unidades vendidas en los días que se miran. */
   sold: number;
-  /** Clientas anotadas en "Avisame cuando vuelva" que todavía esperan. */
-  waiting: number;
 };
 
 export type ReorderSuggestion = ReorderInput & {
-  /** Unidades que se venden por mes, aproximado. */
-  perMonth: number;
-  /** Días que alcanza el stock actual al ritmo de venta (null si no se vende). */
-  daysLeft: number | null;
-  /** Cuántas pedir. */
+  /** Unidades que hacen falta para las semanas elegidas (número entero). */
+  need: number;
+  /** Cuántas pedir: lo que hace falta menos lo que ya hay. */
   order: number;
 };
 
+/** Cuántos días de ventas se miran: desde la primera venta (tienda nueva), mínimo 7 y máximo 90. */
+export function salesDays(historyDays = SALES_WINDOW_DAYS): number {
+  return Math.min(SALES_WINDOW_DAYS, Math.max(7, historyDays));
+}
+
 /**
- * Sugiere cuántas unidades pedir para cubrir `coverDays` días de ventas.
- * Si hay clientas esperando, por lo menos se pide para ellas.
- * Devuelve solo lo que conviene pedir, lo más urgente primero.
+ * Sugiere cuántas unidades pedir para que alcance `coverDays` días, al mismo ritmo que se vendió.
+ * Ej.: vendiste 4 en 14 días y querés 28 días → hacen falta 8; si tenés 3, pedí 5.
+ * Devuelve solo lo que conviene pedir, lo que ya no tiene stock primero.
  */
-export function suggestReorder(items: ReorderInput[], coverDays = 30, windowDays = SALES_WINDOW_DAYS): ReorderSuggestion[] {
+export function suggestReorder(items: ReorderInput[], coverDays = 30, historyDays = SALES_WINDOW_DAYS): ReorderSuggestion[] {
+  const days = salesDays(historyDays);
   const out: ReorderSuggestion[] = [];
-  // Con poca historia (tienda nueva) se divide por los días que realmente hubo ventas, no por 90.
-  const days = Math.min(SALES_WINDOW_DAYS, Math.max(7, windowDays));
   for (const it of items) {
-    const perDay = it.sold / days;
-    const target = Math.ceil(perDay * coverDays);
-    const forSales = Math.max(0, target - it.stock);
-    const forWaiting = Math.max(0, it.waiting - it.stock);
-    const order = Math.max(forSales, forWaiting);
+    if (it.sold <= 0) continue;
+    const need = Math.ceil((it.sold * coverDays) / days);
+    const order = need - Math.max(0, it.stock);
     if (order <= 0) continue;
-    out.push({
-      ...it,
-      perMonth: Math.round(perDay * 30 * 10) / 10,
-      daysLeft: perDay > 0 ? Math.floor(it.stock / perDay) : null,
-      order,
-    });
+    out.push({ ...it, need, order });
   }
+  // Primero lo que se agotó, después lo que menos alcanza, después lo que más se vende.
   return out.sort(
     (a, b) =>
-      (a.daysLeft ?? Infinity) - (b.daysLeft ?? Infinity) || b.waiting - a.waiting || b.perMonth - a.perMonth || a.name.localeCompare(b.name, "es"),
+      Number(b.stock <= 0) - Number(a.stock <= 0) ||
+      a.stock / a.need - b.stock / b.need ||
+      b.sold - a.sold ||
+      a.name.localeCompare(b.name, "es"),
   );
+}
+
+/** "los últimos 3 meses" o "los últimos 12 días". */
+export function salesPeriodText(days: number): string {
+  return days >= SALES_WINDOW_DAYS ? "los últimos 3 meses" : `los últimos ${days} días`;
 }
 
 /** Texto para copiar y pegar al hacer el pedido (WhatsApp, notas). */
