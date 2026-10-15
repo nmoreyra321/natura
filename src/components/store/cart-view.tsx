@@ -11,6 +11,7 @@ import { Button, LinkButton, buttonClasses } from "@/components/ui/button";
 import { cart, useCart, useCartHydrated } from "@/lib/cart-store";
 import { toWhatsAppPhone } from "@/lib/debts";
 import { formatARS } from "@/lib/format";
+import { GIFT_EVERY } from "@/lib/loyalty";
 import { productImageUrl } from "@/lib/images";
 import { surchargeCents, toCents } from "@/lib/pricing";
 import { buildOrderMessage, buildWhatsAppUrl, getOrderTotals, type OrderLine } from "@/lib/whatsapp";
@@ -378,6 +379,12 @@ export function CartView({
                   </p>
                 ) : null}
               </div>
+              <p className="flex items-center gap-2 rounded-2xl bg-sun/50 px-3 py-2 text-sm">
+                <span aria-hidden="true">🎁</span>
+                <span>
+                  Con este pedido <strong>sumás 1 compra</strong> al Club Natu Mariel: cada {GIFT_EVERY}, un regalo.
+                </span>
+              </p>
               <div className="rounded-2xl bg-blush/60 p-3">
                 <label className="flex cursor-pointer items-center gap-2 font-semibold">
                   <input

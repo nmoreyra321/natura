@@ -1,9 +1,10 @@
-import { ArrowRight, CircleCheck, MessageCircle, Sparkles } from "lucide-react";
+import { ArrowRight, CircleCheck, Gift, MessageCircle, Sparkles } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 
 import type { ActiveCampaign, PublicCategory, PublicProduct } from "@/lib/catalog";
 import { formatARS } from "@/lib/format";
+import { GIFT_EVERY } from "@/lib/loyalty";
 import { productImageUrl } from "@/lib/images";
 import { getPriceInfo } from "@/lib/pricing";
 import { LinkButton } from "@/components/ui/button";
@@ -206,6 +207,56 @@ export function HomeView({ d }: { d: HomeData }) {
               </ul>
             </Section>
           ) : null}
+
+          {/* Club de clientas */}
+          <section className="px-3 py-4 sm:px-6" aria-labelledby="club">
+            <div className="relative mx-auto grid max-w-7xl gap-6 overflow-hidden rounded-[2rem] bg-gradient-to-br from-sun via-peach to-blush p-6 sm:p-8 md:grid-cols-[1.3fr_1fr] md:items-center">
+              <span aria-hidden="true" className="pointer-events-none absolute -right-16 -bottom-20 size-64 rounded-full bg-white/50 blur-3xl" />
+              <div className="relative">
+                <p className="inline-flex items-center gap-1.5 rounded-full bg-white/80 px-3 py-1 text-sm font-extrabold text-coral-deep">
+                  <Gift className="size-4" aria-hidden="true" /> Club Natu Mariel
+                </p>
+                <h2 id="club" className="mt-3 font-display text-3xl leading-tight font-bold sm:text-4xl">
+                  Cada {GIFT_EVERY} compras, <span className="text-coral-deep">¡un regalo!</span>
+                </h2>
+                <p className="mt-2 max-w-lg font-semibold text-forest/80">
+                  No tenés que anotarte en nada: tus compras se suman solas con tu número de WhatsApp.
+                </p>
+                <ol className="mt-4 flex flex-col gap-2 text-sm font-bold sm:text-base">
+                  {[
+                    "Comprá como siempre: en la tienda, por WhatsApp o en los vivos.",
+                    "Cada pedido confirmado suma una compra.",
+                    `En tu compra número ${GIFT_EVERY}, Mariel te regala algo especial 💝`,
+                  ].map((t, i) => (
+                    <li key={t} className="flex items-start gap-2.5">
+                      <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-forest text-xs text-white">{i + 1}</span>
+                      <span>{t}</span>
+                    </li>
+                  ))}
+                </ol>
+                <Link href="/productos" className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-full bg-coral-deep px-6 font-bold text-white shadow-lift transition hover:-translate-y-0.5">
+                  Empezar a sumar <ArrowRight className="size-4" aria-hidden="true" />
+                </Link>
+              </div>
+              <div className="relative flex flex-col items-center gap-3 rounded-3xl bg-white/70 p-5 text-center backdrop-blur" aria-hidden="true">
+                <div className="flex items-center gap-2">
+                  {Array.from({ length: GIFT_EVERY }, (_, i) =>
+                    i < GIFT_EVERY - 1 ? (
+                      <span key={i} className="flex size-10 items-center justify-center rounded-full bg-botanical-deep text-white sm:size-12">
+                        <CircleCheck className="size-5" />
+                      </span>
+                    ) : (
+                      <span key={i} className="flex size-12 animate-pulse items-center justify-center rounded-full bg-coral-deep text-white shadow-lift sm:size-14">
+                        <Gift className="size-6" />
+                      </span>
+                    ),
+                  )}
+                </div>
+                <p className="font-display text-lg font-bold">¡Te falta 1 para tu regalo!</p>
+                <p className="text-xs text-muted">Así vas a ver tu avance en la página de cada pedido.</p>
+              </div>
+            </div>
+          </section>
 
           {hasOffers ? (
             <Section>
