@@ -3,9 +3,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { AutoRefresh, OrderPageEffects, ReportPayment } from "@/components/store/order-tracking";
+import { AutoRefresh, MpPayFlow, OrderPageEffects, ReportPayment } from "@/components/store/order-tracking";
 import { PaidOrderActions } from "@/components/store/paid-order-actions";
-import { MpLinkPay, TransferAccount } from "@/components/store/transfer-account";
+import { TransferAccount } from "@/components/store/transfer-account";
 import { buttonClasses } from "@/components/ui/button";
 import { getSiteUrl } from "@/lib/config";
 import { formatARS } from "@/lib/format";
@@ -107,15 +107,18 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
       text =
         "Mercado Pago todavía está procesando el pago (por ejemplo, si elegiste pagar en efectivo en un punto de pago). Cuando se acredite, lo vas a ver acá.";
     }
+  } else if (order.status === "delivered") {
+    [tone, Icon, title] = ["good", PackageCheck, "¡Pedido entregado!"];
+    text = "Gracias por comprar en Natu Mariel. ¡Que lo disfrutes! 💖";
   } else if (isTransfer && state === "paid") {
-    [tone, Icon, title] = ["good", CheckCircle2, "¡Confirmamos tu pago!"];
-    text = "Natu Mariel ya recibió tu pago y tu pedido está confirmado. Te escribe por WhatsApp para coordinar la entrega.";
+    [tone, Icon, title] = ["good", CheckCircle2, "¡Pago confirmado!"];
+    text =
+      "Natu Mariel recibió tu pago y tu pedido ya está reservado. En breve se va a comunicar con vos por WhatsApp para coordinar la entrega.";
   } else if (state === "review") {
-    [tone, Icon, title] = ["wait", Clock, "Estamos revisando tu pago"];
+    [tone, Icon, title] = ["wait", Clock, "Estamos verificando tu pago"];
     text = (
       <>
-        Natu Mariel está controlando que el pago haya llegado. Cuando la apruebe lo vas a ver en esta página y te
-        avisa por WhatsApp.
+        ¡Gracias! Natu Mariel está verificando que el pago se haya acreditado. Te avisamos apenas esté confirmado.
         {order.payment_reported_at ? (
           <span className="mt-1 block text-sm text-muted">Avisaste el {dateFormatter.format(new Date(order.payment_reported_at))}.</span>
         ) : null}
@@ -137,16 +140,13 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
       </>
     );
   } else if (isTransfer) {
-    [tone, Icon, title] = ["todo", Wallet, isNew ? "¡Pedido guardado! Falta tu pago" : "Falta tu pago"];
+    [tone, Icon, title] = ["todo", Wallet, "¡Recibimos tu pedido!"];
     text = (
       <>
-        {transfer?.mpLink ? "Pagá" : "Transferí"} <strong>{formatARS(owed)}</strong> acá abajo y después tocá{" "}
-        <strong>Ya pagué</strong>.
+        Natu Mariel recibió tu pedido <strong>{order.code}</strong>. Para confirmarlo, realizá el pago de{" "}
+        <strong>{formatARS(owed)}</strong> {transfer?.mpLink ? "con Mercado Pago" : "por transferencia"}.
       </>
     );
-  } else if (order.status === "delivered") {
-    [tone, Icon, title] = ["good", PackageCheck, "Pedido entregado"];
-    text = "¡Gracias por tu compra! Que lo disfrutes 💖";
   } else if (order.status === "confirmed") {
     [tone, Icon, title] = ["good", CheckCircle2, "¡Pedido confirmado!"];
     text = "Natu Mariel ya separó tus productos y coordina la entrega con vos por WhatsApp.";
@@ -201,23 +201,28 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
         {canReportPayment(order) ? (
           <div className="mt-6 rounded-2xl border-2 border-dashed border-botanical/60 bg-sage/40 p-4 text-sm">
             {transfer?.mpLink ? (
+              <MpPayFlow
+                orderId={order.id}
+                link={transfer.mpLink}
+                totalCents={owed}
+                again={state === "rejected"}
+                whatsappUrl={message({ paymentMethod: "transferencia", transferReported: true })}
+              />
+            ) : (
               <>
-                <p className="mb-2 font-bold">1. Pagá con Mercado Pago</p>
-                <MpLinkPay link={transfer.mpLink} totalCents={owed} />
+                {transfer ? (
+                  <>
+                    <p className="font-bold">1. Transferí {formatARS(owed)} a esta cuenta</p>
+                    <TransferAccount transfer={transfer} totalCents={owed} />
+                  </>
+                ) : null}
+                <p className="mt-5 mb-2 font-bold">{transfer ? "2. " : ""}Avisá que ya pagaste</p>
+                <ReportPayment
+                  orderId={order.id}
+                  whatsappUrl={message({ paymentMethod: "transferencia", transferReported: true })}
+                />
               </>
-            ) : transfer ? (
-              <>
-                <p className="font-bold">1. Transferí {formatARS(owed)} a esta cuenta</p>
-                <TransferAccount transfer={transfer} totalCents={owed} />
-              </>
-            ) : null}
-            <p className="mt-5 mb-2 font-bold">{transfer ? "2. " : ""}Avisá que ya pagaste</p>
-            <ReportPayment
-              orderId={order.id}
-              proofOptional={Boolean(transfer?.mpLink)}
-              again={state === "rejected"}
-              whatsappUrl={message({ paymentMethod: "transferencia", transferReported: true })}
-            />
+            )}
           </div>
         ) : null}
 

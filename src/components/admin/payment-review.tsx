@@ -97,7 +97,7 @@ export function PaymentReview({
           onClick={() =>
             run(
               () => approveTransferPayment(orderId),
-              `${hi} Soy Mariel de Natu Mariel 🌸 Confirmamos tu pago del pedido ${code} ✅ ¡Gracias! ¿Coordinamos la entrega?`,
+              `${hi} Soy Mariel de Natu Mariel 🌸 Recibimos tu pago del pedido ${code} ✅ ¡Muchísimas gracias por tu compra! Tu pedido ya está reservado. ¿Coordinamos la entrega? Contame qué día y en qué lugar te queda cómodo recibirlo.`,
             )
           }
           className={buttonClasses("primary", "md")}

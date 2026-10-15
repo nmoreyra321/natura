@@ -124,7 +124,7 @@ function CopyButton({ text, label }: { text: string; label: string }) {
  * Botón para pagar con el link de Mercado Pago (sin monto fijo): copia el monto, para que la
  * clienta solo lo pegue, y abre el link.
  */
-export function MpLinkPay({ link, totalCents }: { link: string; totalCents: number }) {
+export function MpLinkPay({ link, totalCents, onOpen }: { link: string; totalCents: number; onOpen?: () => void }) {
   const amount = plainAmount(totalCents);
   return (
     <div className="flex flex-col gap-2">
@@ -140,6 +140,7 @@ export function MpLinkPay({ link, totalCents }: { link: string; totalCents: numb
         target="_blank"
         rel="noopener noreferrer"
         onClick={() => {
+          onOpen?.();
           navigator.clipboard
             ?.writeText(amount)
             .then(() => toast.success("Monto copiado: pegalo en Mercado Pago."))

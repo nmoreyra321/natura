@@ -2,13 +2,14 @@
 
 import { Check, FileText, ImageUp, Loader2, Send, X } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { toast } from "sonner";
 
 import { reportTransferPayment } from "@/app/(tienda)/pedido/actions";
 import { buttonClasses } from "@/components/ui/button";
 import { cart } from "@/lib/cart-store";
 import { rememberOrder } from "@/lib/my-orders";
+import { MpLinkPay } from "./transfer-account";
 
 /** Guarda el pedido en este celular (para "Seguir mi pedido") y, si recién se hizo, vacía el carrito. */
 export function OrderPageEffects({ id, code, createdAt, isNew }: { id: string; code: string; createdAt: string; isNew: boolean }) {
@@ -62,12 +63,10 @@ async function shrinkPhoto(file: File): Promise<File | null> {
 export function ReportPayment({
   orderId,
   whatsappUrl,
-  again,
   proofOptional = false,
 }: {
   orderId: string;
   whatsappUrl: string | null;
-  again: boolean;
   /** Pago con link de Mercado Pago: el comprobante es opcional y se muestra chiquito. */
   proofOptional?: boolean;
 }) {
@@ -150,7 +149,7 @@ export function ReportPayment({
       )}
       <button type="button" disabled={sending} onClick={send} className={buttonClasses("primary", "lg")}>
         {sending ? <Loader2 className="size-5 animate-spin" aria-hidden="true" /> : <Send className="size-5" aria-hidden="true" />}
-        {sending ? "Avisando…" : again ? "Ya pagué de nuevo" : "Ya pagué"}
+        {sending ? "Avisando…" : "Ya realicé el pago"}
       </button>
       {proofOptional && !file ? (
         <label
@@ -169,9 +168,84 @@ export function ReportPayment({
         {file
           ? "Al tocar el botón se guarda el comprobante y se abre WhatsApp para avisarle a Natu Mariel."
           : proofOptional
-            ? "Natu Mariel ve el pago en su cuenta de Mercado Pago y lo aprueba. Te avisamos acá y por WhatsApp."
+            ? "Cuando termines de pagar en Mercado Pago, tocá este botón para avisarle a Natu Mariel."
             : "Si no tenés la captura, igual podés avisar: Natu Mariel lo controla en su cuenta."}
       </p>
     </div>
+  );
+}
+
+const OPENED_EVENT = "natu-mariel:pago-abierto";
+const openedKey = (orderId: string) => `natu-mariel:pago-abierto:${orderId}`;
+
+function subscribeOpened(onChange: () => void) {
+  window.addEventListener(OPENED_EVENT, onChange);
+  return () => window.removeEventListener(OPENED_EVENT, onChange);
+}
+
+/**
+ * Pago con el link de Mercado Pago. Primero solo se ve «Pagar con Mercado Pago»; cuando la clienta
+ * lo toca (queda anotado en su celular), aparece «Ya realicé el pago» para avisarle a Natu Mariel.
+ */
+export function MpPayFlow({
+  orderId,
+  link,
+  totalCents,
+  whatsappUrl,
+  again,
+}: {
+  orderId: string;
+  link: string;
+  totalCents: number;
+  whatsappUrl: string | null;
+  again: boolean;
+}) {
+  const opened = useSyncExternalStore(
+    subscribeOpened,
+    () => {
+      try {
+        return window.localStorage.getItem(openedKey(orderId)) === "1";
+      } catch {
+        return false;
+      }
+    },
+    () => false,
+  );
+  const markOpened = () => {
+    try {
+      window.localStorage.setItem(openedKey(orderId), "1");
+    } catch {
+      // Sin almacenamiento: igual se muestra el botón (ver abajo).
+    }
+    window.dispatchEvent(new Event(OPENED_EVENT));
+  };
+  const [shown, setShown] = useState(false);
+  const showReport = opened || again || shown;
+
+  return (
+    <>
+      <MpLinkPay
+        link={link}
+        totalCents={totalCents}
+        onOpen={() => {
+          markOpened();
+          setShown(true);
+        }}
+      />
+      {showReport ? (
+        <div className="mt-5 border-t border-botanical/30 pt-4">
+          <p className="mb-2 font-bold">¿Ya pagaste?</p>
+          <ReportPayment orderId={orderId} whatsappUrl={whatsappUrl} proofOptional />
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setShown(true)}
+          className="mt-3 w-full text-center text-xs font-semibold text-muted underline"
+        >
+          Ya pagué desde otro dispositivo
+        </button>
+      )}
+    </>
   );
 }

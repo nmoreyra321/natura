@@ -67,10 +67,14 @@ describe("paymentState", () => {
 });
 
 describe("trackingSteps", () => {
-  it("transferencia tiene el paso del pago", () => {
-    const steps = trackingSteps({ ...base, status: "confirmed", payment_status: "approved" });
-    expect(steps.map((s) => s.label)).toEqual(["Pedido recibido", "Pago confirmado", "Pedido confirmado", "Entregado"]);
-    expect(steps.map((s) => s.done)).toEqual([true, true, true, false]);
+  it("pago online: recibido, verificando, confirmado y entregado", () => {
+    const labels = ["Pedido recibido", "Verificando pago", "Pago confirmado", "Entregado"];
+    expect(trackingSteps(base).map((s) => s.label)).toEqual(labels);
+    expect(trackingSteps(base).map((s) => s.done)).toEqual([true, false, false, false]);
+    const review = { ...base, payment_reported_at: "2026-10-15T12:00:00Z" };
+    expect(trackingSteps(review).map((s) => s.done)).toEqual([true, true, false, false]);
+    const paid = { ...base, status: "confirmed", payment_status: "approved" };
+    expect(trackingSteps(paid).map((s) => s.done)).toEqual([true, true, true, false]);
   });
 
   it("efectivo no tiene paso de pago", () => {

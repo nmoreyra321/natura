@@ -52,12 +52,23 @@ export type TrackingStep = { label: string; done: boolean };
 
 /** Pasos que ve la clienta en la página de su pedido. */
 export function trackingSteps(o: TrackingOrder): TrackingStep[] {
-  const confirmed = o.status === "confirmed" || o.status === "delivered";
-  const steps: TrackingStep[] = [{ label: "Pedido recibido", done: true }];
-  if (o.payment_method !== "efectivo") steps.push({ label: "Pago confirmado", done: paymentState(o) === "paid" });
-  steps.push({ label: "Pedido confirmado", done: confirmed });
-  steps.push({ label: "Entregado", done: o.status === "delivered" });
-  return steps;
+  const delivered = o.status === "delivered";
+  if (o.payment_method === "efectivo") {
+    return [
+      { label: "Pedido recibido", done: true },
+      { label: "Pedido confirmado", done: o.status === "confirmed" || delivered },
+      { label: "Entregado", done: delivered },
+    ];
+  }
+  // Pago online: al confirmar el pago, el pedido queda confirmado y reservado en el mismo paso.
+  const state = paymentState(o);
+  const paid = state === "paid" || delivered;
+  return [
+    { label: "Pedido recibido", done: true },
+    { label: "Verificando pago", done: paid || state === "review" },
+    { label: "Pago confirmado", done: paid },
+    { label: "Entregado", done: delivered },
+  ];
 }
 
 /** Lo que falta pagar, en centavos. */
