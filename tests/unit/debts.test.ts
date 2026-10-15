@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { groupDebts, owedCents, toWhatsAppPhone, type DebtOrderRow } from "@/lib/debts";
+import { formatPhone, groupDebts, owedCents, toWhatsAppPhone, type DebtOrderRow } from "@/lib/debts";
 
 const row = (o: Partial<DebtOrderRow>): DebtOrderRow => ({
   id: o.id ?? "1",
@@ -54,5 +54,12 @@ describe("toWhatsAppPhone", () => {
     expect(toWhatsAppPhone("0351 15 234 5678")).toBe("5493512345678");
     expect(toWhatsAppPhone("123")).toBeNull();
     expect(toWhatsAppPhone("")).toBeNull();
+  });
+});
+
+describe("formatPhone", () => {
+  it("muestra el teléfono guardado de forma legible", () => {
+    expect(formatPhone("5491125030882")).toBe("+54 9 11 2503-0882");
+    expect(formatPhone("1125030882")).toBe("1125030882");
   });
 });

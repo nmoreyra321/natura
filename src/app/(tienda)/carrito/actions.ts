@@ -7,7 +7,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createPublicClient } from "@/lib/supabase/server";
 import { surchargeCents, toCents } from "@/lib/pricing";
 import { getMercadoPagoSurcharge } from "@/lib/store-settings";
-import { cartRequestSchema, cleanPhone, orderRequestSchema } from "@/lib/validation";
+import { toWhatsAppPhone } from "@/lib/debts";
+import { cartRequestSchema, orderRequestSchema } from "@/lib/validation";
 
 export type CartValidationLine = {
   productId: string;
@@ -63,14 +64,16 @@ export type RegisterOrderResult = { ok: true; code: string | null } | { ok: fals
  */
 export async function registerOrder(input: unknown): Promise<RegisterOrderResult> {
   const parsed = orderRequestSchema.safeParse(input);
-  if (!parsed.success) return { ok: false, error: "El pedido tiene datos inválidos." };
+  if (!parsed.success) return { ok: false, error: "Completá tu nombre y tu WhatsApp para enviar el pedido." };
+  const phone = toWhatsAppPhone(parsed.data.customerPhone);
+  if (!phone) return { ok: false, error: "Revisá tu número de WhatsApp (por ejemplo 11 2345-6789)." };
 
   const supabase = createPublicClient({ cached: false });
   if (!supabase) return { ok: false, error: "La tienda no está configurada." };
 
   const { data, error } = await supabase.rpc("create_order", {
     items: parsed.data.items,
-    customer_name: parsed.data.customerName || undefined,
+    customer_name: parsed.data.customerName,
   });
   const row = data?.[0];
   if (error || !row) {
@@ -86,7 +89,7 @@ export async function registerOrder(input: unknown): Promise<RegisterOrderResult
       .from("orders")
       .update({
         payment_method: parsed.data.paymentMethod === "transferencia" ? "transferencia" : "efectivo",
-        customer_phone: cleanPhone(parsed.data.customerPhone),
+        customer_phone: phone,
       })
       .eq("id", row.id)
       .select("code")
@@ -105,7 +108,9 @@ export type MercadoPagoCheckoutResult = { ok: true; url: string } | { ok: false;
 export async function payWithMercadoPago(input: unknown): Promise<MercadoPagoCheckoutResult> {
   if (!isMercadoPagoEnabled()) return { ok: false, error: "El pago con Mercado Pago no está disponible." };
   const parsed = orderRequestSchema.safeParse(input);
-  if (!parsed.success) return { ok: false, error: "El pedido tiene datos inválidos." };
+  if (!parsed.success) return { ok: false, error: "Completá tu nombre y tu WhatsApp para pagar." };
+  const phone = toWhatsAppPhone(parsed.data.customerPhone);
+  if (!phone) return { ok: false, error: "Revisá tu número de WhatsApp (por ejemplo 11 2345-6789)." };
 
   const supabase = createPublicClient({ cached: false });
   const admin = createAdminClient();
@@ -113,7 +118,7 @@ export async function payWithMercadoPago(input: unknown): Promise<MercadoPagoChe
 
   const { data, error } = await supabase.rpc("create_order", {
     items: parsed.data.items,
-    customer_name: parsed.data.customerName || undefined,
+    customer_name: parsed.data.customerName,
   });
   const order = data?.[0];
   if (error || !order) {
@@ -124,7 +129,7 @@ export async function payWithMercadoPago(input: unknown): Promise<MercadoPagoChe
   const [{ error: markError }, { data: items }] = await Promise.all([
     admin
       .from("orders")
-      .update({ payment_method: "mercadopago", payment_status: "pending", customer_phone: cleanPhone(parsed.data.customerPhone) })
+      .update({ payment_method: "mercadopago", payment_status: "pending", customer_phone: phone })
       .eq("id", order.id),
     admin.from("order_items").select("product_id, name, size, quantity, unit_price").eq("order_id", order.id),
   ]);

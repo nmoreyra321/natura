@@ -200,17 +200,12 @@ export const cartRequestSchema = z
 
 export const orderRequestSchema = z.object({
   items: cartRequestSchema.min(1),
-  customerName: z.string().trim().max(80).optional(),
-  /** WhatsApp de la clienta (opcional). Se guarda solo si tiene entre 8 y 15 números. */
-  customerPhone: z.string().trim().max(30).optional(),
+  /** Nombre y WhatsApp obligatorios: así cada pedido queda con a quién escribirle. */
+  customerName: z.string().trim().min(2).max(80),
+  customerPhone: z.string().trim().max(30),
   paymentMethod: z.enum(["efectivo", "transferencia"]).optional(),
 });
 
-/** Teléfono solo con números (8 a 15), o null si no sirve. */
-export function cleanPhone(raw: string | null | undefined): string | null {
-  const digits = String(raw ?? "").replace(/\D/g, "");
-  return digits.length >= 8 && digits.length <= 15 ? digits : null;
-}
 
 /** Convierte los errores de Zod en { campo: mensaje } para mostrar en el formulario. */
 export function fieldErrors(error: z.ZodError): Record<string, string> {

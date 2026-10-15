@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { payWithMercadoPago, registerOrder, validateCart } from "@/app/(tienda)/carrito/actions";
 import { Button, LinkButton, buttonClasses } from "@/components/ui/button";
 import { cart, useCart, useCartHydrated } from "@/lib/cart-store";
+import { toWhatsAppPhone } from "@/lib/debts";
 import { formatARS } from "@/lib/format";
 import { productImageUrl } from "@/lib/images";
 import { surchargeCents, toCents } from "@/lib/pricing";
@@ -66,6 +67,21 @@ export function CartView({
   const requestId = useRef(0);
   const [customerName, setCustomerName] = useState(() => readSaved(NAME_KEY));
   const [customerPhone, setCustomerPhone] = useState(() => readSaved(PHONE_KEY));
+  /** Se marca al intentar enviar: recién ahí se muestran los avisos de datos faltantes. */
+  const [triedSend, setTriedSend] = useState(false);
+  const nameError = customerName.trim().length < 2 ? "Escribí tu nombre." : null;
+  const phoneError = !customerPhone.trim()
+    ? "Escribí tu WhatsApp."
+    : !toWhatsAppPhone(customerPhone)
+      ? "Revisá el número: con código de área, por ejemplo 11 2345-6789."
+      : null;
+  /** true si faltan datos: muestra los avisos y lleva al primer casillero a completar. */
+  const blockIfMissingContact = (): boolean => {
+    if (!nameError && !phoneError) return false;
+    setTriedSend(true);
+    document.getElementById(nameError ? "nombre-pedido" : "telefono-pedido")?.focus();
+    return true;
+  };
   const [sending, setSending] = useState(false);
   const [payment, setPayment] = useState<PaymentChoice>("efectivo");
   const paymentOptions: { value: PaymentChoice; label: string; Icon: typeof Banknote }[] = [
@@ -298,8 +314,11 @@ export function CartView({
           ) : whatsappUrl ? (
             <>
               <div>
+                <p className="mb-2 text-sm text-muted">
+                  Dejanos tu nombre y tu WhatsApp para confirmarte el pedido y avisarte cuando esté listo.
+                </p>
                 <label htmlFor="nombre-pedido" className="text-sm font-semibold">
-                  Nombre y apellido <span className="font-normal text-muted">(opcional)</span>
+                  Nombre y apellido
                 </label>
                 <input
                   id="nombre-pedido"
@@ -308,13 +327,21 @@ export function CartView({
                   maxLength={80}
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
-                  placeholder="Para que Natu Mariel pueda identificar tu pedido"
-                  className="mt-1 h-11 w-full rounded-full border border-line bg-white px-4 text-base focus:border-botanical focus:ring-3 focus:ring-botanical/20 focus:outline-none"
+                  placeholder="Ej.: Laura Gómez"
+                  required
+                  aria-invalid={triedSend && Boolean(nameError)}
+                  aria-describedby={triedSend && nameError ? "nombre-error" : undefined}
+                  className={`mt-1 h-11 w-full rounded-full border bg-white px-4 text-base focus:border-botanical focus:ring-3 focus:ring-botanical/20 focus:outline-none ${triedSend && nameError ? "border-coral-deep" : "border-line"}`}
                 />
+                {triedSend && nameError ? (
+                  <p id="nombre-error" className="mt-1 text-sm font-semibold text-coral-deep">
+                    {nameError}
+                  </p>
+                ) : null}
               </div>
               <div>
                 <label htmlFor="telefono-pedido" className="text-sm font-semibold">
-                  Tu WhatsApp <span className="font-normal text-muted">(opcional)</span>
+                  Tu WhatsApp
                 </label>
                 <input
                   id="telefono-pedido"
@@ -325,8 +352,16 @@ export function CartView({
                   value={customerPhone}
                   onChange={(e) => setCustomerPhone(e.target.value)}
                   placeholder="Ej.: 11 2345-6789"
-                  className="mt-1 h-11 w-full rounded-full border border-line bg-white px-4 text-base focus:border-botanical focus:ring-3 focus:ring-botanical/20 focus:outline-none"
+                  required
+                  aria-invalid={triedSend && Boolean(phoneError)}
+                  aria-describedby={triedSend && phoneError ? "telefono-error" : undefined}
+                  className={`mt-1 h-11 w-full rounded-full border bg-white px-4 text-base focus:border-botanical focus:ring-3 focus:ring-botanical/20 focus:outline-none ${triedSend && phoneError ? "border-coral-deep" : "border-line"}`}
                 />
+                {triedSend && phoneError ? (
+                  <p id="telefono-error" className="mt-1 text-sm font-semibold text-coral-deep">
+                    {phoneError}
+                  </p>
+                ) : null}
               </div>
               {paymentOptions.length > 1 ? (
                 <fieldset>
@@ -369,7 +404,7 @@ export function CartView({
                   disabled={sending}
                   className="inline-flex h-13 items-center justify-center gap-2 rounded-full bg-[#009ee3] px-7 text-base font-bold text-white transition-colors hover:bg-[#0089c7] disabled:opacity-70"
                   onClick={async () => {
-                    if (sending) return;
+                    if (sending || blockIfMissingContact()) return;
                     setSending(true);
                     setError(null);
                     const name = customerName.trim();
@@ -377,8 +412,8 @@ export function CartView({
                     saveContact(name, phone);
                     const res = await payWithMercadoPago({
                       items: items.map((i) => ({ productId: i.productId, quantity: i.quantity })),
-                      customerName: name || undefined,
-                      customerPhone: phone || undefined,
+                      customerName: name,
+                      customerPhone: phone,
                     }).catch(() => null);
                     if (res?.ok) {
                       window.location.href = res.url;
@@ -405,6 +440,7 @@ export function CartView({
                 onClick={async (e) => {
                   if (!whatsappNumber || sending) return;
                   e.preventDefault();
+                  if (blockIfMissingContact()) return;
                   // La pestaña se abre ya (durante el clic) para que el navegador no la bloquee.
                   const win = window.open("", "_blank");
                   setSending(true);
@@ -413,8 +449,8 @@ export function CartView({
                   saveContact(name, phone);
                   const res = await registerOrder({
                     items: items.map((i) => ({ productId: i.productId, quantity: i.quantity })),
-                    customerName: name || undefined,
-                    customerPhone: phone || undefined,
+                    customerName: name,
+                    customerPhone: phone,
                     paymentMethod: payment === "transferencia" ? "transferencia" : "efectivo",
                   }).catch(() => null);
                   const message = buildOrderMessage(lines, siteUrl, {

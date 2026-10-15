@@ -5,6 +5,7 @@ import type { OrderStatus } from "@/app/admin/actions";
 import { CancelledOrders } from "@/components/admin/cancelled-orders";
 import { OrderActions, PaymentControl } from "@/components/admin/order-actions";
 import { buttonClasses } from "@/components/ui/button";
+import { OrderContact } from "@/components/admin/order-contact";
 import { requireAdmin } from "@/lib/auth";
 import { cleanSearch, originLabel } from "@/lib/channels";
 import { formatARS } from "@/lib/format";
@@ -84,7 +85,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
   let query = supabase
     .from("orders")
     .select(
-      "id, number, code, channel, status, customer_name, total, savings, created_at, payment_method, payment_status, paid_at, amount_paid, payment_note, items:order_items(id, product_id, name, size, quantity, unit_price), lots:order_lot_allocations(product_id, expires_on, quantity)",
+      "id, number, code, channel, status, customer_name, customer_phone, total, savings, created_at, payment_method, payment_status, paid_at, amount_paid, payment_note, items:order_items(id, product_id, name, size, quantity, unit_price), lots:order_lot_allocations(product_id, expires_on, quantity)",
       { count: "exact" },
     )
     .order("created_at", { ascending: false })
@@ -203,9 +204,15 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
                         {originLabel(o.channel)}
                       </span>
                     </p>
+                    <OrderContact
+                      orderId={o.id}
+                      code={o.code}
+                      name={o.customer_name}
+                      phone={o.customer_phone}
+                      pending={status === "pending"}
+                    />
                     <p className="text-sm text-muted">
-                      {dateFormatter.format(new Date(o.created_at))}
-                      {o.customer_name ? ` · ${o.customer_name}` : ""} · {units} {units === 1 ? "unidad" : "unidades"}
+                      {dateFormatter.format(new Date(o.created_at))} · {units} {units === 1 ? "unidad" : "unidades"}
                       {o.paid_at ? ` · Cobrado el ${dateFormatter.format(new Date(o.paid_at))}` : ""}
                     </p>
                   </div>

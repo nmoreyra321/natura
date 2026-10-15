@@ -2,7 +2,7 @@ import { ExternalLink, MessageCircle, Search } from "lucide-react";
 import Link from "next/link";
 
 import { isManualSale, originLabel } from "@/lib/channels";
-import { toWhatsAppPhone } from "@/lib/debts";
+import { formatPhone, toWhatsAppPhone } from "@/lib/debts";
 import { formatARS } from "@/lib/format";
 
 export type SaleRow = {
@@ -155,7 +155,7 @@ export function SalesList({
                           className="inline-flex items-center gap-1 font-semibold text-botanical-deep hover:underline"
                         >
                           <MessageCircle className="size-3.5" aria-hidden="true" />
-                          {r.customerPhone}
+                          {formatPhone(r.customerPhone)}
                         </a>
                       ) : (
                         <span className="text-muted">{r.customerPhone || "—"}</span>

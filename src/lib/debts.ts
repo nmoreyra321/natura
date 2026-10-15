@@ -72,3 +72,15 @@ export function toWhatsAppPhone(raw: string | null | undefined): string | null {
   if (old && old[1].length + old[2].length === 10) d = old[1] + old[2];
   return d.length === 10 ? `549${d}` : null;
 }
+
+/** Teléfono guardado ("5491125030882") en forma legible: "+54 9 11 2503-0882". */
+export function formatPhone(raw: string | null | undefined): string {
+  const d = String(raw ?? "").replace(/\D/g, "");
+  if (d.startsWith("549") && d.length === 13) {
+    const local = d.slice(3);
+    const area = local.startsWith("11") ? 2 : local.length - 8 > 2 ? 4 : 3;
+    const rest = local.slice(area);
+    return `+54 9 ${local.slice(0, area)} ${rest.slice(0, rest.length - 4)}-${rest.slice(-4)}`;
+  }
+  return raw ?? "";
+}

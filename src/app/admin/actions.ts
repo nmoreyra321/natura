@@ -927,6 +927,29 @@ export async function registerManualSale(input: ManualSaleInput): Promise<Action
 /* ----------------------- Deudas y avisos de reposición ----------------------- */
 
 /** Guarda el WhatsApp de una clienta en sus pedidos (para mandarle recordatorios). */
+/** Completa o corrige el nombre y el WhatsApp de la clienta de un pedido. */
+export async function setOrderContact(orderId: string, name: string, phone: string): Promise<ActionResult> {
+  try {
+    const { supabase } = await assertAdmin();
+    if (!UUID_RE.test(orderId)) return { ok: false, error: "Pedido inválido." };
+    const cleanName = String(name ?? "").trim().replace(/\s+/g, " ").slice(0, 80);
+    const rawPhone = String(phone ?? "").trim();
+    const normalized = rawPhone ? toWhatsAppPhone(rawPhone) : null;
+    if (rawPhone && !normalized) return { ok: false, error: "Escribí el celular con código de área, por ejemplo 11 2345-6789." };
+    const { error } = await supabase
+      .from("orders")
+      .update({ customer_name: cleanName || null, customer_phone: normalized })
+      .eq("id", orderId);
+    if (error) return fail(error, "No pudimos guardar los datos.");
+    revalidatePath("/admin/pedidos");
+    revalidatePath("/admin/ventas");
+    revalidatePath("/admin/deudas");
+    return { ok: true, message: "Datos de la clienta guardados." };
+  } catch (e) {
+    return fail(e, "No pudimos guardar los datos.");
+  }
+}
+
 export async function setCustomerPhone(orderIds: string[], phone: string): Promise<ActionResult> {
   try {
     const { supabase } = await assertAdmin();
