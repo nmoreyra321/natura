@@ -8,13 +8,13 @@ import { GIFT_EVERY } from "@/lib/loyalty";
 import { productImageUrl } from "@/lib/images";
 import { getPriceInfo } from "@/lib/pricing";
 import { LinkButton } from "@/components/ui/button";
-import { AddReview } from "./add-review";
 import { ClubProgressCard } from "./club-progress";
 import { EmptyStore } from "./empty-store";
 import { InfiniteCarousel } from "./infinite-carousel";
 import { HeroArt } from "./hero-art";
 import { LeafMark } from "./logo";
 import { ProductRail } from "./product-card";
+import { ReviewsStrip } from "./reviews-strip";
 import { Stars } from "./stars";
 
 export type HomeData = {
@@ -37,7 +37,7 @@ export type HomeData = {
 
 const reviewDateFmt = new Intl.DateTimeFormat("es-AR", { month: "long", year: "numeric", timeZone: "America/Argentina/Buenos_Aires" });
 
-/** «Calificaciones»: franja de color con el promedio, carrusel de reseñas y botón para dejar una. */
+/** «Calificaciones»: franja finita con el promedio; el carrusel de reseñas se abre al tocar «Ver reseñas». */
 export function ReviewsSection({ r }: { r: ReviewSummary | null }) {
   const cards = (r?.latest ?? []).map((rev) => (
     <li key={rev.id} className="flex w-[80%] shrink-0 snap-start flex-col rounded-3xl bg-white p-5 shadow-soft sm:w-[45%] lg:w-[31%]">
@@ -57,42 +57,29 @@ export function ReviewsSection({ r }: { r: ReviewSummary | null }) {
     </li>
   ));
 
+  const summary = (
+    <h2 className="flex flex-wrap items-center gap-x-2 gap-y-1">
+      <span className="font-display text-lg leading-tight font-bold sm:text-xl">Calificaciones</span>
+      {r ? (
+        <>
+          <Stars value={r.average} />
+          <span className="text-sm font-bold">
+            <span className="tabular">{r.average.toLocaleString("es-AR", { maximumFractionDigits: 1 })}</span>
+            <span className="font-semibold text-forest/70">
+              {" "}
+              · {r.count} {r.count === 1 ? "reseña" : "reseñas"}
+            </span>
+          </span>
+        </>
+      ) : (
+        <span className="text-sm font-semibold text-forest/70">¡Dejá la primera reseña!</span>
+      )}
+    </h2>
+  );
+
   return (
-    <section id="calificaciones" className="scroll-mt-24 px-3 py-4 sm:px-6" aria-labelledby="resenas">
-      <div className="relative mx-auto max-w-7xl overflow-hidden rounded-[2rem] bg-gradient-to-br from-lilac via-pink/70 to-blush p-6 sm:p-8">
-        <span aria-hidden="true" className="pointer-events-none absolute -top-20 -left-16 size-64 rounded-full bg-white/50 blur-3xl" />
-        <div className="relative mb-5 flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <p className="inline-flex items-center gap-1.5 rounded-full bg-white/80 px-3 py-1 text-sm font-extrabold text-coral-deep">
-              <MessageCircle className="size-4" aria-hidden="true" /> Opiniones reales
-            </p>
-            <h2 id="resenas" className="mt-3 font-display text-3xl leading-tight font-bold sm:text-4xl">
-              Calificaciones ⭐
-            </h2>
-            {r ? (
-              <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
-                <span className="font-display text-5xl leading-none font-bold tabular">{r.average.toLocaleString("es-AR", { maximumFractionDigits: 1 })}</span>
-                <span className="flex flex-col gap-0.5">
-                  <Stars value={r.average} className="size-6" />
-                  <span className="text-sm font-bold text-forest/70">
-                    de 5 · {r.count} {r.count === 1 ? "reseña" : "reseñas"} de clientas
-                  </span>
-                </span>
-              </p>
-            ) : (
-              <p className="mt-1 font-semibold text-forest/80">Todavía no hay reseñas. ¿Ya compraste? ¡Dejá la primera!</p>
-            )}
-          </div>
-          <AddReview />
-        </div>
-        {cards.length >= 3 ? (
-          <InfiniteCarousel label="Reseñas de clientas">{cards}</InfiniteCarousel>
-        ) : cards.length > 0 ? (
-          <ul aria-label="Reseñas de clientas" className="relative -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pt-2 pb-2 sm:mx-0 sm:px-1">
-            {cards}
-          </ul>
-        ) : null}
-      </div>
+    <section id="calificaciones" className="scroll-mt-24 px-3 py-3 sm:px-6">
+      <ReviewsStrip summary={summary} cards={cards} />
     </section>
   );
 }
@@ -209,19 +196,6 @@ export function HomeView({ d }: { d: HomeData }) {
                     </LinkButton>
                   ) : null}
                 </div>
-              ) : null}
-              {d.reviews ? (
-                <a
-                  href="#calificaciones"
-                  className="mt-6 inline-flex flex-wrap items-center gap-2 rounded-full bg-white/85 px-4 py-2 text-sm font-bold shadow-soft transition hover:bg-white"
-                >
-                  <Stars value={d.reviews.average} />
-                  <span className="tabular">{d.reviews.average.toLocaleString("es-AR", { maximumFractionDigits: 1 })}</span>
-                  <span className="text-muted">
-                    · {d.reviews.count} {d.reviews.count === 1 ? "reseña" : "reseñas"}
-                  </span>
-                  <ArrowRight className="size-4 text-coral-deep" aria-hidden="true" />
-                </a>
               ) : null}
               <ul aria-label="Por qué comprar acá" className="mt-6 grid max-w-lg gap-x-5 gap-y-2 text-sm font-bold text-forest sm:grid-cols-2">
                 {PERKS.map((perk) => (

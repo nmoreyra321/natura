@@ -34,7 +34,7 @@ export function AddReview() {
           setRound((r) => r + 1);
           setOpen(true);
         }}
-        className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full bg-coral-deep px-5 font-bold text-white shadow-lift transition hover:-translate-y-0.5"
+        className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-coral-deep px-3.5 py-1.5 text-sm font-bold text-white transition hover:brightness-110"
       >
         <PenLine className="size-4" aria-hidden="true" /> Dejar mi reseña
       </button>
