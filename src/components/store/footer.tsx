@@ -10,8 +10,8 @@ export function Footer({ categories }: { categories: { name: string; slug: strin
       <svg viewBox="0 0 1440 60" preserveAspectRatio="none" aria-hidden="true" className="block h-8 w-full -translate-y-px bg-cream sm:h-12">
         <path d="M0 30 C 120 0 240 60 360 30 S 600 0 720 30 S 960 60 1080 30 S 1320 0 1440 30 V60 H0 Z" fill="var(--forest)" />
       </svg>
-      <div className="mx-auto grid max-w-7xl gap-10 px-4 py-12 sm:px-6 md:grid-cols-[1.4fr_1fr_1fr]">
-        <div className="max-w-sm">
+      <div className="mx-auto grid max-w-7xl grid-cols-2 gap-x-6 gap-y-10 px-4 py-12 sm:px-6 md:grid-cols-[1.4fr_1fr_1fr]">
+        <div className="col-span-2 max-w-sm md:col-span-1">
           <p className="flex items-center gap-2 font-display text-3xl font-bold">
             <LeafMark className="size-9" />
             Natu <span className="text-pink">Mariel</span>
