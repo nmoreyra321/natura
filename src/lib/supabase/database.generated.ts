@@ -180,6 +180,19 @@ isOneToOne: false
                   }
                   Relationships: [
                   ]
+                },"loyalty_gifts": {
+                  Row: {
+                    "given_at": string,"id": string,"phone": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "given_at"?: string,"id"?: string,"phone": string
+                  }
+                  Update: {
+                    "given_at"?: string,"id"?: string,"phone"?: string
+                  }
+                  Relationships: [
+                  ]
                 },"restock_requests": {
                   Row: {
                     "created_at": string,"id": string,"name": string | null,"notified_at": string | null,"phone": string,"product_id": string

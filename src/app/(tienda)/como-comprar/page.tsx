@@ -55,6 +55,10 @@ const faqs = [
     a: "Después de hacer el pedido pasás a su página: ahí ves si el pago está aprobado, si el pedido está confirmado y cuándo se entrega. Para volver a verla, entrá a «Seguir mi pedido» (al pie de la página) con tu código y tu WhatsApp.",
   },
   {
+    q: "¿Cómo funciona el Club Natu Mariel?",
+    a: "Cada 5 compras te ganás un regalo. Se cuentan solas con tu número de WhatsApp, sin anotarte en ningún lado: cada pedido confirmado suma una compra (también las que hacés en los vivos o por WhatsApp). En la página de tu pedido ves cuánto te falta.",
+  },
+  {
     q: "¿Qué es el precio de revista?",
     a: "Es el precio oficial de Natura. Al lado ves el precio especial de Natu Mariel; si es más bajo, te mostramos cuánto ahorrás.",
   },

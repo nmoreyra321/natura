@@ -1,6 +1,6 @@
 "use client";
 
-import { BellRing, CalendarClock, CirclePlus, HandCoins, ClipboardList, ExternalLink, LayoutDashboard, LogOut, Menu, Package, Settings, ShoppingBasket, TrendingUp, X } from "lucide-react";
+import { BellRing, CalendarClock, CirclePlus, Gift, HandCoins, ClipboardList, ExternalLink, LayoutDashboard, LogOut, Menu, Package, Settings, ShoppingBasket, TrendingUp, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
@@ -21,6 +21,7 @@ const groups: { title: string | null; items: NavItem[] }[] = [
       { href: "/admin/pedidos", label: "Pedidos", icon: ClipboardList },
       { href: "/admin/deudas", label: "Quién me debe", icon: HandCoins },
       { href: "/admin/ventas", label: "Ventas y estadísticas", icon: TrendingUp },
+      { href: "/admin/club", label: "Club de clientas", icon: Gift },
     ],
   },
   {

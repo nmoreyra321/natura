@@ -12,6 +12,7 @@ import type { NaturaLookup } from "@/lib/natura";
 import { parseExpiry } from "@/lib/lots";
 import { toWhatsAppPhone } from "@/lib/debts";
 import { formatARS } from "@/lib/format";
+import { loyaltyStatus, PURCHASE_STATUSES } from "@/lib/loyalty";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isValidPrice, planMagazinePriceUpdate, salePriceFromDiscount, toCents } from "@/lib/pricing";
 import { aliasKey, cleanInvoiceNumber, codeKey, mergeReceiptItems, parseArDate, skuFromCode } from "@/lib/receipt";
@@ -1789,5 +1790,56 @@ export async function finishNaturaPhotos(): Promise<ActionResult> {
     return { ok: true };
   } catch (e) {
     return fail(e, "No pudimos refrescar la tienda.");
+  }
+}
+
+/** Club de clientas: anota que se entregó un regalo (solo si de verdad le toca). */
+export async function giveLoyaltyGift(phone: unknown): Promise<ActionResult> {
+  try {
+    const { supabase } = await assertAdmin();
+    const key = typeof phone === "string" ? toWhatsAppPhone(phone) : null;
+    if (!key) return { ok: false, error: "Teléfono inválido." };
+    const [{ count: purchases, error: e1 }, { count: given, error: e2 }] = await Promise.all([
+      supabase
+        .from("orders")
+        .select("id", { count: "exact", head: true })
+        .eq("customer_phone", key)
+        .in("status", [...PURCHASE_STATUSES]),
+      supabase.from("loyalty_gifts").select("id", { count: "exact", head: true }).eq("phone", key),
+    ]);
+    if (e1 || e2) return fail(e1 ?? e2, "No pudimos anotar el regalo.");
+    if (loyaltyStatus(purchases ?? 0, given ?? 0).pending <= 0) return { ok: false, error: "A esta clienta todavía no le toca regalo." };
+    const { error } = await supabase.from("loyalty_gifts").insert({ phone: key });
+    if (error) return fail(error, "No pudimos anotar el regalo.");
+    revalidatePath("/admin/club");
+    revalidatePath("/admin");
+    return { ok: true, message: "¡Listo! Regalo anotado como entregado." };
+  } catch (e) {
+    return fail(e, "No pudimos anotar el regalo.");
+  }
+}
+
+/** Deshace el último regalo anotado de una clienta (por si se tocó sin querer). */
+export async function undoLoyaltyGift(phone: unknown): Promise<ActionResult> {
+  try {
+    const { supabase } = await assertAdmin();
+    const key = typeof phone === "string" ? toWhatsAppPhone(phone) : null;
+    if (!key) return { ok: false, error: "Teléfono inválido." };
+    const { data: last, error: e1 } = await supabase
+      .from("loyalty_gifts")
+      .select("id")
+      .eq("phone", key)
+      .order("given_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (e1) return fail(e1, "No pudimos deshacer el regalo.");
+    if (!last) return { ok: false, error: "No hay regalos anotados para deshacer." };
+    const { error } = await supabase.from("loyalty_gifts").delete().eq("id", last.id);
+    if (error) return fail(error, "No pudimos deshacer el regalo.");
+    revalidatePath("/admin/club");
+    revalidatePath("/admin");
+    return { ok: true, message: "Listo, se deshizo el último regalo." };
+  } catch (e) {
+    return fail(e, "No pudimos deshacer el regalo.");
   }
 }

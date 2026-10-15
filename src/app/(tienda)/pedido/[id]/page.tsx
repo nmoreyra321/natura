@@ -1,4 +1,4 @@
-import { AlertCircle, CheckCircle2, Clock, MessageCircle, PackageCheck, Wallet, XCircle } from "lucide-react";
+import { AlertCircle, CheckCircle2, Clock, Gift, MessageCircle, PackageCheck, Wallet, XCircle } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -9,6 +9,7 @@ import { TransferAccount } from "@/components/store/transfer-account";
 import { buttonClasses } from "@/components/ui/button";
 import { getSiteUrl } from "@/lib/config";
 import { formatARS } from "@/lib/format";
+import { GIFT_EVERY, loyaltyKey, loyaltyStatus, PURCHASE_STATUSES, type LoyaltyStatus } from "@/lib/loyalty";
 import { canReportPayment, owedOf, paymentState, trackingSteps } from "@/lib/order-tracking";
 import { syncMercadoPagoPayment } from "@/lib/payments";
 import { toCents } from "@/lib/pricing";
@@ -57,7 +58,7 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
   const { data: order } = await admin
     .from("orders")
     .select(
-      "id, code, created_at, status, total, savings, customer_name, payment_method, payment_status, amount_paid, payment_reported_at, payment_rejection, payment_proof_path, items:order_items(name, size, quantity, unit_price, magazine_price)",
+      "id, code, created_at, status, total, savings, customer_name, customer_phone, payment_method, payment_status, amount_paid, payment_reported_at, payment_rejection, payment_proof_path, items:order_items(name, size, quantity, unit_price, magazine_price)",
     )
     .eq("id", id)
     .maybeSingle();
@@ -71,6 +72,17 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
   const isTransfer = order.payment_method === "transferencia";
   const owed = owedOf(order);
   const transfer = isTransfer ? await getTransferDetails() : null;
+
+  // Club de clientas: cuántas compras lleva con este teléfono (si el pedido no está cancelado).
+  const clubKey = cancelled ? null : loyaltyKey(order.customer_phone);
+  let club: LoyaltyStatus | null = null;
+  if (clubKey) {
+    const [{ count: purchases }, { count: given }] = await Promise.all([
+      admin.from("orders").select("id", { count: "exact", head: true }).eq("customer_phone", clubKey).in("status", [...PURCHASE_STATUSES]),
+      admin.from("loyalty_gifts").select("id", { count: "exact", head: true }).eq("phone", clubKey),
+    ]);
+    club = loyaltyStatus(purchases ?? 0, given ?? 0);
+  }
   const siteUrl = getSiteUrl();
   const trackUrl = `${siteUrl}/pedido/${order.id}`;
 
@@ -258,6 +270,32 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
             <span className="tabular">{formatARS(toCents(order.total))}</span>
           </li>
         </ul>
+
+        {club ? (
+          <section aria-labelledby="club" className="mt-6 rounded-3xl bg-gradient-to-br from-blush to-sun/40 p-4">
+            <h2 id="club" className="flex items-center gap-2 font-display text-lg font-bold">
+              <Gift className="size-5 text-coral-deep" aria-hidden="true" /> Club Natu Mariel
+            </h2>
+            {club.pending > 0 ? (
+              <p className="mt-1 font-semibold">¡Te ganaste un regalo! 🎉 Natu Mariel te lo entrega con tu pedido.</p>
+            ) : (
+              <>
+                <p className="mt-1 text-sm">
+                  Cada {GIFT_EVERY} compras te ganás un regalo. Llevás <b>{club.progress}</b> de {GIFT_EVERY}
+                  {club.left === 1 ? ": ¡te falta solo 1!" : `: te faltan ${club.left}.`}
+                </p>
+                <span className="mt-2 flex gap-1.5" aria-hidden="true">
+                  {Array.from({ length: GIFT_EVERY }, (_, i) => (
+                    <span key={i} className={`size-3.5 rounded-full ${i < club.progress ? "bg-coral-deep" : "bg-white"}`} />
+                  ))}
+                </span>
+              </>
+            )}
+            {order.status === "pending" ? (
+              <p className="mt-2 text-xs text-muted">Este pedido se suma cuando Natu Mariel lo confirme.</p>
+            ) : null}
+          </section>
+        ) : null}
 
         <div className="mt-6 flex flex-col gap-3 text-center">
           {isMp && state === "paid" ? <PaidOrderActions whatsappUrl={message({ paid: true })} /> : null}

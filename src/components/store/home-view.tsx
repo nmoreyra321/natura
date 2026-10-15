@@ -25,7 +25,7 @@ export type HomeData = {
 };
 
 /** Lo que más le importa a la clienta antes de comprar (se muestra como texto con tildes, no como botones). */
-const PERKS = ["Productos 100% originales", "Pagás con Mercado Pago o efectivo", "Comprás sin crear cuenta", "Coordinamos la entrega con vos"];
+const PERKS = ["Hace 4 años vendiendo Natura", "Productos 100% originales", "Pagás con Mercado Pago o efectivo", "Sumá compras y ganá regalos"];
 
 const CATEGORY_TINTS = ["bg-pink", "bg-sun", "bg-sage", "bg-lilac", "bg-peach"];
 
