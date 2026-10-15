@@ -32,7 +32,7 @@ export default async function ClubPage() {
   const [{ data: orders, error }, { data: gifts }] = await Promise.all([
     supabase
       .from("orders")
-      .select("customer_name, customer_phone, status, created_at, total")
+      .select("customer_name, customer_phone, status, created_at, total, payment_status")
       .in("status", [...PURCHASE_STATUSES])
       .not("customer_phone", "is", null)
       .limit(20000),
@@ -47,7 +47,7 @@ export default async function ClubPage() {
       <h1 className="font-display text-3xl font-bold">Club de clientas</h1>
       <p className="mt-1 text-muted">
         Cada <b className="text-forest">{GIFT_EVERY} compras</b>, la clienta se gana <b className="text-forest">un regalo</b>. Las compras
-        se cuentan solas por número de WhatsApp (tienda web y Venta rápida), cuando el pedido está confirmado o entregado
+        se cuentan solas por número de WhatsApp (tienda web y Venta rápida), cuando el pedido está confirmado, <b className="text-forest">pagado completo</b>
         {minTotal > 0 ? (
           <>
             {" "}

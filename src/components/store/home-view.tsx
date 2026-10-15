@@ -231,8 +231,8 @@ export function HomeView({ d }: { d: HomeData }) {
                   {[
                     "Comprá como siempre: en la tienda, por WhatsApp o en los vivos.",
                     d.clubMinCents > 0
-                      ? `Cada pedido confirmado de ${formatARS(d.clubMinCents)} o más suma una compra.`
-                      : "Cada pedido confirmado suma una compra.",
+                      ? `Cada pedido de ${formatARS(d.clubMinCents)} o más, pagado completo, suma una compra.`
+                      : "Cada pedido pagado completo suma una compra.",
                     `En tu compra número ${GIFT_EVERY}, Mariel te regala algo especial 💝`,
                   ].map((t, i) => (
                     <li key={t} className="flex items-start gap-2.5">
@@ -246,6 +246,7 @@ export function HomeView({ d }: { d: HomeData }) {
                 </Link>
               </div>
               <div className="relative flex flex-col items-center gap-3 rounded-3xl bg-white/70 p-5 text-center backdrop-blur" aria-hidden="true">
+                <span className="rounded-full bg-cream px-2.5 py-0.5 text-xs font-extrabold tracking-wide text-muted uppercase">Ejemplo</span>
                 <div className="flex items-center gap-2">
                   {Array.from({ length: GIFT_EVERY }, (_, i) =>
                     i < GIFT_EVERY - 1 ? (
@@ -259,7 +260,7 @@ export function HomeView({ d }: { d: HomeData }) {
                     ),
                   )}
                 </div>
-                <p className="font-display text-lg font-bold">¡Te falta 1 para tu regalo!</p>
+                <p className="font-display text-lg font-bold">Con 4 compras, ¡te falta 1 para tu regalo!</p>
                 <p className="text-xs text-muted">Así vas a ver tu avance en la página de cada pedido.</p>
               </div>
             </div>

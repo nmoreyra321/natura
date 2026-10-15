@@ -84,7 +84,7 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
   const counts = toCents(order.total) >= Math.round(clubMin * 100);
   if (clubKey) {
     const [{ count: purchases }, { count: given }] = await Promise.all([
-      admin.from("orders").select("id", { count: "exact", head: true }).eq("customer_phone", clubKey).in("status", [...PURCHASE_STATUSES]).gte("total", clubMin),
+      admin.from("orders").select("id", { count: "exact", head: true }).eq("customer_phone", clubKey).in("status", [...PURCHASE_STATUSES]).eq("payment_status", "approved").gte("total", clubMin),
       admin.from("loyalty_gifts").select("id", { count: "exact", head: true }).eq("phone", clubKey),
     ]);
     club = loyaltyStatus(purchases ?? 0, given ?? 0);
@@ -309,8 +309,8 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
               <p className="mt-2 text-xs text-muted">
                 Este pedido no suma porque es de menos de {formatARS(Math.round(clubMin * 100))}. Suman las compras desde ese monto.
               </p>
-            ) : order.status === "pending" ? (
-              <p className="mt-2 text-xs text-muted">Este pedido se suma cuando Natu Mariel lo confirme.</p>
+            ) : order.payment_status !== "approved" || order.status === "pending" ? (
+              <p className="mt-2 text-xs text-muted">Este pedido se suma cuando esté pagado completo y confirmado.</p>
             ) : null}
           </section>
         ) : null}

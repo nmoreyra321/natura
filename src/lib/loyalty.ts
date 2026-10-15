@@ -35,11 +35,19 @@ export type ClubOrder = {
   status: string;
   created_at: string;
   total: number | string;
+  payment_status: string | null;
 };
 
-/** ¿Este pedido suma al Club? (confirmado o entregado y de al menos el monto mínimo, en pesos). */
-export function countsForClub(o: { status: string; total: number | string }, minTotal: number): boolean {
-  return (PURCHASE_STATUSES as readonly string[]).includes(o.status) && toCents(o.total) >= Math.round(minTotal * 100);
+/**
+ * ¿Este pedido suma al Club? Tiene que estar confirmado o entregado, PAGADO COMPLETO (nada de pagos
+ * parciales) y ser de al menos el monto mínimo (en pesos).
+ */
+export function countsForClub(o: { status: string; total: number | string; payment_status: string | null }, minTotal: number): boolean {
+  return (
+    (PURCHASE_STATUSES as readonly string[]).includes(o.status) &&
+    o.payment_status === "approved" &&
+    toCents(o.total) >= Math.round(minTotal * 100)
+  );
 }
 
 export type ClubMember = LoyaltyStatus & { phone: string; name: string; lastAt: string; /** Regalos ya entregados. */ given: number };

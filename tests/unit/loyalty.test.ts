@@ -8,6 +8,7 @@ const order = (phone: string, status = "confirmed", name = "Ana", at = "2026-10-
   status,
   created_at: at,
   total,
+  payment_status: "approved" as string | null,
 });
 
 describe("loyaltyStatus", () => {
@@ -22,6 +23,11 @@ describe("loyaltyStatus", () => {
 });
 
 describe("summarizeClub", () => {
+  it("solo suman los pedidos pagados completos", () => {
+    const orders = [order("5491122223333"), { ...order("5491122223333"), payment_status: null }];
+    expect(summarizeClub(orders, [], 0)[0].purchases).toBe(1);
+  });
+
   it("solo suman los pedidos que llegan al monto mínimo", () => {
     const orders = [order("5491122223333"), order("5491122223333", "delivered", "Ana", "2026-10-02T10:00:00Z", 19999.99)];
     expect(summarizeClub(orders, [], 20000)[0].purchases).toBe(1);

@@ -1808,6 +1808,7 @@ export async function giveLoyaltyGift(phone: unknown): Promise<ActionResult> {
         .select("id", { count: "exact", head: true })
         .eq("customer_phone", key)
         .in("status", [...PURCHASE_STATUSES])
+        .eq("payment_status", "approved")
         .gte("total", await getLoyaltyMinTotal()),
       supabase.from("loyalty_gifts").select("id", { count: "exact", head: true }).eq("phone", key),
     ]);

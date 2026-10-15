@@ -58,7 +58,7 @@ const faqsFor = (clubMin: string | null) => [
   },
   {
     q: "¿Cómo funciona el Club Natu Mariel?",
-    a: `Cada 5 compras${clubMin ? ` de ${clubMin} o más` : ""} te ganás un regalo. Se cuentan solas con tu número de WhatsApp, sin anotarte en ningún lado: cada pedido confirmado${clubMin ? ` de ${clubMin} o más` : ""} suma una compra (también las que hacés en los vivos o por WhatsApp). En la página de tu pedido ves cuánto te falta.`,
+    a: `Cada 5 compras${clubMin ? ` de ${clubMin} o más` : ""} te ganás un regalo. Se cuentan solas con tu número de WhatsApp, sin anotarte en ningún lado: cada pedido${clubMin ? ` de ${clubMin} o más` : ""}, pagado completo, suma una compra (también las que hacés en los vivos o por WhatsApp). En la página de tu pedido ves cuánto te falta.`,
   },
   {
     q: "¿Qué es el precio de revista?",
