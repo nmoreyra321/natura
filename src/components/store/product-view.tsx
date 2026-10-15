@@ -1,4 +1,4 @@
-import { ChevronRight, MessageCircle, Truck, Wallet } from "lucide-react";
+import { ChevronRight, CircleCheck, MessageCircle } from "lucide-react";
 import Link from "next/link";
 
 import { buttonClasses } from "@/components/ui/button";
@@ -136,17 +136,11 @@ export function ProductView({
             </div>
           </div>
 
-          <ul className="grid gap-2 text-sm sm:grid-cols-3" aria-label="Cómo comprás">
-            {[
-              { icon: MessageCircle, text: "Pedís por WhatsApp, sin registrarte", tone: "bg-sage text-botanical-deep" },
-              { icon: Wallet, text: "Pagás en efectivo o transferencia", tone: "bg-sun text-forest" },
-              { icon: Truck, text: "Coordinás la entrega con Mariel", tone: "bg-pink text-coral-deep" },
-            ].map((p) => (
-              <li key={p.text} className="flex items-center gap-2.5 rounded-2xl bg-warm-white p-2.5 font-semibold ring-1 ring-line/70">
-                <span className={`flex size-8 shrink-0 items-center justify-center rounded-xl ${p.tone}`}>
-                  <p.icon className="size-4" aria-hidden="true" />
-                </span>
-                <span className="leading-tight">{p.text}</span>
+          <ul className="grid gap-x-5 gap-y-1.5 px-1 text-sm font-semibold text-forest sm:grid-cols-2" aria-label="Por qué comprar acá">
+            {["Producto 100% original", "Pagás con Mercado Pago o efectivo", "Coordinamos la entrega con vos", "Sumá compras y ganá regalos"].map((t) => (
+              <li key={t} className="flex items-center gap-2">
+                <CircleCheck className="size-4 shrink-0 text-botanical-deep" aria-hidden="true" />
+                {t}
               </li>
             ))}
           </ul>

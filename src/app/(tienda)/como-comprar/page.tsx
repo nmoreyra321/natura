@@ -40,7 +40,7 @@ const steps = [
 const faqs = [
   {
     q: "¿Tengo que crear una cuenta?",
-    a: "No. Armás el carrito y enviás el pedido por WhatsApp, sin registrarte: solo te pedimos tu nombre y tu WhatsApp para poder coordinar.",
+    a: "No. Armás el carrito y hacés el pedido acá mismo, sin registrarte: solo te pedimos tu nombre y tu WhatsApp para coordinar la entrega (con ese número también sumás compras en el Club Natu Mariel).",
   },
   {
     q: "¿El pedido queda confirmado al enviarlo?",
