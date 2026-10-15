@@ -123,7 +123,7 @@ export default async function DashboardPage() {
   if (dueReceipt?.due_date) {
     const daysLeft = Math.round((atNoon(dueReceipt.due_date).getTime() - atNoon(today).getTime()) / 86_400_000);
     tasks.push({
-      href: "/admin/productos?vista=boleta",
+      href: "/admin/productos?vista=llego",
       icon: FileText,
       tone: "urgent",
       text: `Pagar la factura de Natura${dueReceipt.total ? ` (${formatARS(toCents(dueReceipt.total))})` : ""}: ${
@@ -211,11 +211,6 @@ export default async function DashboardPage() {
           const id = t.key.startsWith("nombre:") ? null : t.key;
           return { id, name: t.name, units: t.units, cents: t.totalCents, image: id ? (firstImage.get(id) ?? null) : null };
         }),
-        restock: published
-          .filter((x) => x.stock <= LOW_STOCK_THRESHOLD)
-          .sort((a, b) => a.stock - b.stock || a.name.localeCompare(b.name, "es"))
-          .slice(0, 6)
-          .map((x) => ({ id: x.id, name: x.name, stock: x.stock })),
         stats: [
           { label: "publicados", value: published.length, href: "/admin/productos?estado=published" },
           { label: "borradores", value: list.filter((x) => x.status === "draft").length, href: "/admin/productos?estado=draft" },

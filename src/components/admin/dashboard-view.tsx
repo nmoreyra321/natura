@@ -2,7 +2,7 @@ import {
   ArrowDownRight,
   ArrowRight,
   ArrowUpRight,
-  Camera,
+  PackagePlus,
   CirclePlus,
   ExternalLink,
   PackageCheck,
@@ -35,7 +35,6 @@ export type DashboardData = {
   owed: { cents: number; people: number };
   tasks: DashboardTask[];
   top: DashboardTop[];
-  restock: { id: string; name: string; stock: number }[];
   stats: DashboardStat[];
   warnings: React.ReactNode;
 };
@@ -114,7 +113,7 @@ export function DashboardView({ d, imageUrl }: { d: DashboardData; imageUrl: (pa
           </div>
           <div className="grid grid-cols-2 gap-2">
             <QuickAction href="/admin/vender" icon={CirclePlus} label="Venta rápida" />
-            <QuickAction href="/admin/productos?vista=boleta" icon={Camera} label="Cargar factura" />
+            <QuickAction href="/admin/productos?vista=llego" icon={PackagePlus} label="Me llegó mercadería" />
             <QuickAction href="/admin/productos/nuevo" icon={Plus} label="Nuevo producto" />
             <QuickAction href="/" icon={ExternalLink} label="Ver tienda" external />
           </div>
@@ -235,8 +234,8 @@ export function DashboardView({ d, imageUrl }: { d: DashboardData; imageUrl: (pa
             <Link href="/admin/reponer" className="text-coral-deep hover:underline">
               Qué pedir →
             </Link>
-            <Link href="/admin/productos?vista=stock" className="text-coral-deep hover:underline">
-              Cargar stock →
+            <Link href="/admin/productos?vista=llego" className="text-coral-deep hover:underline">
+              Me llegó mercadería →
             </Link>
           </span>
         </div>
@@ -252,25 +251,6 @@ export function DashboardView({ d, imageUrl }: { d: DashboardData; imageUrl: (pa
             </li>
           ))}
         </ul>
-        {d.restock.length > 0 ? (
-          <>
-            <p className="mt-4 text-sm font-bold text-muted">Se están por acabar</p>
-            <ul className="mt-1 grid grid-cols-1 gap-x-6 sm:grid-cols-2">
-              {d.restock.map((p) => (
-                <li key={p.id} className="flex items-center justify-between gap-3 border-b border-line/60 py-1.5 text-sm">
-                  <Link href={`/admin/productos/${p.id}`} className="min-w-0 truncate hover:text-coral-deep">
-                    {p.name}
-                  </Link>
-                  <span
-                    className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-bold tabular ${p.stock === 0 ? "bg-coral-soft text-coral-deep" : "bg-sun text-forest"}`}
-                  >
-                    {p.stock === 0 ? "Sin stock" : `Quedan ${p.stock}`}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </>
-        ) : null}
       </section>
     </div>
   );

@@ -132,7 +132,7 @@ export function Header({ categories }: { categories: NavCategory[] }) {
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-cream/95 backdrop-blur-md supports-[backdrop-filter]:bg-cream/85">
       <p className="bg-coral-deep px-4 py-1.5 text-center text-xs font-extrabold tracking-wide text-white sm:text-sm">
-        ✨ Productos Natura a precios especiales · Pedidos por WhatsApp ✨
+        ✨ Productos Natura a precios especiales · Pagá con Mercado Pago o en efectivo ✨
       </p>
       <div className="mx-auto flex h-16 max-w-7xl items-center gap-2 px-4 sm:h-18 sm:gap-4 sm:px-6">
         <button

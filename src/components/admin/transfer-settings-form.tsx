@@ -48,6 +48,12 @@ export function TransferSettingsForm({ defaults }: { defaults: Values }) {
           <Input id="t-link" autoComplete="off" inputMode="url" value={values.mpLink} onChange={set("mpLink")} />
         </Field>
       </div>
+      <div className="border-t border-line/70 pt-4 sm:col-span-2">
+        <p className="font-bold">Alias de respaldo (opcional)</p>
+        <p className="text-sm text-muted">
+          Solo se le muestra a la clienta si borrás el link de Mercado Pago. Si no lo usás, podés dejarlo como está.
+        </p>
+      </div>
       <Field label="Alias" htmlFor="t-alias" error={errors.alias} hint="Ej.: natu.mariel.mp">
         <Input id="t-alias" autoComplete="off" value={values.alias} onChange={set("alias")} />
       </Field>
