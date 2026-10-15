@@ -1,4 +1,4 @@
-import { ArrowRight, BadgePercent, Heart, MessageCircle, Sparkles, Truck } from "lucide-react";
+import { ArrowRight, CircleCheck, MessageCircle, Sparkles } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -24,12 +24,8 @@ export type HomeData = {
   whatsappUrl: string | null;
 };
 
-const PERKS = [
-  { icon: BadgePercent, title: "Más barato que la revista", text: "Precios especiales en todo", tone: "bg-sun" },
-  { icon: MessageCircle, title: "Pedís por WhatsApp", text: "Sin registrarte ni vueltas", tone: "bg-sage" },
-  { icon: Heart, title: "Atención personalizada", text: "Te asesoramos en lo que necesites", tone: "bg-pink" },
-  { icon: Truck, title: "Entrega coordinada", text: "Arreglás día y lugar", tone: "bg-lilac" },
-];
+/** Lo que más le importa a la clienta antes de comprar (se muestra como texto con tildes, no como botones). */
+const PERKS = ["Productos 100% originales", "Pagás con Mercado Pago o efectivo", "Comprás sin crear cuenta", "Coordinamos la entrega con vos"];
 
 const CATEGORY_TINTS = ["bg-pink", "bg-sun", "bg-sage", "bg-lilac", "bg-peach"];
 
@@ -122,6 +118,14 @@ export function HomeView({ d }: { d: HomeData }) {
                   ) : null}
                 </div>
               ) : null}
+              <ul aria-label="Por qué comprar acá" className="mt-6 grid max-w-lg gap-x-5 gap-y-2 text-sm font-bold text-forest sm:grid-cols-2">
+                {PERKS.map((perk) => (
+                  <li key={perk} className="flex items-center gap-2">
+                    <CircleCheck className="size-[1.1rem] shrink-0 text-botanical-deep" aria-hidden="true" />
+                    {perk}
+                  </li>
+                ))}
+              </ul>
             </div>
 
             {a ? (
@@ -135,23 +139,6 @@ export function HomeView({ d }: { d: HomeData }) {
             )}
           </div>
         </div>
-      </section>
-
-      {/* Beneficios */}
-      <section aria-label="Beneficios" className="mx-auto max-w-7xl px-4 pt-6 sm:px-6">
-        <ul className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
-          {PERKS.map((p) => (
-            <li key={p.title} className="flex items-center gap-3 rounded-2xl bg-warm-white p-3 shadow-soft ring-1 ring-line/70">
-              <span className={`flex size-10 shrink-0 items-center justify-center rounded-xl ${p.tone} text-forest`}>
-                <p.icon className="size-5" aria-hidden="true" />
-              </span>
-              <span className="min-w-0 leading-tight">
-                <span className="block text-sm font-extrabold">{p.title}</span>
-                <span className="block text-xs font-semibold text-muted">{p.text}</span>
-              </span>
-            </li>
-          ))}
-        </ul>
       </section>
 
       {!d.hasProducts ? (
