@@ -3,6 +3,7 @@ import "server-only";
 import { createClient } from "@supabase/supabase-js";
 
 import { getSupabaseConfig } from "@/lib/config";
+import { resilientFetch } from "./fetch";
 import type { Database } from "./types";
 
 /**
@@ -16,6 +17,6 @@ export function createAdminClient() {
   if (!config || !secret) return null;
   return createClient<Database>(config.url, secret, {
     auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
-    global: { fetch: (input, init) => fetch(input, { ...init, cache: "no-store" }) },
+    global: { fetch: (input, init) => resilientFetch(input, { ...init, cache: "no-store" }) },
   });
 }

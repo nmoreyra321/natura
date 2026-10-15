@@ -5,6 +5,7 @@ import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 
 import { getSupabaseConfig } from "@/lib/config";
+import { resilientFetch } from "./fetch";
 import type { Database } from "./types";
 
 export const CATALOG_TAG = "catalog";
@@ -19,6 +20,7 @@ export async function createSessionClient() {
   const cookieStore = await cookies();
 
   return createServerClient<Database>(config.url, config.anonKey, {
+    global: { fetch: resilientFetch },
     cookies: {
       getAll() {
         return cookieStore.getAll();
@@ -49,8 +51,8 @@ export function createPublicClient({ cached = true }: { cached?: boolean } = {})
       // Lecturas del catálogo cacheadas (se invalidan al guardar desde el panel).
       fetch: cached
         ? (input, init) =>
-            fetch(input, { ...init, next: { revalidate: 300, tags: [CATALOG_TAG] } })
-        : (input, init) => fetch(input, { ...init, cache: "no-store" }),
+            resilientFetch(input, { ...init, next: { revalidate: 300, tags: [CATALOG_TAG] } })
+        : (input, init) => resilientFetch(input, { ...init, cache: "no-store" }),
     },
   });
 }
