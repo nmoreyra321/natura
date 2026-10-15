@@ -225,6 +225,7 @@ export function Header({ categories }: { categories: NavCategory[] }) {
                 <X className="size-6" aria-hidden="true" />
               </button>
             </div>
+            <InstallAppButton className="flex min-h-12 items-center gap-3 rounded-2xl bg-sun/60 px-4 text-lg font-semibold hover:bg-sun" />
             <nav aria-label="Menú móvil">
               <ul className="flex flex-col gap-1">
                 {[
@@ -251,7 +252,6 @@ export function Header({ categories }: { categories: NavCategory[] }) {
                 )}
               </ul>
             </nav>
-            <InstallAppButton className="flex min-h-12 items-center gap-3 rounded-2xl bg-sun/60 px-4 text-lg font-semibold hover:bg-sun" />
             {categories.length > 4 ? (
               <div>
                 <p className="px-4 pb-2 text-xs font-bold tracking-[0.14em] text-muted uppercase">Más categorías</p>
