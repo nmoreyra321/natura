@@ -135,7 +135,7 @@ export function AddToCart({ product }: { product: Omit<CartItem, "quantity"> }) 
           Agregar al carrito
         </Button>
       </div>
-      {quantity > 1 ? (
+      {quantity >= 1 ? (
         <p className="rounded-2xl bg-cream px-4 py-2.5 text-sm tabular" aria-live="polite">
           Llevando <strong>{quantity}</strong>: pagás <strong className="whitespace-nowrap text-coral-deep">{formatARS(saleCents * quantity)}</strong>
           {unitSavings > 0 ? (
