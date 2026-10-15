@@ -1,20 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { reorderText, salesPeriodText, suggestReorder } from "@/lib/reorder";
+import { reorderText, suggestReorder, weeksText } from "@/lib/reorder";
 
 describe("suggestReorder", () => {
-  it("pide lo que falta para cubrir un mes de ventas, en números enteros", () => {
-    // 15 vendidos en 90 días → para 30 días hacen falta 5; con 2 en stock, pedí 3.
-    const [s] = suggestReorder([{ id: "a", name: "Body splash", stock: 2, sold: 15 }]);
-    expect(s.need).toBe(5);
+  it("pide lo que se vendió menos lo que queda", () => {
+    // En las últimas semanas vendiste 4 y te queda 1 → pedí 3.
+    const [s] = suggestReorder([{ id: "a", name: "Body splash", stock: 1, sold: 4 }]);
+    expect(s.need).toBe(4);
     expect(s.order).toBe(3);
-  });
-
-  it("redondea para arriba (nunca medio producto)", () => {
-    // 4 vendidos en 14 días → para 30 días son 8,57 → 9.
-    const [s] = suggestReorder([{ id: "a", name: "Crema", stock: 0, sold: 4 }], 30, 14);
-    expect(s.need).toBe(9);
-    expect(Number.isInteger(s.order)).toBe(true);
   });
 
   it("no sugiere nada si el stock alcanza o si no se vendió", () => {
@@ -22,23 +15,20 @@ describe("suggestReorder", () => {
     expect(suggestReorder([{ id: "b", name: "Kaiak", stock: 0, sold: 0 }])).toEqual([]);
   });
 
-  it("primero lo agotado y respeta las semanas elegidas", () => {
-    const list = suggestReorder(
-      [
-        { id: "a", name: "Lento", stock: 3, sold: 9 },
-        { id: "b", name: "Agotado", stock: 0, sold: 9 },
-      ],
-      60,
-    );
+  it("primero lo agotado", () => {
+    const list = suggestReorder([
+      { id: "a", name: "Queda poco", stock: 1, sold: 9 },
+      { id: "b", name: "Agotado", stock: 0, sold: 2 },
+    ]);
     expect(list.map((s) => s.id)).toEqual(["b", "a"]);
-    expect(list[0].order).toBe(6);
   });
 });
 
-describe("salesPeriodText", () => {
+describe("weeksText", () => {
   it("dice el periodo en palabras", () => {
-    expect(salesPeriodText(90)).toBe("los últimos 3 meses");
-    expect(salesPeriodText(12)).toBe("los últimos 12 días");
+    expect(weeksText(1, "pasadas")).toBe("la última semana");
+    expect(weeksText(2, "pasadas")).toBe("las últimas 2 semanas");
+    expect(weeksText(4, "proximas")).toBe("las próximas 4 semanas");
   });
 });
 

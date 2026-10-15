@@ -6,12 +6,24 @@ import { CopyOrderButtons } from "@/components/admin/copy-order-button";
 import { ProductImageFallback } from "@/components/store/product-card";
 import { requireAdmin } from "@/lib/auth";
 import { productImageUrl } from "@/lib/images";
-import { historyDays, reorderText, salesDays, salesPeriodText, salesWindowStart, suggestReorder } from "@/lib/reorder";
+import { reorderText, salesWindowStart, suggestReorder, weeksText } from "@/lib/reorder";
 
 export const metadata = { title: "Qué pedirle a Natura" };
 
 type Search = Record<string, string | string[] | undefined>;
-const WEEKS = [2, 4, 6, 8] as const;
+const WEEKS = [1, 2, 4, 6, 8] as const;
+
+/** Un número con su etiqueta chiquita arriba (para la cuenta vendiste − te queda = pedí). */
+function Figure({ label, value, tone = "plain" }: { label: string; value: number; tone?: "plain" | "alert" | "result" }) {
+  return (
+    <span
+      className={`flex min-w-16 flex-col items-center rounded-2xl px-2.5 py-1.5 leading-tight ${tone === "result" ? "bg-sun" : "bg-white"}`}
+    >
+      <span className="text-[11px] font-semibold text-muted">{label}</span>
+      <span className={`font-display text-xl font-bold tabular ${tone === "alert" ? "text-coral-deep" : ""}`}>{value}</span>
+    </span>
+  );
+}
 
 export default async function ReorderPage({ searchParams }: { searchParams: Promise<Search> }) {
   const { supabase } = await requireAdmin();
@@ -19,7 +31,7 @@ export default async function ReorderPage({ searchParams }: { searchParams: Prom
   const asked = Number(Array.isArray(sp.semanas) ? sp.semanas[0] : sp.semanas);
   const weeks = WEEKS.find((w) => w === asked) ?? 4;
 
-  const since = salesWindowStart();
+  const since = salesWindowStart(weeks * 7);
   const [{ data: products, error }, { data: sales }] = await Promise.all([
     supabase.from("products").select("id, name, size, stock, natura_sku, images:product_images(storage_path, position)").limit(3000),
     supabase
@@ -30,21 +42,14 @@ export default async function ReorderPage({ searchParams }: { searchParams: Prom
       .limit(20000),
   ]);
 
-  // Días con historia de ventas: desde la primera venta de la ventana (la tienda puede ser nueva).
-  const firstSale = (sales ?? []).reduce<string | null>((min, s) => {
-    const at = (s.order as unknown as { created_at: string } | null)?.created_at ?? null;
-    return at && (!min || at < min) ? at : min;
-  }, null);
-  const history = historyDays(firstSale);
-  const period = salesPeriodText(salesDays(history));
+  const past = weeksText(weeks, "pasadas");
+  const next = weeksText(weeks, "proximas");
   const sold = new Map<string, number>();
   for (const s of sales ?? []) if (s.product_id) sold.set(s.product_id, (sold.get(s.product_id) ?? 0) + s.quantity);
 
   const byId = new Map((products ?? []).map((p) => [p.id, p]));
   const list = suggestReorder(
     (products ?? []).map((p) => ({ id: p.id, name: p.name, stock: p.stock, sold: sold.get(p.id) ?? 0 })),
-    weeks * 7,
-    history,
   );
   const units = list.reduce((s, r) => s + r.order, 0);
   const text = reorderText(list.map((r) => ({ name: r.name, order: r.order, sku: byId.get(r.id)?.natura_sku ?? null })));
@@ -52,24 +57,36 @@ export default async function ReorderPage({ searchParams }: { searchParams: Prom
   return (
     <div className="mx-auto max-w-3xl">
       <h1 className="font-display text-3xl font-bold">Qué pedirle a Natura</h1>
-      <p className="mt-1 text-muted">
-        Te armamos la lista para tu próximo pedido. Para cada producto miramos <b className="text-forest">cuánto vendiste en {period}</b>{" "}
-        y <b className="text-forest">cuánto te queda</b>, y calculamos cuántos te faltan para que te alcancen las semanas que elijas.
-      </p>
+      <p className="mt-1 text-muted">Sugerencia de compra para tu próximo pedido, según lo que vendiste y lo que te queda.</p>
 
-      <nav aria-label="Para cuánto tiempo" className="mt-4 flex flex-wrap items-center gap-2">
-        <span className="text-sm font-semibold">Quiero que me alcance para:</span>
-        {WEEKS.map((w) => (
-          <Link
-            key={w}
-            href={`/admin/reponer?semanas=${w}`}
-            aria-current={w === weeks ? "page" : undefined}
-            className={`rounded-full px-3.5 py-1.5 text-sm font-bold ${w === weeks ? "bg-forest text-white" : "bg-warm-white shadow-soft hover:bg-sun"}`}
-          >
-            {w} semanas
-          </Link>
-        ))}
-      </nav>
+      <section aria-labelledby="periodo" className="mt-5 rounded-3xl bg-warm-white p-4 shadow-soft">
+        <h2 id="periodo" className="text-sm font-bold">
+          Calcular con las ventas de:
+        </h2>
+        <nav aria-label="Período de ventas" className="mt-2 flex flex-wrap gap-2">
+          {WEEKS.map((w) => (
+            <Link
+              key={w}
+              href={`/admin/reponer?semanas=${w}`}
+              aria-current={w === weeks ? "page" : undefined}
+              className={`rounded-full px-3.5 py-1.5 text-sm font-bold ${w === weeks ? "bg-forest text-white" : "bg-white ring-1 ring-line hover:bg-sun"}`}
+            >
+              {w === 1 ? "1 semana" : `${w} semanas`}
+            </Link>
+          ))}
+        </nav>
+        <p className="mt-3 text-sm text-muted">
+          Miramos cuánto vendiste de cada producto en <b className="text-forest">{past}</b> y te sugerimos pedir lo necesario
+          para que te alcance <b className="text-forest">{next}</b>:
+        </p>
+        <p className="mt-2 flex flex-wrap items-center gap-1.5 text-sm font-bold" aria-label="Vendiste menos te queda igual a pedí">
+          <span className="rounded-full bg-white px-3 py-1 ring-1 ring-line">Vendiste</span>
+          <span aria-hidden="true">−</span>
+          <span className="rounded-full bg-white px-3 py-1 ring-1 ring-line">Te queda</span>
+          <span aria-hidden="true">=</span>
+          <span className="rounded-full bg-sun px-3 py-1">Pedí</span>
+        </p>
+      </section>
 
       {error ? (
         <p className="mt-6 rounded-2xl bg-coral-soft p-4 font-semibold">No pudimos calcular la lista.</p>
@@ -79,15 +96,18 @@ export default async function ReorderPage({ searchParams }: { searchParams: Prom
           <p className="mt-3 font-display text-xl font-bold">Por ahora no hace falta pedir nada.</p>
           <p className="mt-1 text-muted">
             {sold.size === 0
-              ? "Todavía no hay ventas confirmadas para calcular. Cuando vendas, acá vas a ver qué reponer."
-              : `Con lo que tenés te alcanza para ${weeks} semanas, vendiendo como en ${period}.`}
+              ? `No hay ventas confirmadas en ${past}. Probá con más semanas.`
+              : `Con lo que tenés te alcanza para ${next}.`}
           </p>
         </div>
       ) : (
         <>
-          <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-3xl bg-warm-white p-4 shadow-soft">
-            <p className="font-semibold">
-              Pedí {units} {units === 1 ? "unidad" : "unidades"} de {list.length} {list.length === 1 ? "producto" : "productos"}
+          <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-3xl bg-forest p-4 text-white shadow-soft">
+            <p>
+              <span className="block text-sm opacity-80">Tu pedido sugerido</span>
+              <span className="font-display text-xl font-bold">
+                {units} {units === 1 ? "unidad" : "unidades"} · {list.length} {list.length === 1 ? "producto" : "productos"}
+              </span>
             </p>
             <CopyOrderButtons text={text} />
           </div>
@@ -96,34 +116,31 @@ export default async function ReorderPage({ searchParams }: { searchParams: Prom
               const p = byId.get(r.id);
               const img = [...(p?.images ?? [])].sort((a, b) => a.position - b.position)[0]?.storage_path;
               const src = img ? productImageUrl(img) : null;
+              const left = Math.max(0, r.stock);
               return (
-                <li key={r.id} className="flex items-center gap-3 rounded-3xl bg-warm-white p-3 shadow-soft">
+                <li key={r.id} className="flex flex-wrap items-center gap-3 rounded-3xl bg-warm-white p-3 shadow-soft">
                   <span className="relative size-14 shrink-0 overflow-hidden rounded-xl bg-white">
                     {src ? <Image src={src} alt="" fill sizes="56px" className="object-cover" /> : <ProductImageFallback className="size-full" />}
                   </span>
-                  <div className="min-w-0 flex-1">
+                  <div className="min-w-0 flex-1 basis-40">
                     <Link href={`/admin/productos/${r.id}`} className="line-clamp-2 font-semibold leading-snug hover:text-coral-deep">
                       {r.name}
                     </Link>
-                    <p className="mt-0.5 text-sm text-muted tabular">
-                      Vendiste <b className="text-forest">{r.sold}</b> en {period} · Te {r.stock === 1 ? "queda" : "quedan"}{" "}
-                      <b className={r.stock <= 0 ? "text-coral-deep" : "text-forest"}>{Math.max(0, r.stock)}</b>
-                    </p>
-                    <p className="text-xs text-muted tabular">
-                      Para {weeks} semanas necesitás {r.need}
-                    </p>
+                    {left === 0 ? <span className="mt-1 inline-block rounded-full bg-coral-soft px-2 py-0.5 text-xs font-bold text-coral-deep">Agotado</span> : null}
                   </div>
-                  <span className="shrink-0 rounded-2xl bg-sun px-3 py-2 text-center leading-tight">
-                    <span className="block text-xs font-semibold">Pedí</span>
-                    <span className="font-display text-xl font-bold tabular">{r.order}</span>
-                  </span>
+                  <div className="flex w-full items-center justify-end gap-1.5 sm:w-auto" aria-label={`Vendiste ${r.sold}, te quedan ${left}, pedí ${r.order}`}>
+                    <Figure label="Vendiste" value={r.sold} />
+                    <span className="font-bold text-muted" aria-hidden="true">−</span>
+                    <Figure label="Te queda" value={left} tone={left === 0 ? "alert" : "plain"} />
+                    <span className="font-bold text-muted" aria-hidden="true">=</span>
+                    <Figure label="Pedí" value={r.order} tone="result" />
+                  </div>
                 </li>
               );
             })}
           </ul>
           <p className="mt-4 text-sm text-muted">
-            Es una sugerencia: cambiala con lo que sabés vos. Las clientas que pidieron que les avises cuando vuelva un producto
-            están aparte, en{" "}
+            Es una sugerencia: cambiala con lo que sabés vos. Las clientas que pidieron aviso cuando vuelva un producto están en{" "}
             <Link href="/admin/avisos" className="font-semibold text-coral-deep underline">
               Avisos de stock
             </Link>
