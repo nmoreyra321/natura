@@ -48,3 +48,12 @@ export const getMercadoPagoSurcharge = cache(async (): Promise<number> => {
   const n = Number(data?.mp_surcharge_percent ?? 0);
   return Number.isFinite(n) && n > 0 ? n : 0;
 });
+
+/** Club de clientas: monto mínimo (en pesos) para que un pedido sume una compra. */
+export const getLoyaltyMinTotal = cache(async (): Promise<number> => {
+  const supabase = createPublicClient();
+  if (!supabase) return 20000;
+  const { data } = await supabase.from("store_settings").select("loyalty_min_total").eq("id", 1).maybeSingle();
+  const n = Number(data?.loyalty_min_total ?? 20000);
+  return Number.isFinite(n) && n >= 0 ? n : 20000;
+});

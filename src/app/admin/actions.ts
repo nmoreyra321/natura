@@ -12,6 +12,7 @@ import type { NaturaLookup } from "@/lib/natura";
 import { parseExpiry } from "@/lib/lots";
 import { toWhatsAppPhone } from "@/lib/debts";
 import { campaignSlug } from "@/lib/campaigns";
+import { getLoyaltyMinTotal } from "@/lib/store-settings";
 import { notifyAdmins } from "@/lib/push";
 import { formatARS } from "@/lib/format";
 import { loyaltyStatus, PURCHASE_STATUSES } from "@/lib/loyalty";
@@ -1806,7 +1807,8 @@ export async function giveLoyaltyGift(phone: unknown): Promise<ActionResult> {
         .from("orders")
         .select("id", { count: "exact", head: true })
         .eq("customer_phone", key)
-        .in("status", [...PURCHASE_STATUSES]),
+        .in("status", [...PURCHASE_STATUSES])
+        .gte("total", await getLoyaltyMinTotal()),
       supabase.from("loyalty_gifts").select("id", { count: "exact", head: true }).eq("phone", key),
     ]);
     if (e1 || e2) return fail(e1 ?? e2, "No pudimos anotar el regalo.");
@@ -1943,5 +1945,24 @@ export async function sendTestPush(): Promise<ActionResult> {
     return { ok: true, message: "Mandamos el aviso de prueba. Si no te llegó en unos segundos, revisá los permisos del celular." };
   } catch (e) {
     return fail(e, "No pudimos mandar el aviso de prueba.");
+  }
+}
+
+/** Club de clientas: monto mínimo para que un pedido sume una compra. */
+export async function saveLoyaltyMinTotal(value: unknown): Promise<ActionResult> {
+  try {
+    const { supabase } = await assertAdmin();
+    const n = typeof value === "number" ? value : Number.NaN;
+    if (!Number.isFinite(n) || n < 0 || n > 10_000_000) return { ok: false, error: "Escribí un monto válido (0 = cuentan todos)." };
+    const { error } = await supabase
+      .from("store_settings")
+      .update({ loyalty_min_total: Math.round(n * 100) / 100, updated_at: new Date().toISOString() })
+      .eq("id", 1);
+    if (error) return fail(error, "No pudimos guardar el monto.");
+    refreshCatalog();
+    revalidatePath("/admin/club");
+    return { ok: true, message: n > 0 ? `Listo: suman los pedidos desde ${formatARS(Math.round(n * 100))}.` : "Listo: suman todos los pedidos." };
+  } catch (e) {
+    return fail(e, "No pudimos guardar el monto.");
   }
 }

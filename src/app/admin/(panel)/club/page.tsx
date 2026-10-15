@@ -1,8 +1,11 @@
 import { Gift, MessageCircle, Users } from "lucide-react";
 
 import { GiftActions, UndoGift } from "@/components/admin/gift-actions";
+import { LoyaltyMinForm } from "@/components/admin/loyalty-min-form";
 import { requireAdmin } from "@/lib/auth";
 import { formatPhone } from "@/lib/debts";
+import { formatARS } from "@/lib/format";
+import { getLoyaltyMinTotal } from "@/lib/store-settings";
 import { GIFT_EVERY, PURCHASE_STATUSES, summarizeClub, type ClubMember } from "@/lib/loyalty";
 
 export const metadata = { title: "Club de clientas" };
@@ -25,16 +28,17 @@ function giftMessage(m: ClubMember): string {
 
 export default async function ClubPage() {
   const { supabase } = await requireAdmin();
+  const minTotal = await getLoyaltyMinTotal();
   const [{ data: orders, error }, { data: gifts }] = await Promise.all([
     supabase
       .from("orders")
-      .select("customer_name, customer_phone, status, created_at")
+      .select("customer_name, customer_phone, status, created_at, total")
       .in("status", [...PURCHASE_STATUSES])
       .not("customer_phone", "is", null)
       .limit(20000),
     supabase.from("loyalty_gifts").select("phone").limit(20000),
   ]);
-  const club = summarizeClub(orders ?? [], gifts ?? []);
+  const club = summarizeClub(orders ?? [], gifts ?? [], minTotal);
   const winners = club.filter((m) => m.pending > 0);
   const onTheWay = club.filter((m) => m.pending === 0);
 
@@ -43,8 +47,16 @@ export default async function ClubPage() {
       <h1 className="font-display text-3xl font-bold">Club de clientas</h1>
       <p className="mt-1 text-muted">
         Cada <b className="text-forest">{GIFT_EVERY} compras</b>, la clienta se gana <b className="text-forest">un regalo</b>. Las compras
-        se cuentan solas por número de WhatsApp (tienda web y Venta rápida), cuando el pedido está confirmado o entregado.
+        se cuentan solas por número de WhatsApp (tienda web y Venta rápida), cuando el pedido está confirmado o entregado
+        {minTotal > 0 ? (
+          <>
+            {" "}
+            y es de <b className="text-forest">{formatARS(Math.round(minTotal * 100))} o más</b>
+          </>
+        ) : null}
+        .
       </p>
+      <LoyaltyMinForm current={minTotal} />
 
       {error ? (
         <p className="mt-6 rounded-2xl bg-coral-soft p-4 font-semibold">No pudimos cargar el club.</p>

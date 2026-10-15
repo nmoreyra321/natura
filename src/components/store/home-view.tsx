@@ -25,6 +25,8 @@ export type HomeData = {
   whatsappUrl: string | null;
   /** Fecha especial activa (Día de la Madre…) y sus productos. */
   campaign: (ActiveCampaign & { products: PublicProduct[] }) | null;
+  /** Club de clientas: monto mínimo del pedido para que sume (en centavos). */
+  clubMinCents: number;
 };
 
 const untilFmt = new Intl.DateTimeFormat("es-AR", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" });
@@ -219,13 +221,18 @@ export function HomeView({ d }: { d: HomeData }) {
                 <h2 id="club" className="mt-3 font-display text-3xl leading-tight font-bold sm:text-4xl">
                   Cada {GIFT_EVERY} compras, <span className="text-coral-deep">¡un regalo!</span>
                 </h2>
+                {d.clubMinCents > 0 ? (
+                  <p className="mt-1 text-sm font-bold text-forest/70">Suman las compras de {formatARS(d.clubMinCents)} o más.</p>
+                ) : null}
                 <p className="mt-2 max-w-lg font-semibold text-forest/80">
                   No tenés que anotarte en nada: tus compras se suman solas con tu número de WhatsApp.
                 </p>
                 <ol className="mt-4 flex flex-col gap-2 text-sm font-bold sm:text-base">
                   {[
                     "Comprá como siempre: en la tienda, por WhatsApp o en los vivos.",
-                    "Cada pedido confirmado suma una compra.",
+                    d.clubMinCents > 0
+                      ? `Cada pedido confirmado de ${formatARS(d.clubMinCents)} o más suma una compra.`
+                      : "Cada pedido confirmado suma una compra.",
                     `En tu compra número ${GIFT_EVERY}, Mariel te regala algo especial 💝`,
                   ].map((t, i) => (
                     <li key={t} className="flex items-start gap-2.5">

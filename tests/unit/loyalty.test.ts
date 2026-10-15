@@ -2,11 +2,12 @@ import { describe, expect, it } from "vitest";
 
 import { loyaltyStatus, summarizeClub } from "@/lib/loyalty";
 
-const order = (phone: string, status = "confirmed", name = "Ana", at = "2026-10-01T10:00:00Z") => ({
+const order = (phone: string, status = "confirmed", name = "Ana", at = "2026-10-01T10:00:00Z", total = 25000) => ({
   customer_name: name,
   customer_phone: phone,
   status,
   created_at: at,
+  total,
 });
 
 describe("loyaltyStatus", () => {
@@ -21,6 +22,12 @@ describe("loyaltyStatus", () => {
 });
 
 describe("summarizeClub", () => {
+  it("solo suman los pedidos que llegan al monto mínimo", () => {
+    const orders = [order("5491122223333"), order("5491122223333", "delivered", "Ana", "2026-10-02T10:00:00Z", 19999.99)];
+    expect(summarizeClub(orders, [], 20000)[0].purchases).toBe(1);
+    expect(summarizeClub(orders, [], 0)[0].purchases).toBe(2);
+  });
+
   it("agrupa por teléfono, solo cuenta pedidos confirmados o entregados y pone primero a quien le toca regalo", () => {
     const orders = [
       ...Array.from({ length: 5 }, () => order("5491122223333", "delivered", "Laura")),

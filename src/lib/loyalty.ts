@@ -1,6 +1,7 @@
 /** Club de clientas: cada GIFT_EVERY compras confirmadas (por teléfono), un regalo. */
 
 import { toWhatsAppPhone } from "./debts";
+import { toCents } from "./pricing";
 
 export const GIFT_EVERY = 5;
 
@@ -28,18 +29,29 @@ export function loyaltyStatus(purchases: number, giftsGiven: number): LoyaltySta
   return { purchases, pending: Math.max(0, earned - giftsGiven), progress, left: GIFT_EVERY - progress };
 }
 
-export type ClubOrder = { customer_name: string | null; customer_phone: string | null; status: string; created_at: string };
+export type ClubOrder = {
+  customer_name: string | null;
+  customer_phone: string | null;
+  status: string;
+  created_at: string;
+  total: number | string;
+};
+
+/** ¿Este pedido suma al Club? (confirmado o entregado y de al menos el monto mínimo, en pesos). */
+export function countsForClub(o: { status: string; total: number | string }, minTotal: number): boolean {
+  return (PURCHASE_STATUSES as readonly string[]).includes(o.status) && toCents(o.total) >= Math.round(minTotal * 100);
+}
 
 export type ClubMember = LoyaltyStatus & { phone: string; name: string; lastAt: string; /** Regalos ya entregados. */ given: number };
 
 /** Agrupa las compras por teléfono. Primero a quién le toca regalo, después quién está más cerca. */
-export function summarizeClub(orders: ClubOrder[], gifts: { phone: string }[]): ClubMember[] {
+export function summarizeClub(orders: ClubOrder[], gifts: { phone: string }[], minTotal = 0): ClubMember[] {
   const given = new Map<string, number>();
   for (const g of gifts) given.set(g.phone, (given.get(g.phone) ?? 0) + 1);
 
   const byPhone = new Map<string, { name: string; purchases: number; lastAt: string }>();
   for (const o of orders) {
-    if (!(PURCHASE_STATUSES as readonly string[]).includes(o.status)) continue;
+    if (!countsForClub(o, minTotal)) continue;
     const key = loyaltyKey(o.customer_phone);
     if (!key) continue;
     const m = byPhone.get(key) ?? { name: "", purchases: 0, lastAt: "" };

@@ -50,7 +50,10 @@ export function CartView({
   mercadoPago = false,
   transfer = null,
   mpSurcharge = 0,
+  clubMinCents = 0,
 }: {
+  /** Club de clientas: monto mínimo del pedido para que sume una compra. */
+  clubMinCents?: number;
   whatsappNumber: string | null;
   siteUrl: string;
   /** true si la tienda tiene Mercado Pago configurado. */
@@ -381,9 +384,16 @@ export function CartView({
               </div>
               <p className="flex items-center gap-2 rounded-2xl bg-sun/50 px-3 py-2 text-sm">
                 <span aria-hidden="true">🎁</span>
-                <span>
-                  Con este pedido <strong>sumás 1 compra</strong> al Club Natu Mariel: cada {GIFT_EVERY}, un regalo.
-                </span>
+                {totals.totalCents >= clubMinCents ? (
+                  <span>
+                    Con este pedido <strong>sumás 1 compra</strong> al Club Natu Mariel: cada {GIFT_EVERY}, un regalo.
+                  </span>
+                ) : (
+                  <span>
+                    Te faltan <strong>{formatARS(clubMinCents - totals.totalCents)}</strong> para que este pedido sume al Club
+                    Natu Mariel (cada {GIFT_EVERY} compras de {formatARS(clubMinCents)} o más, un regalo).
+                  </span>
+                )}
               </p>
               <div className="rounded-2xl bg-blush/60 p-3">
                 <label className="flex cursor-pointer items-center gap-2 font-semibold">

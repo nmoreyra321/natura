@@ -1,4 +1,6 @@
 import { ChevronDown, Handshake, MessageCircle, PackageCheck, ShoppingBag } from "lucide-react";
+import { formatARS } from "@/lib/format";
+import { getLoyaltyMinTotal } from "@/lib/store-settings";
 import type { Metadata } from "next";
 import Link from "next/link";
 
@@ -37,7 +39,7 @@ const steps = [
   },
 ];
 
-const faqs = [
+const faqsFor = (clubMin: string | null) => [
   {
     q: "¿Tengo que crear una cuenta?",
     a: "No. Armás el carrito y hacés el pedido acá mismo, sin registrarte: solo te pedimos tu nombre y tu WhatsApp para coordinar la entrega (con ese número también sumás compras en el Club Natu Mariel).",
@@ -56,7 +58,7 @@ const faqs = [
   },
   {
     q: "¿Cómo funciona el Club Natu Mariel?",
-    a: "Cada 5 compras te ganás un regalo. Se cuentan solas con tu número de WhatsApp, sin anotarte en ningún lado: cada pedido confirmado suma una compra (también las que hacés en los vivos o por WhatsApp). En la página de tu pedido ves cuánto te falta.",
+    a: `Cada 5 compras${clubMin ? ` de ${clubMin} o más` : ""} te ganás un regalo. Se cuentan solas con tu número de WhatsApp, sin anotarte en ningún lado: cada pedido confirmado${clubMin ? ` de ${clubMin} o más` : ""} suma una compra (también las que hacés en los vivos o por WhatsApp). En la página de tu pedido ves cuánto te falta.`,
   },
   {
     q: "¿Qué es el precio de revista?",
@@ -76,8 +78,10 @@ const faqs = [
   },
 ];
 
-export default function HowToBuyPage() {
+export default async function HowToBuyPage() {
   const number = getWhatsAppNumber();
+  const min = await getLoyaltyMinTotal();
+  const faqs = faqsFor(min > 0 ? formatARS(Math.round(min * 100)) : null);
   const faqJsonLd = {
     "@context": "https://schema.org",
     "@type": "FAQPage",

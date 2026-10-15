@@ -8,6 +8,7 @@ import {
   getPublishedCount,
   type PublicProduct,
 } from "@/lib/catalog";
+import { getLoyaltyMinTotal } from "@/lib/store-settings";
 import { buildWhatsAppUrl, getWhatsAppNumber } from "@/lib/whatsapp";
 
 export const revalidate = 300;
@@ -33,6 +34,7 @@ export default async function HomePage() {
     getBestSellers(8),
     getActiveCampaign(),
   ]);
+  const clubMin = await getLoyaltyMinTotal();
   const campaignProducts = campaign ? await getProductsByIds(campaign.productIds) : [];
   const whatsapp = getWhatsAppNumber();
 
@@ -47,6 +49,7 @@ export default async function HomePage() {
         latest: highlights.latest,
         heroProducts: pickHeroProducts(highlights.offers, highlights.featured, bestSellers, highlights.latest),
         campaign: campaign ? { ...campaign, products: campaignProducts } : null,
+        clubMinCents: Math.round(clubMin * 100),
         whatsappUrl: whatsapp ? buildWhatsAppUrl(whatsapp, "¡Hola Mariel! Quería hacerte una consulta 😊") : null,
       }}
     />

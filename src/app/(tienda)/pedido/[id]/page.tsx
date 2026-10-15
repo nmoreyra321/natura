@@ -16,7 +16,7 @@ import { GIFT_EVERY, loyaltyKey, loyaltyStatus, PURCHASE_STATUSES, type LoyaltyS
 import { canCustomerCancel, canReportPayment, owedOf, paymentState, trackingSteps } from "@/lib/order-tracking";
 import { syncMercadoPagoPayment } from "@/lib/payments";
 import { toCents } from "@/lib/pricing";
-import { getTransferDetails } from "@/lib/store-settings";
+import { getLoyaltyMinTotal, getTransferDetails } from "@/lib/store-settings";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { buildOrderMessage, buildWhatsAppUrl, getWhatsAppNumber } from "@/lib/whatsapp";
 
@@ -80,9 +80,11 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
   // Club de clientas: cuántas compras lleva con este teléfono (si el pedido no está cancelado).
   const clubKey = cancelled ? null : loyaltyKey(order.customer_phone);
   let club: LoyaltyStatus | null = null;
+  const clubMin = await getLoyaltyMinTotal();
+  const counts = toCents(order.total) >= Math.round(clubMin * 100);
   if (clubKey) {
     const [{ count: purchases }, { count: given }] = await Promise.all([
-      admin.from("orders").select("id", { count: "exact", head: true }).eq("customer_phone", clubKey).in("status", [...PURCHASE_STATUSES]),
+      admin.from("orders").select("id", { count: "exact", head: true }).eq("customer_phone", clubKey).in("status", [...PURCHASE_STATUSES]).gte("total", clubMin),
       admin.from("loyalty_gifts").select("id", { count: "exact", head: true }).eq("phone", clubKey),
     ]);
     club = loyaltyStatus(purchases ?? 0, given ?? 0);
@@ -293,7 +295,7 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
             ) : (
               <>
                 <p className="mt-1 text-sm">
-                  Cada {GIFT_EVERY} compras te ganás un regalo. Llevás <b>{club.progress}</b> de {GIFT_EVERY}
+                  Cada {GIFT_EVERY} compras{clubMin > 0 ? ` de ${formatARS(Math.round(clubMin * 100))} o más` : ""} te ganás un regalo. Llevás <b>{club.progress}</b> de {GIFT_EVERY}
                   {club.left === 1 ? ": ¡te falta solo 1!" : `: te faltan ${club.left}.`}
                 </p>
                 <span className="mt-2 flex gap-1.5" aria-hidden="true">
@@ -303,7 +305,11 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
                 </span>
               </>
             )}
-            {order.status === "pending" ? (
+            {!counts ? (
+              <p className="mt-2 text-xs text-muted">
+                Este pedido no suma porque es de menos de {formatARS(Math.round(clubMin * 100))}. Suman las compras desde ese monto.
+              </p>
+            ) : order.status === "pending" ? (
               <p className="mt-2 text-xs text-muted">Este pedido se suma cuando Natu Mariel lo confirme.</p>
             ) : null}
           </section>
