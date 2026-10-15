@@ -1,8 +1,9 @@
 import { Camera, Keyboard, Plus, Search } from "lucide-react";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
 import { BulkSelectionProvider, SelectAllCheckbox, SelectProductCheckbox } from "@/components/admin/bulk-selection";
-import { InventoryView } from "@/components/admin/inventory-view";
+import { InventoryCreate } from "@/components/admin/inventory-create";
 import { LotQuickEntry } from "@/components/admin/lot-quick-entry";
 import { ReceiptHistory } from "@/components/admin/receipt-history";
 import { ReceiptImport } from "@/components/admin/receipt-import";
@@ -56,9 +57,13 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
   const { supabase } = await requireAdmin();
   const sp = await searchParams;
 
-  // "boleta" es la dirección vieja de «Me llegó mercadería».
+  // "boleta" es la dirección vieja de «Cargar caja de Natura»; "stock" (Contar stock) ahora es la pestaña Stock.
   const vista = one(sp.vista) === "boleta" ? "llego" : one(sp.vista);
-  if (vista === "stock" || vista === "llego") {
+  if (vista === "stock") {
+    const q = one(sp.q).trim();
+    redirect(q ? `/admin/productos?q=${encodeURIComponent(q)}` : "/admin/productos");
+  }
+  if (vista === "llego") {
     const byHand = one(sp.modo) === "mano";
     const modeClass = (on: boolean) =>
       `inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-full text-sm font-bold sm:flex-none sm:px-5 ${on ? "bg-forest text-white" : "bg-warm-white shadow-soft hover:bg-sun"}`;
@@ -66,21 +71,11 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
       <div className="mx-auto max-w-6xl">
         <ProductsHeader active={vista} action={<NewProductButton />} />
         <div className="mt-5">
-          {vista === "stock" ? (
-            <>
-              <p className="mb-4 rounded-2xl bg-sun/50 px-4 py-3 text-sm">
-                <strong>Contar stock</strong> es para corregir: el número que escribas <strong>reemplaza</strong> al que
-                había. Si te llegó mercadería, usá{" "}
-                <Link href="/admin/productos?vista=llego" className="font-bold text-coral-deep underline">
-                  Me llegó mercadería
-                </Link>
-                , que suma.
-              </p>
-              <InventoryView supabase={supabase} sp={sp} />
-            </>
-          ) : (
             <div className="mx-auto max-w-3xl">
-              <p className="text-sm text-muted">Todo lo que cargues acá se suma al stock que ya tenías.</p>
+              <p className="text-sm text-muted">
+                Cuando te llega una caja de Natura: todo lo que cargues acá <strong className="text-forest">se suma</strong> al
+                stock que ya tenías. Para corregir un número, usá la pestaña Stock.
+              </p>
               <nav aria-label="Cómo cargar" className="mt-3 mb-5 flex gap-2">
                 <Link href="/admin/productos?vista=llego" aria-current={!byHand ? "page" : undefined} className={modeClass(!byHand)}>
                   <Camera className="size-4" aria-hidden="true" /> Con la factura
@@ -103,7 +98,6 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
                 </>
               )}
             </div>
-          )}
         </div>
       </div>
     );
@@ -124,7 +118,8 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
       "id, name, slug, size, magazine_price, sale_price, stock, status, is_featured, is_offer, updated_at, category:categories(name), images:product_images(storage_path, position)",
       { count: "exact" },
     )
-    .order("updated_at", { ascending: false })
+    // Por nombre: al cargar stock la lista no se reordena (si fuera por «último cambio», el producto saltaría arriba).
+    .order("name")
     // Desempate estable: sin esto, productos con la misma fecha podrían repetirse o saltearse entre páginas.
     .order("id");
   for (const pattern of nameSearchPatterns(q)) query = query.filter("name", "imatch", pattern);
@@ -161,9 +156,18 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
         }
       />
 
+      <p className="mt-3 text-sm text-muted">
+        Escribí cuántos tenés de cada producto (o usá <strong className="text-forest">−</strong> y{" "}
+        <strong className="text-forest">+</strong>). Con Enter se guarda y pasa al siguiente. Si te llegó una caja, usá{" "}
+        <Link href="/admin/productos?vista=llego" className="font-semibold text-coral-deep underline">
+          Cargar caja de Natura
+        </Link>
+        , que suma.
+      </p>
+
       <form
         method="get"
-        className="mt-4 grid grid-cols-2 gap-2 md:grid-cols-[1.6fr_1fr_1fr_1.2fr_auto] md:rounded-2xl md:bg-warm-white md:p-2.5 md:shadow-soft"
+        className="mt-3 grid grid-cols-2 gap-2 md:grid-cols-[1.6fr_1fr_1fr_1.2fr_auto] md:rounded-2xl md:bg-warm-white md:p-2.5 md:shadow-soft"
       >
         <CatalogFiltersToggle
           activeCount={[estado, stock, categoria, oferta].filter(Boolean).length}
@@ -230,6 +234,11 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
             <Link href={pageHref(sp, 1)} className="mt-3 inline-block font-semibold text-coral-deep hover:underline">
               Ir a la primera página
             </Link>
+          ) : null}
+          {q.length >= 2 && page === 1 ? (
+            <div className="mt-4 text-left">
+              <InventoryCreate name={q} categories={categories ?? []} />
+            </div>
           ) : null}
           {!filtered && page === 1 ? (
             <LinkButton href="/admin/productos/nuevo" className="mt-4">

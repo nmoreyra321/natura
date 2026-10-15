@@ -62,7 +62,7 @@ export function AdminProductSearch({
   const loading = showPanel && state.term !== term;
   const results = state.term === term ? state.results : [];
   const hrefFor = (p: AdminSearchOption) =>
-    mode === "stock" ? `/admin/productos?vista=stock&q=${encodeURIComponent(p.name)}` : `/admin/productos/${p.id}`;
+    mode === "stock" ? `/admin/productos?q=${encodeURIComponent(p.name)}` : `/admin/productos/${p.id}`;
 
   return (
     <div ref={rootRef} className="relative">

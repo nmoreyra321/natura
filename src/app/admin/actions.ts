@@ -116,7 +116,7 @@ export async function saveProduct(
 }
 
 /**
- * Crear un producto al vuelo (desde «Me llegó mercadería» o «Contar stock») cuando no está en la tienda.
+ * Crear un producto al vuelo (desde «Cargar caja de Natura» o «Stock») cuando no está en la tienda.
  * Queda como borrador con el stock que llegó; se publica cuando se le agrega la foto.
  */
 export async function quickCreateProduct(input: {
@@ -827,7 +827,7 @@ async function addLot(supabase: AdminContext["supabase"], productId: string, exp
 }
 
 /**
- * «Me llegó mercadería», a mano: suma unidades al stock y, si se escribe el vencimiento,
+ * «Cargar caja de Natura», a mano: suma unidades al stock y, si se escribe el vencimiento,
  * las anota en ese lote. Si el producto era borrador y `publish` está activo, se publica.
  */
 export async function receiveStock(

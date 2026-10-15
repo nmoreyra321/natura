@@ -17,7 +17,7 @@ type Loaded = { key: number; name: string; expiry: string | null; quantity: numb
 
 /**
  * Carga rápida con el teclado. El cursor vuelve solo al buscador.
- * - "llegada" («Me llegó mercadería», a mano): producto → Enter → cantidad → Enter. Suma al stock;
+ * - "llegada" («Cargar caja de Natura», a mano): producto → Enter → cantidad → Enter. Suma al stock;
  *   el vencimiento es opcional y, si se escribe, queda anotado.
  * - "vencimiento": producto → Enter → vencimiento (0129) → Enter. Solo anota el vencimiento de algo
  *   que ya está en el stock (no lo cambia).

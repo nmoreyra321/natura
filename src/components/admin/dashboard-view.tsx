@@ -113,7 +113,7 @@ export function DashboardView({ d, imageUrl }: { d: DashboardData; imageUrl: (pa
           </div>
           <div className="grid grid-cols-2 gap-2">
             <QuickAction href="/admin/vender" icon={CirclePlus} label="Venta rápida" />
-            <QuickAction href="/admin/productos?vista=llego" icon={PackagePlus} label="Me llegó mercadería" />
+            <QuickAction href="/admin/productos?vista=llego" icon={PackagePlus} label="Cargar caja de Natura" />
             <QuickAction href="/admin/productos/nuevo" icon={Plus} label="Nuevo producto" />
             <QuickAction href="/" icon={ExternalLink} label="Ver tienda" external />
           </div>
@@ -235,7 +235,7 @@ export function DashboardView({ d, imageUrl }: { d: DashboardData; imageUrl: (pa
               Qué pedirle a Natura →
             </Link>
             <Link href="/admin/productos?vista=llego" className="text-coral-deep hover:underline">
-              Me llegó mercadería →
+              Cargar caja de Natura →
             </Link>
           </span>
         </div>

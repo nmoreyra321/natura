@@ -7,7 +7,7 @@ import { useState } from "react";
 import { buttonClasses } from "@/components/ui/button";
 import { QuickCreateProduct } from "./quick-create-product";
 
-/** En «Contar stock»: si lo que se buscó no está en la tienda, se puede crear ahí mismo. */
+/** En «Stock»: si lo que se buscó no está en la tienda, se puede crear ahí mismo. */
 export function InventoryCreate({ name, categories }: { name: string; categories: { id: string; name: string }[] }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);

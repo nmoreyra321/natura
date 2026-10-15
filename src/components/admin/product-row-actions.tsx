@@ -87,7 +87,19 @@ export function ProductRowActions({
           value={stockValue}
           onChange={(e) => setStockValue(e.target.value)}
           onBlur={saveStock}
-          onKeyDown={(e) => e.key === "Enter" && (e.currentTarget as HTMLInputElement).blur()}
+          data-stock-input
+          onKeyDown={(e) => {
+            if (e.key !== "Enter") return;
+            // Guarda (al salir del campo) y pasa al stock del producto siguiente, para cargar rápido.
+            const input = e.currentTarget;
+            const all = [...document.querySelectorAll<HTMLInputElement>("[data-stock-input]")];
+            const next = all[all.indexOf(input) + 1];
+            input.blur();
+            if (next) {
+              next.focus();
+              next.select();
+            }
+          }}
           disabled={pending}
           className="h-9 w-12 rounded-xl border border-line bg-white px-1 text-center text-sm tabular [appearance:textfield] focus:border-botanical focus:outline-none [&::-webkit-inner-spin-button]:appearance-none"
         />

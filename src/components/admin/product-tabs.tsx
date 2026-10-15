@@ -1,12 +1,11 @@
-import { ClipboardCheck, List, PackagePlus, RefreshCw, Tags } from "lucide-react";
+import { List, PackagePlus, RefreshCw, Tags } from "lucide-react";
 import Link from "next/link";
 
-export type ProductTab = "lista" | "stock" | "llego" | "categorias" | "natura";
+export type ProductTab = "lista" | "llego" | "categorias" | "natura";
 
 const TABS: { key: ProductTab; href: string; label: string; icon: typeof List }[] = [
-  { key: "lista", href: "/admin/productos", label: "Lista", icon: List },
-  { key: "llego", href: "/admin/productos?vista=llego", label: "Me llegó mercadería", icon: PackagePlus },
-  { key: "stock", href: "/admin/productos?vista=stock", label: "Contar stock", icon: ClipboardCheck },
+  { key: "llego", href: "/admin/productos?vista=llego", label: "Cargar caja de Natura", icon: PackagePlus },
+  { key: "lista", href: "/admin/productos", label: "Stock", icon: List },
   { key: "categorias", href: "/admin/categorias", label: "Categorías", icon: Tags },
   { key: "natura", href: "/admin/precios", label: "Precios y fotos Natura", icon: RefreshCw },
 ];
