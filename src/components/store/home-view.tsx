@@ -36,14 +36,14 @@ export type HomeData = {
 
 const reviewDateFmt = new Intl.DateTimeFormat("es-AR", { month: "long", year: "numeric", timeZone: "America/Argentina/Buenos_Aires" });
 
-/** «Lo que dicen nuestras clientas»: promedio de estrellas y una fila de reseñas para deslizar. */
+/** «Calificaciones»: promedio de estrellas y una fila de reseñas para deslizar. */
 export function ReviewsSection({ r }: { r: ReviewSummary }) {
   return (
     <Section>
       <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 id="resenas" className="font-display text-2xl font-bold sm:text-3xl">
-            Lo que dicen nuestras clientas 💬
+            Calificaciones ⭐
           </h2>
           <p className="mt-1 flex flex-wrap items-center gap-2 text-sm font-semibold text-muted sm:text-base">
             <span className="font-display text-2xl font-bold text-forest tabular">{r.average.toLocaleString("es-AR", { maximumFractionDigits: 1 })}</span>
