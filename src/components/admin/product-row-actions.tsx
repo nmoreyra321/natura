@@ -1,9 +1,9 @@
 "use client";
 
-import { Eye, EyeOff, Pencil, Trash2 } from "lucide-react";
+import { Eye, EyeOff, Minus, Pencil, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { deleteProduct, updateProductQuick } from "@/app/admin/actions";
@@ -37,6 +37,21 @@ export function ProductRowActions({
       }
     });
 
+  // − / +: el número cambia al instante y se guarda una sola vez cuando deja de tocar (así 5 toques = 1 guardado).
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (timer.current) clearTimeout(timer.current);
+  }, []);
+  const bump = (delta: number) => {
+    const current = Number(stockValue);
+    const next = Math.max(0, (Number.isInteger(current) ? current : stock) + delta);
+    setStockValue(String(next));
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => {
+      if (next !== stock) run(() => updateProductQuick(id, { stock: next }), "Stock actualizado.");
+    }, 700);
+  };
+
   const saveStock = () => {
     const n = Number(stockValue);
     if (!Number.isInteger(n) || n < 0) {
@@ -54,6 +69,15 @@ export function ProductRowActions({
         <label htmlFor={`stock-${id}`} className="text-xs font-semibold text-muted">
           Stock
         </label>
+        <button
+          type="button"
+          onClick={() => bump(-1)}
+          disabled={pending || Number(stockValue) <= 0}
+          className="inline-flex size-8 items-center justify-center rounded-full border border-line bg-white text-forest hover:bg-coral-soft disabled:opacity-40"
+          aria-label={`Restar 1 al stock de ${name}`}
+        >
+          <Minus className="size-4" aria-hidden="true" />
+        </button>
         <input
           id={`stock-${id}`}
           type="number"
@@ -65,8 +89,17 @@ export function ProductRowActions({
           onBlur={saveStock}
           onKeyDown={(e) => e.key === "Enter" && (e.currentTarget as HTMLInputElement).blur()}
           disabled={pending}
-          className="h-9 w-16 rounded-xl border border-line bg-white px-1 text-center text-sm tabular focus:border-botanical focus:outline-none"
+          className="h-9 w-12 rounded-xl border border-line bg-white px-1 text-center text-sm tabular [appearance:textfield] focus:border-botanical focus:outline-none [&::-webkit-inner-spin-button]:appearance-none"
         />
+        <button
+          type="button"
+          onClick={() => bump(1)}
+          disabled={pending}
+          className="inline-flex size-8 items-center justify-center rounded-full border border-line bg-white text-forest hover:bg-sage disabled:opacity-40"
+          aria-label={`Sumar 1 al stock de ${name}`}
+        >
+          <Plus className="size-4" aria-hidden="true" />
+        </button>
       </div>
       <button
         type="button"
