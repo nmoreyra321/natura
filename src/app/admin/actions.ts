@@ -18,7 +18,15 @@ import { aliasKey, cleanInvoiceNumber, codeKey, mergeReceiptItems, parseArDate, 
 import { nameSearchPatterns } from "@/lib/search";
 import { slugify } from "@/lib/slug";
 import { createSessionClient, CATALOG_TAG } from "@/lib/supabase/server";
-import { categorySchema, fieldErrors, loginSchema, productSchema, surchargeSchema, transferSettingsSchema } from "@/lib/validation";
+import {
+  categorySchema,
+  fieldErrors,
+  loginSchema,
+  productSchema,
+  socialLinksSchema,
+  surchargeSchema,
+  transferSettingsSchema,
+} from "@/lib/validation";
 
 export type ActionResult<T = undefined> =
   | { ok: true; data?: T; message?: string }
@@ -866,6 +874,27 @@ export async function saveTransferSettings(input: unknown): Promise<ActionResult
     };
   } catch (e) {
     return fail(e, "No pudimos guardar los datos.");
+  }
+}
+
+/** Guarda los links de Facebook e Instagram de la tienda («Quiénes somos»). */
+export async function saveSocialLinks(input: unknown): Promise<ActionResult> {
+  try {
+    const { supabase } = await assertAdmin();
+    const parsed = socialLinksSchema.safeParse(input);
+    if (!parsed.success) {
+      return { ok: false, error: "Revisá los campos marcados.", fields: fieldErrors(parsed.error) };
+    }
+    const { error } = await supabase
+      .from("store_settings")
+      .update({ facebook_url: parsed.data.facebook, instagram_url: parsed.data.instagram, updated_at: new Date().toISOString() })
+      .eq("id", 1);
+    if (error) return fail(error, "No pudimos guardar las redes.");
+    refreshCatalog();
+    revalidatePath("/quienes-somos");
+    return { ok: true, message: "Listo: las redes ya aparecen en «Quiénes somos»." };
+  } catch (e) {
+    return fail(e, "No pudimos guardar las redes.");
   }
 }
 

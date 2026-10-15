@@ -212,6 +212,9 @@ export function HomeView({ d }: { d: HomeData }) {
                   <p className="mt-1 max-w-xl font-semibold text-white/85">
                     Escribile a Mariel: te recomienda el perfume o la crema ideal y te cuenta las ofertas de la semana.
                   </p>
+                  <Link href="/quienes-somos" className="mt-2 inline-block text-sm font-bold text-white underline underline-offset-4">
+                    Conocé a Mariel y sus vivos en Facebook →
+                  </Link>
                 </div>
                 <a
                   href={d.whatsappUrl}

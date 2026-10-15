@@ -1,5 +1,6 @@
 import { CheckCircle2, CircleAlert } from "lucide-react";
 
+import { SocialLinksForm } from "@/components/admin/social-links-form";
 import { SurchargeForm } from "@/components/admin/surcharge-form";
 import { TransferSettingsForm } from "@/components/admin/transfer-settings-form";
 import { requireAdmin } from "@/lib/auth";
@@ -31,7 +32,7 @@ export default async function SettingsPage() {
   const { supabase } = await requireAdmin();
   const { data: settings } = await supabase
     .from("store_settings")
-    .select("transfer_alias, transfer_cbu, transfer_holder, transfer_bank, mp_link, mp_surcharge_percent")
+    .select("transfer_alias, transfer_cbu, transfer_holder, transfer_bank, mp_link, mp_surcharge_percent, facebook_url, instagram_url")
     .eq("id", 1)
     .maybeSingle();
   const whatsapp = getWhatsAppNumber();
@@ -57,6 +58,15 @@ export default async function SettingsPage() {
             bank: settings?.transfer_bank ?? "",
           }}
         />
+      </section>
+
+      <section className="mt-4 rounded-3xl bg-warm-white p-5 shadow-soft">
+        <h2 className="font-display text-xl font-bold">Redes sociales</h2>
+        <p className="mt-1 mb-4 text-sm text-muted">
+          Aparecen en la página <strong>Quiénes somos</strong> de la tienda, con un botón para seguirte. Si dejás uno vacío,
+          no se muestra.
+        </p>
+        <SocialLinksForm defaults={{ facebook: settings?.facebook_url ?? "", instagram: settings?.instagram_url ?? "" }} />
       </section>
 
       {/* Cobro con link de Mercado Pago: solo si se conecta la cuenta (MP_ACCESS_TOKEN). */}

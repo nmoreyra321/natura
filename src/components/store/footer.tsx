@@ -49,6 +49,11 @@ export function Footer({ categories }: { categories: { name: string; slug: strin
           <p className="text-xs font-bold tracking-[0.14em] text-white/80 uppercase">Ayuda</p>
           <ul className="mt-3 flex flex-col gap-2">
             <li>
+              <Link className="hover:text-sun" href="/quienes-somos">
+                Quiénes somos
+              </Link>
+            </li>
+            <li>
               <Link className="hover:text-sun" href="/contacto">
                 Contacto
               </Link>

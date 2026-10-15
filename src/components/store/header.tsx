@@ -232,6 +232,7 @@ export function Header({ categories }: { categories: NavCategory[] }) {
                   { href: "/mi-pedido", label: "Seguir mi pedido" },
                   { href: "/carrito", label: "Mi carrito" },
                   { href: "/como-comprar", label: "Cómo comprar" },
+                  { href: "/quienes-somos", label: "Quiénes somos" },
                   { href: "/contacto", label: "Contacto" },
                 ].map(
                   (l) => (

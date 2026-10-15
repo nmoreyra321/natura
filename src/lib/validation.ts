@@ -135,6 +135,34 @@ export const transferSettingsSchema = z
       .transform((v) => (typeof v === "string" ? v : null)),
   });
 
+/** Redes de la tienda («Quiénes somos»). Vacío = no se muestra. */
+export const socialLinksSchema = z.object({
+  facebook: z
+    .string()
+    .transform((v) => normalizeSocialLink(v, /^(www\.|m\.|web\.)?(facebook\.com|fb\.com|fb\.me)$/))
+    .refine((v) => v !== false, "Pegá el link de tu página o perfil de Facebook (ej.: facebook.com/natumariel).")
+    .transform((v) => (typeof v === "string" ? v : null)),
+  instagram: z
+    .string()
+    .transform((v) => normalizeSocialLink(v, /^(www\.)?instagram\.com$/))
+    .refine((v) => v !== false, "Pegá el link de tu Instagram (ej.: instagram.com/natumariel).")
+    .transform((v) => (typeof v === "string" ? v : null)),
+});
+
+/** Link de una red como lo pegue la administradora → "https://…"; null si está vacío, false si no es de esa red. */
+export function normalizeSocialLink(raw: string, host: RegExp): string | null | false {
+  const v = raw.trim();
+  if (!v) return null;
+  try {
+    const url = new URL(/^https?:\/\//i.test(v) ? v : `https://${v}`);
+    const hostname = url.hostname.toLowerCase();
+    if (!host.test(hostname) || url.pathname.length < 2 || v.length > 200) return false;
+    return `https://${hostname}${url.pathname}${url.search}`;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Link de pago de Mercado Pago como lo pegue la administradora → "https://link.mercadopago.com.ar/…".
  * null si está vacío; false si no es un link de pago de Mercado Pago.

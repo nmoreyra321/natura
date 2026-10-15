@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { isValidProductImagePath, validateImageFile } from "@/lib/images";
 import { slugify } from "@/lib/slug";
-import { loginIdentifierToEmail, normalizeMpLink, parseMoney, productSchema } from "@/lib/validation";
+import { loginIdentifierToEmail, normalizeMpLink, parseMoney, productSchema, socialLinksSchema } from "@/lib/validation";
 
 const base = {
   name: "Crema corporal",
@@ -101,5 +101,15 @@ describe("normalizeMpLink", () => {
     expect(normalizeMpLink("")).toBeNull();
     expect(normalizeMpLink("https://otra-pagina.com/natumariel")).toBe(false);
     expect(normalizeMpLink("link.mercadopago.com.ar/")).toBe(false);
+  });
+});
+
+describe("socialLinksSchema", () => {
+  it("acepta los links como los pegue", () => {
+    const r = socialLinksSchema.parse({ facebook: "facebook.com/natumariel", instagram: "" });
+    expect(r).toEqual({ facebook: "https://facebook.com/natumariel", instagram: null });
+  });
+  it("rechaza links de otra página", () => {
+    expect(socialLinksSchema.safeParse({ facebook: "https://otra.com/x", instagram: "" }).success).toBe(false);
   });
 });

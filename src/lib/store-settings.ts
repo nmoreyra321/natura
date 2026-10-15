@@ -32,6 +32,14 @@ export const getTransferDetails = cache(async (): Promise<TransferDetails | null
   };
 });
 
+/** Redes de la tienda (para «Quiénes somos»). */
+export const getSocialLinks = cache(async (): Promise<{ facebook: string | null; instagram: string | null }> => {
+  const supabase = createPublicClient();
+  if (!supabase) return { facebook: null, instagram: null };
+  const { data } = await supabase.from("store_settings").select("facebook_url, instagram_url").eq("id", 1).maybeSingle();
+  return { facebook: data?.facebook_url ?? null, instagram: data?.instagram_url ?? null };
+});
+
 /** % de recargo que paga la clienta si elige Mercado Pago (0 = sin recargo). */
 export const getMercadoPagoSurcharge = cache(async (): Promise<number> => {
   const supabase = createPublicClient();
