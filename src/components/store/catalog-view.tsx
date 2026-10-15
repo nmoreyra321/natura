@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { buttonClasses } from "@/components/ui/button";
 import { inputClasses } from "@/components/ui/fields";
+import { CatalogFiltersToggle } from "./catalog-filters-toggle";
 import { EmptyStore } from "./empty-store";
 import { ProductGrid } from "./product-card";
 import { CatalogSearchField } from "./search-box";
@@ -69,22 +70,36 @@ export async function CatalogView({
       (!fixedCategory && filters.category),
   );
 
+  const activeCount = [
+    filters.line,
+    filters.refills,
+    filters.min !== undefined || filters.max !== undefined,
+    filters.offers,
+    !fixedCategory && filters.category,
+    filters.sort !== "destacados",
+  ].filter(Boolean).length;
+
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-12">
+    <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-12">
       <h1 className="font-display text-3xl font-bold sm:text-4xl">{title}</h1>
       {description ? <p className="mt-2 max-w-2xl text-muted">{description}</p> : null}
 
       <form
         method="get"
         action={basePath}
-        className={`mt-6 grid grid-cols-2 gap-3 rounded-3xl border border-line bg-warm-white p-4 shadow-soft ${fixedCategory ? "md:grid-cols-[2fr_1.3fr_1fr_1fr_1.3fr]" : "md:grid-cols-3 lg:grid-cols-[2fr_1.2fr_1.2fr_1fr_1fr_1.2fr]"}`}
+        className={`mt-4 grid grid-cols-2 gap-3 md:mt-6 md:rounded-3xl md:border md:border-line md:bg-warm-white md:p-4 md:shadow-soft ${fixedCategory ? "md:grid-cols-[2fr_1.3fr_1fr_1fr_1.3fr]" : "md:grid-cols-3 lg:grid-cols-[2fr_1.2fr_1.2fr_1fr_1fr_1.2fr]"}`}
       >
-        <div className="col-span-2 md:col-span-1">
-          <label htmlFor="f-q" className="mb-1 block text-sm font-semibold">
-            Buscar
-          </label>
-          <CatalogSearchField id="f-q" defaultValue={filters.q} />
-        </div>
+        <CatalogFiltersToggle
+          activeCount={activeCount}
+          search={
+            <>
+              <label htmlFor="f-q" className="sr-only md:not-sr-only md:mb-1 md:block md:text-sm md:font-semibold">
+                Buscar
+              </label>
+              <CatalogSearchField id="f-q" defaultValue={filters.q} />
+            </>
+          }
+        >
         {!fixedCategory ? (
           <div className="col-span-2 md:col-span-1">
             <label htmlFor="f-cat" className="mb-1 block text-sm font-semibold">
@@ -151,6 +166,7 @@ export async function CatalogView({
             Filtrar
           </button>
         </div>
+        </CatalogFiltersToggle>
       </form>
 
       <div className="mt-6 flex flex-wrap items-center justify-between gap-2 text-sm text-muted" aria-live="polite">
