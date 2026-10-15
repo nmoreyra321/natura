@@ -4,6 +4,7 @@ import { DebtCard } from "@/components/admin/debt-card";
 import { requireAdmin } from "@/lib/auth";
 import { groupDebts } from "@/lib/debts";
 import { formatARS } from "@/lib/format";
+import { SelectToDelete } from "@/components/admin/select-to-delete";
 
 export const metadata = { title: "Quién me debe" };
 
@@ -28,7 +29,8 @@ export default async function DebtsPage() {
     <div className="mx-auto max-w-3xl">
       <h1 className="font-display text-3xl font-bold">Quién me debe</h1>
       <p className="text-muted">
-        Clientas con pedidos sin cobrar o pagados en parte. Para anotar un pago, tocá el código del pedido.
+        Clientas con pedidos sin cobrar o pagados en parte. Para anotar un pago, tocá el código del pedido. Si una clienta se
+        arrepintió, marcá el pedido con el casillero y tocá «Borrar».
       </p>
 
       {error ? (
@@ -47,11 +49,13 @@ export default async function DebtsPage() {
             </span>
             <span className="text-3xl font-extrabold text-coral-deep tabular">{formatARS(totalCents)}</span>
           </div>
-          <ul className="mt-5 flex flex-col gap-3">
-            {debts.map((d) => (
-              <DebtCard key={d.key} debt={d} today={today} />
-            ))}
-          </ul>
+          <SelectToDelete kind="orders" ids={debts.flatMap((d) => d.orders.map((o) => o.id))}>
+            <ul className="mt-5 flex flex-col gap-3">
+              {debts.map((d) => (
+                <DebtCard key={d.key} debt={d} today={today} />
+              ))}
+            </ul>
+          </SelectToDelete>
         </>
       )}
     </div>

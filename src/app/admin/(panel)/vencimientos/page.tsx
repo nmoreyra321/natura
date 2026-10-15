@@ -2,6 +2,7 @@ import { AlertTriangle, CalendarClock, Tag } from "lucide-react";
 import Link from "next/link";
 
 import { LotActions } from "@/components/admin/lot-actions";
+import { SelectBox, SelectToDelete } from "@/components/admin/select-to-delete";
 import { LotQuickEntry } from "@/components/admin/lot-quick-entry";
 import { requireAdmin } from "@/lib/auth";
 import { EXPIRY_WARNING_MONTHS, expiryState, expiryWarningLimit, formatExpiry, monthsLeft } from "@/lib/lots";
@@ -36,6 +37,7 @@ function LotList({ lots, emphasize }: { lots: LotRow[]; emphasize: boolean }) {
             }`}
           >
             <div className="flex min-w-0 flex-1 items-center gap-3">
+              <SelectBox id={lot.id} label={name} />
               <span
                 className={`flex w-16 shrink-0 flex-col items-center rounded-xl px-2 py-1 text-center ${
                   state === "expired" ? "bg-coral-deep text-white" : state === "soon" ? "bg-sun" : "bg-white"
@@ -115,7 +117,7 @@ export default async function ExpiryPage() {
       {error ? (
         <p className="mt-6 rounded-2xl bg-coral-soft p-4 font-semibold">No pudimos cargar los vencimientos.</p>
       ) : (
-        <>
+        <SelectToDelete kind="lots" ids={lots.map((l) => l.id)}>
           <section aria-labelledby="por-vencer" className="mt-8 rounded-3xl bg-warm-white p-5 shadow-soft">
             <h2 id="por-vencer" className="flex flex-wrap items-center gap-2 font-display text-xl font-bold">
               <AlertTriangle className="size-5 text-coral-deep" aria-hidden="true" />
@@ -150,7 +152,7 @@ export default async function ExpiryPage() {
               <LotList lots={later} emphasize={false} />
             )}
           </details>
-        </>
+        </SelectToDelete>
       )}
     </div>
   );

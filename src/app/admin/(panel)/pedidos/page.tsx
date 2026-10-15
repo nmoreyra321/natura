@@ -7,6 +7,7 @@ import { OrderActions, PaymentControl } from "@/components/admin/order-actions";
 import { buttonClasses } from "@/components/ui/button";
 import { OrderContact } from "@/components/admin/order-contact";
 import { PaymentReview } from "@/components/admin/payment-review";
+import { SelectBox, SelectToDelete } from "@/components/admin/select-to-delete";
 import { requireAdmin } from "@/lib/auth";
 import { cleanSearch, originLabel } from "@/lib/channels";
 import { formatARS } from "@/lib/format";
@@ -203,6 +204,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
           }))}
         />
       ) : (
+        <SelectToDelete kind="orders" ids={orders.map((o) => o.id)}>
         <ul className="mt-6 flex flex-col gap-4">
           {orders.map((o) => {
             const status = (o.status in STATUS_LABELS ? o.status : "pending") as OrderStatus;
@@ -217,6 +219,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <p className="flex flex-wrap items-center gap-2">
+                      <SelectBox id={o.id} label={`el pedido ${o.code}`} />
                       <span className="font-display text-xl font-bold">Pedido {o.code}</span>
                       <span className="text-sm text-muted tabular">N.º interno {o.number}</span>
                       <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${STATUS_LABELS[status].tone}`}>
@@ -309,6 +312,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
             );
           })}
         </ul>
+        </SelectToDelete>
       )}
 
       {pageCount > 1 && orders.length > 0 ? (

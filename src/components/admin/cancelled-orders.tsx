@@ -92,6 +92,7 @@ export function CancelledOrders({ rows }: { rows: CancelledOrderRow[] }) {
         description="Se borran para siempre. No cambia el stock: ya se había devuelto al cancelarlos."
         confirmLabel="Borrar"
         pending={pending}
+        confirmWord="BORRAR"
         onConfirm={() => {
           setConfirm(false);
           start(async () => {

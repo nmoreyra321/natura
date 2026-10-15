@@ -250,6 +250,7 @@ function BulkBar({
         description="Se borran los productos y sus fotos. No se puede deshacer."
         confirmLabel={`Eliminar ${label}`}
         pending={pending}
+        confirmWord="BORRAR"
         onConfirm={() => {
           setConfirmDelete(false);
           run(() => bulkDeleteProducts(ids));

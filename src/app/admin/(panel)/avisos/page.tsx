@@ -2,6 +2,7 @@ import { BellRing } from "lucide-react";
 import Link from "next/link";
 
 import { RestockRow } from "@/components/admin/restock-row";
+import { SelectToDelete } from "@/components/admin/select-to-delete";
 import { requireAdmin } from "@/lib/auth";
 import { getSiteUrl } from "@/lib/config";
 
@@ -46,6 +47,7 @@ export default async function RestockPage() {
           <p className="mt-1 text-muted">En los productos sin stock, las clientas pueden tocar «Avisame cuando vuelva».</p>
         </div>
       ) : (
+        <SelectToDelete kind="restock" ids={list.flatMap((g) => g.rows.map((r) => r.id))}>
         <ul className="mt-6 flex flex-col gap-4">
           {list.map(({ product, rows }) => (
             <li key={product.id} className="rounded-3xl bg-warm-white p-4 shadow-soft">
@@ -79,6 +81,7 @@ export default async function RestockPage() {
             </li>
           ))}
         </ul>
+        </SelectToDelete>
       )}
     </div>
   );

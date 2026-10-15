@@ -106,6 +106,7 @@ export function ProductRowActions({
         title="¿Eliminar este producto?"
         description={`Se va a borrar “${name}” con todas sus fotos. Esta acción no se puede deshacer.`}
         pending={pending}
+        confirmWord="BORRAR"
         onCancel={() => setConfirm(false)}
         onConfirm={() =>
           start(async () => {

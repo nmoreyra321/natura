@@ -481,6 +481,58 @@ export async function deleteCancelledOrders(orderIds: string[]): Promise<ActionR
   }
 }
 
+export type DeleteKind = "orders" | "restock" | "lots" | "receipts";
+
+/**
+ * Borra varios registros elegidos en el panel (con doble confirmación en pantalla).
+ * - orders: si el pedido había descontado stock, primero se cancela (devuelve stock y vencimientos)
+ *   y después se borra con sus productos y su comprobante.
+ * - restock: avisos de «Avisame cuando vuelva».
+ * - lots: vencimientos anotados (no cambia el stock).
+ * - receipts: facturas del historial (no cambia el stock que ya se sumó).
+ */
+export async function deleteSelected(kind: DeleteKind, rawIds: string[]): Promise<ActionResult<{ deleted: number }>> {
+  try {
+    const { supabase } = await assertAdmin();
+    const ids = [...new Set(Array.isArray(rawIds) ? rawIds : [])].filter((id) => UUID_RE.test(String(id))).slice(0, 500);
+    if (ids.length === 0) return { ok: false, error: "No elegiste nada para borrar." };
+    let deleted = 0;
+
+    if (kind === "orders") {
+      const { data: orders, error: readError } = await supabase
+        .from("orders")
+        .select("id, status, stock_applied, payment_proof_path")
+        .in("id", ids);
+      if (readError) return fail(readError, "No pudimos leer los pedidos.");
+      for (const o of orders ?? []) {
+        if (o.status !== "cancelled" || o.stock_applied) {
+          const { error } = await supabase.rpc("set_order_status", { order_id: o.id, new_status: "cancelled" });
+          if (error) return fail(error, `No pudimos devolver el stock de un pedido. Se borraron ${deleted}.`);
+        }
+        const { error } = await supabase.from("orders").delete().eq("id", o.id);
+        if (error) return fail(error, `No pudimos borrar un pedido. Se borraron ${deleted}.`);
+        deleted++;
+      }
+      const proofs = (orders ?? []).map((o) => o.payment_proof_path).filter((p): p is string => Boolean(p));
+      if (proofs.length > 0) await supabase.storage.from("payment-proofs").remove(proofs);
+      refreshCatalog();
+      for (const path of ["/admin/pedidos", "/admin/deudas", "/admin/ventas", "/admin", "/admin/vencimientos"]) revalidatePath(path);
+    } else {
+      const table = kind === "restock" ? "restock_requests" : kind === "lots" ? "product_lots" : kind === "receipts" ? "receipts" : null;
+      if (!table) return { ok: false, error: "Datos inválidos." };
+      const { data, error } = await supabase.from(table).delete().in("id", ids).select("id");
+      if (error) return fail(error, "No pudimos borrar.");
+      deleted = data?.length ?? 0;
+      const path = { restock: "/admin/avisos", lots: "/admin/vencimientos", receipts: "/admin/productos" }[kind];
+      revalidatePath(path);
+      revalidatePath("/admin");
+    }
+    return { ok: true, data: { deleted }, message: `Listo: se ${deleted === 1 ? "borró 1" : `borraron ${deleted}`}.` };
+  } catch (e) {
+    return fail(e, "No pudimos borrar.");
+  }
+}
+
 /* --------------------------- Precios de Natura --------------------------- */
 
 export type NaturaPriceCheck = {

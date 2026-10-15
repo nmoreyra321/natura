@@ -4,6 +4,8 @@ import Link from "next/link";
 import type { AdminContext } from "@/lib/auth";
 import { formatARS } from "@/lib/format";
 import { toCents } from "@/lib/pricing";
+import { SelectBox, SelectToDelete } from "./select-to-delete";
+
 
 const dateFmt = new Intl.DateTimeFormat("es-AR", { dateStyle: "short", timeZone: "America/Argentina/Buenos_Aires" });
 const dayFmt = new Intl.DateTimeFormat("es-AR", { dateStyle: "short", timeZone: "UTC" });
@@ -26,12 +28,14 @@ export async function ReceiptHistory({ supabase }: { supabase: AdminContext["sup
   }
 
   return (
+    <SelectToDelete kind="receipts" ids={data.map((r) => r.id)}>
     <ul className="flex flex-col gap-3">
       {data.map((r) => {
         const items = [...(r.items ?? [])].sort((a, b) => a.product_name.localeCompare(b.product_name, "es"));
         return (
-          <li key={r.id} className="rounded-3xl bg-warm-white shadow-soft">
-            <details>
+          <li key={r.id} className="flex items-start gap-1 rounded-3xl bg-warm-white pl-4 shadow-soft">
+            <SelectBox id={r.id} label={r.invoice_number ? `la factura ${r.invoice_number}` : "la factura"} className="mt-[1.1rem]" />
+            <details className="min-w-0 flex-1">
               <summary className="flex cursor-pointer list-none items-start gap-3 p-4">
                 <FileText className="mt-0.5 size-5 shrink-0 text-coral-deep" aria-hidden="true" />
                 <span className="min-w-0 flex-1">
@@ -66,5 +70,6 @@ export async function ReceiptHistory({ supabase }: { supabase: AdminContext["sup
         );
       })}
     </ul>
+    </SelectToDelete>
   );
 }

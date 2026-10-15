@@ -7,6 +7,7 @@ import { toast } from "sonner";
 
 import { deleteRestockRequest, markRestockNotified } from "@/app/admin/actions";
 import { buttonClasses } from "@/components/ui/button";
+import { SelectBox } from "./select-to-delete";
 
 /** Una clienta esperando un producto: avisarle por WhatsApp (y marcar avisada) o borrar. */
 export function RestockRow({
@@ -33,10 +34,13 @@ export function RestockRow({
 
   return (
     <li className="flex flex-wrap items-center justify-between gap-2 px-3 py-2.5">
-      <span className="min-w-0">
+      <span className="flex min-w-0 items-start gap-2.5">
+        <SelectBox id={id} label={name ?? `+${phone}`} className="mt-0.5" />
+        <span className="min-w-0">
         <span className="font-semibold">{name ?? "Sin nombre"}</span>
         <span className="block text-xs text-muted">
           +{phone} · se anotó el {date}
+        </span>
         </span>
       </span>
       <span className="flex gap-1.5">
