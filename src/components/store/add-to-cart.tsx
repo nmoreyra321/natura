@@ -2,13 +2,13 @@
 
 import { Minus, Plus, ShoppingBag } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { cart, cartDrawer, useCart, type CartItem } from "@/lib/cart-store";
 import { formatARS } from "@/lib/format";
-import { toCents } from "@/lib/pricing";
+import { getPriceInfo, toCents } from "@/lib/pricing";
 
 export function QuantityInput({
   value,
@@ -61,11 +61,44 @@ export function QuantityInput({
   );
 }
 
+/** Cantidad elegida en la ficha de cada producto, para que el cartel de ahorro la use. */
+const selectedQty = new Map<string, number>();
+const qtyListeners = new Set<() => void>();
+function setSelectedQty(productId: string, n: number) {
+  if (selectedQty.get(productId) === n) return;
+  selectedQty.set(productId, n);
+  qtyListeners.forEach((l) => l());
+}
+function subscribeQty(l: () => void) {
+  qtyListeners.add(l);
+  return () => qtyListeners.delete(l);
+}
+
+/** Cartel "¡Ahorrás $X!" que se actualiza según la cantidad elegida. */
+export function LiveSavings({ productId, magazinePrice, salePrice }: { productId: string; magazinePrice: number; salePrice: number }) {
+  const qty = useSyncExternalStore(
+    subscribeQty,
+    () => selectedQty.get(productId) ?? 1,
+    () => 1,
+  );
+  const info = getPriceInfo(magazinePrice, salePrice);
+  if (!info.hasDiscount) return null;
+  return (
+    <p className="mt-1 inline-flex w-fit flex-wrap items-center gap-x-1.5 rounded-full bg-sun px-3 py-1 text-sm font-extrabold text-forest tabular" aria-live="polite">
+      ¡Ahorrás {formatARS(info.savingsCents * qty)}
+      {qty > 1 ? ` llevando ${qty}` : ""}!
+      {info.discountPercent >= 1 ? <span> {info.discountPercent}% menos que en revista</span> : null}
+    </p>
+  );
+}
+
 export function AddToCart({ product }: { product: Omit<CartItem, "quantity"> }) {
   const items = useCart();
   const inCart = items.find((i) => i.productId === product.productId)?.quantity ?? 0;
   const available = Math.max(product.stock - inCart, 0);
   const [qty, setQty] = useState(1);
+  const shownQty = product.stock <= 0 ? 1 : Math.min(qty, Math.max(available, 1));
+  useEffect(() => setSelectedQty(product.productId, shownQty), [product.productId, shownQty]);
 
   if (product.stock <= 0) {
     return (
@@ -108,8 +141,7 @@ export function AddToCart({ product }: { product: Omit<CartItem, "quantity"> }) 
           {unitSavings > 0 ? (
             <>
               {" "}
-              en vez de <span className="whitespace-nowrap line-through">{formatARS(magazineCents * quantity)}</span>.{" "}
-              <strong className="whitespace-nowrap text-botanical-deep">¡Ahorrás {formatARS(unitSavings * quantity)}!</strong>
+              en vez de <span className="whitespace-nowrap line-through">{formatARS(magazineCents * quantity)}</span>.
             </>
           ) : (
             "."

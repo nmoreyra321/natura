@@ -7,7 +7,7 @@ import { formatARS } from "@/lib/format";
 import { getPriceInfo, toCents } from "@/lib/pricing";
 import { slugify } from "@/lib/slug";
 import { buildProductInquiryMessage, buildWhatsAppUrl } from "@/lib/whatsapp";
-import { AddToCart, MobileBuyBar } from "./add-to-cart";
+import { AddToCart, LiveSavings, MobileBuyBar } from "./add-to-cart";
 import { Gallery } from "./gallery";
 import { Price } from "./price";
 import { ProductRail } from "./product-card";
@@ -100,7 +100,8 @@ export function ProductView({
 
           <div id="comprar" className="flex scroll-mt-28 flex-col gap-4 rounded-[1.75rem] bg-warm-white p-5 shadow-soft ring-1 ring-line/80">
             <div className="rounded-2xl bg-gradient-to-br from-blush to-lilac/70 p-4">
-              <Price magazinePrice={product.magazine_price} salePrice={product.sale_price} size="lg" showSavings />
+              <Price magazinePrice={product.magazine_price} salePrice={product.sale_price} size="lg" />
+              <LiveSavings productId={product.id} magazinePrice={product.magazine_price} salePrice={product.sale_price} />
               <StockBadge stock={product.stock} className="mt-3" />
             </div>
             <AddToCart
