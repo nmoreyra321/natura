@@ -1,4 +1,4 @@
-import { AlertTriangle, BellRing, CalendarClock, ClipboardList, FileText, HandCoins } from "lucide-react";
+import { AlertTriangle, BadgeDollarSign, BellRing, CalendarClock, ClipboardList, FileText, HandCoins } from "lucide-react";
 import Link from "next/link";
 
 import { DashboardView, type DashboardTask } from "@/components/admin/dashboard-view";
@@ -45,6 +45,7 @@ export default async function DashboardPage() {
     { data: restock },
     { data: orders },
     { data: dueReceipt },
+    { count: paymentsToReview },
   ] = await Promise.all([
     supabase.from("products").select("id, name, status, stock, is_offer, discount_percent, images:product_images(storage_path, position)"),
     supabase.from("orders").select("id", { count: "exact", head: true }).eq("status", "pending"),
@@ -70,6 +71,13 @@ export default async function DashboardPage() {
       .order("due_date")
       .limit(1)
       .maybeSingle(),
+    supabase
+      .from("orders")
+      .select("id", { count: "exact", head: true })
+      .eq("payment_method", "transferencia")
+      .not("payment_reported_at", "is", null)
+      .neq("status", "cancelled")
+      .or("payment_status.is.null,payment_status.neq.approved"),
   ]);
 
   const list = products ?? [];
@@ -88,6 +96,14 @@ export default async function DashboardPage() {
 
   // Lo que hay que hacer hoy, lo más importante primero.
   const tasks: DashboardTask[] = [];
+  if (paymentsToReview) {
+    tasks.push({
+      href: "/admin/pedidos?estado=revisar",
+      icon: BadgeDollarSign,
+      tone: "urgent",
+      text: `${paymentsToReview} ${paymentsToReview === 1 ? "clienta avisó que transfirió" : "clientas avisaron que transfirieron"}: revisá y aprobá el pago`,
+    });
+  }
   if (pendingOrders) {
     tasks.push({
       href: "/admin/pedidos?estado=pending",

@@ -79,10 +79,19 @@ describe("buildOrderMessage con forma de pago", () => {
 });
 
 describe("buildOrderMessage por transferencia", () => {
-  it("avisa que manda el comprobante", () => {
-    const lines = [{ name: "Tododia", quantity: 2, unitCents: 500_000, magazineUnitCents: 500_000 }];
-    expect(buildOrderMessage(lines, undefined, { paymentMethod: "transferencia" })).toContain(
-      "Forma de pago: Transferencia (adjunto el comprobante a continuación)",
-    );
+  const lines = [{ name: "Tododia", quantity: 2, unitCents: 500_000, magazineUnitCents: 500_000 }];
+  it("dice la forma de pago", () => {
+    expect(buildOrderMessage(lines, undefined, { paymentMethod: "transferencia" })).toContain("Forma de pago: Transferencia");
+  });
+
+  it("si ya transfirió avisa que cargó el comprobante y pasa el enlace del pedido", () => {
+    const msg = buildOrderMessage(lines, "https://natumariel.com", {
+      paymentMethod: "transferencia",
+      transferReported: true,
+      trackUrl: "https://natumariel.com/pedido/abc",
+    });
+    expect(msg).toContain("Ya hice la transferencia y cargué el comprobante en la tienda.");
+    expect(msg).toContain("Estado del pedido: https://natumariel.com/pedido/abc");
+    expect(msg).not.toContain("Pedido realizado en");
   });
 });

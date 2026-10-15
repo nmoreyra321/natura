@@ -1,10 +1,10 @@
 "use client";
 
-import { AlertCircle, ArrowLeftRight, Banknote, Check, Copy, CreditCard, Info, Loader2, MessageCircle, ShoppingBag, Trash2 } from "lucide-react";
+import { AlertCircle, ArrowLeftRight, Banknote, CreditCard, Info, Loader2, MessageCircle, ShoppingBag, Trash2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { toast } from "sonner";
 
 import { payWithMercadoPago, registerOrder, validateCart } from "@/app/(tienda)/carrito/actions";
 import { Button, LinkButton, buttonClasses } from "@/components/ui/button";
@@ -16,6 +16,7 @@ import { surchargeCents, toCents } from "@/lib/pricing";
 import { buildOrderMessage, buildWhatsAppUrl, getOrderTotals, type OrderLine } from "@/lib/whatsapp";
 import type { TransferDetails } from "@/lib/store-settings";
 import { QuantityInput } from "./add-to-cart";
+import { TransferAccount } from "./transfer-account";
 import { SavingsCelebration } from "./savings-celebration";
 import { ProductImageFallback } from "./product-card";
 
@@ -59,6 +60,7 @@ export function CartView({
   /** % de recargo si paga con Mercado Pago. */
   mpSurcharge?: number;
 }) {
+  const router = useRouter();
   const items = useCart();
   const hydrated = useCartHydrated();
   const [status, setStatus] = useState<Status>("idle");
@@ -430,6 +432,40 @@ export function CartView({
                   )}
                   {sending ? "Te llevamos a Mercado Pago…" : "Pagar con Mercado Pago"}
                 </button>
+              ) : payment === "transferencia" && transfer ? (
+                <button
+                  type="button"
+                  disabled={sending}
+                  className={buttonClasses("primary", "lg")}
+                  onClick={async () => {
+                    if (sending || blockIfMissingContact()) return;
+                    setSending(true);
+                    setError(null);
+                    const name = customerName.trim();
+                    const phone = customerPhone.trim();
+                    saveContact(name, phone);
+                    const res = await registerOrder({
+                      items: items.map((i) => ({ productId: i.productId, quantity: i.quantity })),
+                      customerName: name,
+                      customerPhone: phone,
+                      paymentMethod: "transferencia",
+                    }).catch(() => null);
+                    if (res?.ok) {
+                      // En la página del pedido avisa el pago y sube el comprobante.
+                      router.push(`/pedido/${res.id}?nuevo=1`);
+                      return;
+                    }
+                    setError(res?.error ?? "No pudimos registrar el pedido. Probá de nuevo.");
+                    setSending(false);
+                  }}
+                >
+                  {sending ? (
+                    <Loader2 className="size-5 animate-spin" aria-hidden="true" />
+                  ) : (
+                    <ShoppingBag className="size-5" aria-hidden="true" />
+                  )}
+                  {sending ? "Registrando tu pedido…" : "Hacer pedido"}
+                </button>
               ) : (
               <a
                 href={whatsappUrl}
@@ -451,17 +487,23 @@ export function CartView({
                     items: items.map((i) => ({ productId: i.productId, quantity: i.quantity })),
                     customerName: name,
                     customerPhone: phone,
-                    paymentMethod: payment === "transferencia" ? "transferencia" : "efectivo",
+                    paymentMethod: "efectivo",
                   }).catch(() => null);
                   const message = buildOrderMessage(lines, siteUrl, {
                     orderCode: res?.ok ? res.code : null,
                     customerName: name,
-                    paymentMethod: paymentOptions.length > 1 ? (payment === "transferencia" ? "transferencia" : "efectivo") : undefined,
+                    paymentMethod: paymentOptions.length > 1 ? "efectivo" : undefined,
+                    trackUrl: res?.ok ? `${siteUrl}/pedido/${res.id}` : null,
                   });
                   const url = buildWhatsAppUrl(whatsappNumber, message);
                   if (win) {
                     win.opener = null;
                     win.location.href = url;
+                    // Esta pestaña pasa a la página del pedido, donde puede ver en qué está.
+                    if (res?.ok) {
+                      router.push(`/pedido/${res.id}?nuevo=1`);
+                      return;
+                    }
                   } else {
                     window.location.href = url;
                   }
@@ -473,7 +515,7 @@ export function CartView({
                 ) : (
                   <MessageCircle className="size-5" aria-hidden="true" />
                 )}
-                {payment === "transferencia" ? "Enviar pedido y comprobante" : "Hacer pedido por WhatsApp"}
+                Hacer pedido por WhatsApp
               </a>
               )}
             </>
@@ -496,7 +538,7 @@ export function CartView({
             {payment === "mercadopago" && mercadoPago
               ? "Te llevamos a la página segura de Mercado Pago para pagar con tarjeta, dinero en cuenta o efectivo en puntos de pago. Cuando termines, volvés a la tienda y Natu Mariel coordina la entrega con vos."
               : payment === "transferencia"
-                ? "Al tocar el botón se abre WhatsApp con el detalle del pedido. Adjuntá ahí la captura del comprobante y enviala."
+                ? "Al tocar el botón se guarda tu pedido y pasás a su página: ahí subís el comprobante y ves cuándo se aprueba el pago."
                 : "Al enviar el pedido se abre WhatsApp con el detalle. Natu Mariel te confirmará disponibilidad, pago y entrega. El pedido queda confirmado y el stock reservado recién con esa confirmación."}
           </p>
           <Link href="/productos" className="text-center text-sm font-semibold text-coral-deep hover:underline">
@@ -508,53 +550,8 @@ export function CartView({
   );
 }
 
-/** Datos para transferir, con botón para copiar cada uno. */
-/** Monto como lo escriben las apps de transferencia: "20000" o "20000,50". */
-function plainAmount(cents: number): string {
-  const pesos = Math.floor(cents / 100);
-  const rest = cents % 100;
-  return rest ? `${pesos},${String(rest).padStart(2, "0")}` : String(pesos);
-}
-
-const MP_WEB = "https://www.mercadopago.com.ar/";
-
-/**
- * Abre la app de Mercado Pago (no el navegador). En Android, si no está instalada,
- * el sistema abre la web en el navegador predeterminado. En iPhone, si no se abrió, avisamos.
- */
-function openMercadoPagoApp() {
-  const ua = navigator.userAgent;
-  const isIOS = /iPhone|iPad|iPod/.test(ua) || (ua.includes("Macintosh") && navigator.maxTouchPoints > 1);
-  if (/Android/.test(ua)) {
-    window.location.href = `intent://home#Intent;scheme=mercadopago;package=com.mercadopago.wallet;S.browser_fallback_url=${encodeURIComponent(MP_WEB)};end`;
-    return;
-  }
-  if (isIOS) {
-    const timer = setTimeout(() => {
-      if (!document.hidden) toast.info("Si no se abrió, entrá a la app de Mercado Pago y pegá el alias en Transferir.");
-    }, 1800);
-    document.addEventListener("visibilitychange", () => clearTimeout(timer), { once: true });
-    window.location.href = "mercadopago://";
-    return;
-  }
-  // Compu: no hay app, se abre la web en una pestaña nueva.
-  window.open(MP_WEB, "_blank", "noopener");
-}
-
-/**
- * Datos para transferir. Ninguna app permite abrir una transferencia con el alias ya cargado,
- * así que el botón principal copia el alias y abre Mercado Pago: la clienta solo pega.
- */
+/** Cómo pagar por transferencia: datos de la cuenta y los pasos. */
 function TransferBox({ transfer, totalCents }: { transfer: TransferDetails; totalCents: number }) {
-  const rows = [
-    { label: "Alias", value: transfer.alias },
-    { label: "CBU/CVU", value: transfer.cbu },
-    { label: "Monto", value: plainAmount(totalCents), display: formatARS(totalCents) },
-    { label: "Titular", value: transfer.holder, noCopy: true },
-    { label: "Banco", value: transfer.bank, noCopy: true },
-  ].filter((r) => r.value);
-  const key = transfer.alias ?? transfer.cbu ?? "";
-  const keyLabel = transfer.alias ? "alias" : "CBU";
   const step = (n: number) => (
     <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-botanical-deep text-xs font-bold text-white">
       {n}
@@ -572,85 +569,26 @@ function TransferBox({ transfer, totalCents }: { transfer: TransferDetails; tota
             <p>
               Transferí <strong>{formatARS(totalCents)}</strong> a esta cuenta:
             </p>
-            <dl className="mt-1.5 flex flex-col gap-1 rounded-xl bg-white/70 px-2.5 py-1.5">
-              {rows.map((r) => (
-                <div key={r.label} className="flex items-center justify-between gap-2">
-                  <dt className="shrink-0 text-muted">{r.label}</dt>
-                  <dd className="flex min-w-0 items-center gap-1 font-semibold">
-                    <span className="truncate font-mono text-[0.85rem]">{r.display ?? r.value}</span>
-                    {r.noCopy ? null : <CopyButton text={r.value!} label={r.label} />}
-                  </dd>
-                </div>
-              ))}
-            </dl>
-            {key ? (
-              <>
-                <button
-                  type="button"
-                  onClick={() => {
-                    // Se copia y se abre en el mismo toque (si no, el navegador bloquea la ventana).
-                    navigator.clipboard
-                      ?.writeText(key)
-                      .then(() => toast.success(`${transfer.alias ? "Alias" : "CBU"} copiado: pegalo en Mercado Pago.`))
-                      .catch(() => toast.info(`Copiá el ${keyLabel}: ${key}`));
-                    openMercadoPagoApp();
-                  }}
-                  className="mt-2 inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-[#009ee3] px-4 font-bold text-white transition-colors hover:bg-[#0089c7]"
-                >
-                  <Copy className="size-4.5" aria-hidden="true" />
-                  Copiar {keyLabel} y abrir Mercado Pago
-                </button>
-                <p className="mt-1.5 text-xs text-muted">
-                  En Mercado Pago tocá <strong>Transferir</strong> y pegá el {keyLabel}. ¿Otro banco o billetera? Pegalo en
-                  la app que uses.
-                </p>
-              </>
-            ) : null}
+            <TransferAccount transfer={transfer} totalCents={totalCents} />
           </div>
         </li>
         <li className="flex gap-2.5">
           {step(2)}
           <p>
-            Guardá el <strong>comprobante</strong>: con una captura de pantalla alcanza.
+            Volvé a esta página y tocá <strong>Hacer pedido</strong> (acá abajo).
           </p>
         </li>
         <li className="flex gap-2.5">
           {step(3)}
           <p>
-            Volvé a esta página y tocá <strong>Enviar pedido y comprobante</strong> (acá abajo). Se abre WhatsApp con tu
-            pedido: <strong>adjuntá la captura</strong> en ese chat y enviala.
+            En la página de tu pedido subí la <strong>captura del comprobante</strong> y tocá <strong>Ya transferí</strong>.
           </p>
         </li>
       </ol>
       <p className="mt-3 border-t border-botanical/30 pt-2 text-xs text-muted">
-        Natu Mariel verifica el pago y te confirma la entrega por WhatsApp. Tu carrito queda guardado mientras transferís.
+        Natu Mariel revisa el pago y te avisa cuando está aprobado. En la página de tu pedido vas a ver cuándo se confirma.
+        Tu carrito queda guardado mientras transferís.
       </p>
     </div>
-  );
-}
-
-function CopyButton({ text, label }: { text: string; label: string }) {
-  const [copied, setCopied] = useState(false);
-  return (
-    <button
-      type="button"
-      onClick={async () => {
-        try {
-          await navigator.clipboard.writeText(text);
-          setCopied(true);
-          setTimeout(() => setCopied(false), 1800);
-        } catch {
-          // Sin permiso para copiar: la clienta lo puede seleccionar a mano.
-        }
-      }}
-      className="inline-flex size-8 shrink-0 items-center justify-center rounded-full hover:bg-white"
-      aria-label={copied ? `${label} copiado` : `Copiar ${label}`}
-    >
-      {copied ? (
-        <Check className="size-4 text-botanical-deep" aria-hidden="true" />
-      ) : (
-        <Copy className="size-4" aria-hidden="true" />
-      )}
-    </button>
   );
 }

@@ -337,6 +337,9 @@ export async function registerOrderPayment(orderId: string, amount: number, note
         payment_status: complete ? "approved" : null,
         paid_at: complete ? new Date().toISOString() : null,
         payment_note: complete ? null : note?.trim().slice(0, 120) || null,
+        // Anotar un pago cuenta como revisar el aviso de la clienta.
+        payment_reported_at: null,
+        payment_rejection: null,
       })
       .eq("id", orderId);
     if (error) return fail(error, "No pudimos anotar el pago.");
@@ -347,6 +350,76 @@ export async function registerOrderPayment(orderId: string, amount: number, note
     };
   } catch (e) {
     return fail(e, "No pudimos anotar el pago.");
+  }
+}
+
+/**
+ * Aprueba la transferencia que avisó la clienta: el pedido queda pagado por completo y,
+ * si estaba pendiente, se confirma (se descuenta el stock).
+ */
+export async function approveTransferPayment(orderId: string): Promise<ActionResult> {
+  try {
+    const { supabase } = await assertAdmin();
+    if (!UUID_RE.test(orderId)) return { ok: false, error: "Datos inválidos." };
+    const { data: order, error: readError } = await supabase
+      .from("orders")
+      .select("total, status, payment_method")
+      .eq("id", orderId)
+      .maybeSingle();
+    if (readError) return fail(readError, "No pudimos leer el pedido.");
+    if (!order || order.payment_method !== "transferencia" || order.status === "cancelled") {
+      return { ok: false, error: "No encontramos ese pedido." };
+    }
+    const { error } = await supabase
+      .from("orders")
+      .update({
+        amount_paid: toCents(order.total) / 100,
+        payment_status: "approved",
+        paid_at: new Date().toISOString(),
+        payment_note: null,
+        payment_reported_at: null,
+        payment_rejection: null,
+      })
+      .eq("id", orderId);
+    if (error) return fail(error, "No pudimos aprobar el pago.");
+    revalidatePath("/admin/pedidos");
+    revalidatePath("/admin");
+    revalidatePath(`/pedido/${orderId}`);
+    if (order.status === "pending") {
+      const { error: confirmError } = await supabase.rpc("set_order_status", { order_id: orderId, new_status: "confirmed" });
+      if (confirmError) {
+        console.error("[pagos] Pago aprobado pero no se pudo confirmar el pedido:", confirmError.message);
+        return { ok: true, message: "Pago aprobado. No pudimos confirmar el pedido (¿falta stock?): revisalo." };
+      }
+      refreshCatalog();
+      return { ok: true, message: "Pago aprobado y pedido confirmado (se descontó el stock)." };
+    }
+    return { ok: true, message: "Pago aprobado." };
+  } catch (e) {
+    return fail(e, "No pudimos aprobar el pago.");
+  }
+}
+
+/** No se encontró la transferencia: la clienta ve el motivo en la página de su pedido y puede volver a avisar. */
+export async function rejectTransferPayment(orderId: string, reason: string): Promise<ActionResult> {
+  try {
+    const { supabase } = await assertAdmin();
+    const why = reason.trim().slice(0, 200);
+    if (!UUID_RE.test(orderId) || why.length < 3) return { ok: false, error: "Escribí el motivo." };
+    const { data, error } = await supabase
+      .from("orders")
+      .update({ payment_reported_at: null, payment_rejection: why })
+      .eq("id", orderId)
+      .eq("payment_method", "transferencia")
+      .select("id");
+    if (error) return fail(error, "No pudimos guardar.");
+    if (!data?.length) return { ok: false, error: "No encontramos ese pedido." };
+    revalidatePath("/admin/pedidos");
+    revalidatePath("/admin");
+    revalidatePath(`/pedido/${orderId}`);
+    return { ok: true, message: "Listo: la clienta va a ver que el pago no se confirmó." };
+  } catch (e) {
+    return fail(e, "No pudimos guardar.");
   }
 }
 

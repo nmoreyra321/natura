@@ -60,6 +60,10 @@ export function buildOrderMessage(
     paymentMethod?: "efectivo" | "transferencia" | "mercadopago";
     /** true si ya se pagó online (mensaje desde la página del pedido). */
     paid?: boolean;
+    /** true si la clienta ya transfirió y subió el comprobante en la tienda. */
+    transferReported?: boolean;
+    /** Página donde la clienta sigue su pedido. */
+    trackUrl?: string | null;
   } = {},
 ): string {
   const { totalCents, savingsCents } = getOrderTotals(lines);
@@ -94,14 +98,17 @@ export function buildOrderMessage(
     if (extra.paymentMethod) {
       const label = {
         efectivo: "Efectivo",
-        transferencia: "Transferencia (adjunto el comprobante a continuación)",
+        transferencia: extra.transferReported
+          ? "Transferencia. Ya hice la transferencia y cargué el comprobante en la tienda."
+          : "Transferencia",
         mercadopago: "Mercado Pago",
       };
       parts.push("", `Forma de pago: ${label[extra.paymentMethod]}`);
     }
     parts.push("", "Quedo a la espera de la confirmación de disponibilidad y de la coordinación de la entrega. Muchas gracias.");
   }
-  if (siteUrl) parts.push("", `Pedido realizado en ${siteUrl.replace(/^https?:\/\//, "")}`);
+  if (extra.trackUrl) parts.push("", `Estado del pedido: ${extra.trackUrl}`);
+  else if (siteUrl) parts.push("", `Pedido realizado en ${siteUrl.replace(/^https?:\/\//, "")}`);
   return parts.join("\n");
 }
 

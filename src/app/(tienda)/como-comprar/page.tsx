@@ -40,7 +40,7 @@ const steps = [
 const faqs = [
   {
     q: "¿Tengo que crear una cuenta?",
-    a: "No. Armás el carrito y enviás el pedido por WhatsApp, sin registrarte ni dejar datos en la página.",
+    a: "No. Armás el carrito y enviás el pedido por WhatsApp, sin registrarte: solo te pedimos tu nombre y tu WhatsApp para poder coordinar.",
   },
   {
     q: "¿El pedido queda confirmado al enviarlo?",
@@ -48,7 +48,11 @@ const faqs = [
   },
   {
     q: "¿Cómo pago y cómo recibo el pedido?",
-    a: "En el carrito elegís cómo pagar: en efectivo o por transferencia (sin recargo: ves el alias ahí mismo, lo copiás con un toque y le mandás el comprobante a Mariel). La entrega la coordinan por WhatsApp.",
+    a: "En el carrito elegís cómo pagar: en efectivo o por transferencia (sin recargo: ves el alias ahí mismo, lo copiás con un toque y después subís el comprobante en la página de tu pedido). Cuando Mariel aprueba el pago lo ves ahí mismo, y la entrega la coordinan por WhatsApp.",
+  },
+  {
+    q: "¿Cómo sé en qué está mi pedido?",
+    a: "Después de hacer el pedido pasás a su página: ahí ves si el pago está aprobado, si el pedido está confirmado y cuándo se entrega. Para volver a verla, entrá a «Seguir mi pedido» (al pie de la página) con tu código y tu WhatsApp.",
   },
   {
     q: "¿Qué es el precio de revista?",

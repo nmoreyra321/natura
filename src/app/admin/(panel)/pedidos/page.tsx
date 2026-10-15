@@ -6,10 +6,13 @@ import { CancelledOrders } from "@/components/admin/cancelled-orders";
 import { OrderActions, PaymentControl } from "@/components/admin/order-actions";
 import { buttonClasses } from "@/components/ui/button";
 import { OrderContact } from "@/components/admin/order-contact";
+import { PaymentReview } from "@/components/admin/payment-review";
 import { requireAdmin } from "@/lib/auth";
 import { cleanSearch, originLabel } from "@/lib/channels";
 import { formatARS } from "@/lib/format";
+import { getSiteUrl } from "@/lib/config";
 import { formatExpiry } from "@/lib/lots";
+import { needsPaymentReview } from "@/lib/order-tracking";
 import { toCents } from "@/lib/pricing";
 
 export const metadata = { title: "Pedidos" };
@@ -33,10 +36,11 @@ const PAYMENT_LABELS: Record<string, { label: string; tone: string }> = {
   charged_back: { label: "Mercado Pago · Contracargo", tone: "bg-coral-soft text-coral-deep" },
 };
 
-function paymentBadge(method: string, status: string | null, paidCents = 0, totalCents = 0) {
+function paymentBadge(method: string, status: string | null, paidCents = 0, totalCents = 0, review = false) {
   if (method !== "mercadopago") {
     const label = method === "transferencia" ? "Transferencia" : "Efectivo";
     if (status === "approved") return { label: `${label} · Pagado ✓`, tone: "bg-botanical-deep text-white" };
+    if (review) return { label: `${label} · Avisó que pagó: revisar`, tone: "bg-grape text-white" };
     if (paidCents > 0) {
       return { label: `${label} · Pagó una parte (falta ${formatARS(totalCents - paidCents)})`, tone: "bg-sun text-forest" };
     }
@@ -48,6 +52,7 @@ function paymentBadge(method: string, status: string | null, paidCents = 0, tota
 
 const FILTERS: { value: string; label: string }[] = [
   { value: "", label: "Todos" },
+  { value: "revisar", label: "Pagos por revisar" },
   { value: "pending", label: "Pendientes" },
   { value: "confirmed", label: "Confirmados" },
   { value: "delivered", label: "Entregados" },
@@ -76,7 +81,7 @@ function href(estado: string, page: number, q = "") {
 export default async function OrdersPage({ searchParams }: { searchParams: Promise<Search> }) {
   const { supabase } = await requireAdmin();
   const sp = await searchParams;
-  const estado = one(sp.estado) in STATUS_LABELS || one(sp.estado) === "sin-cobrar" ? one(sp.estado) : "";
+  const estado = one(sp.estado) in STATUS_LABELS || ["sin-cobrar", "revisar"].includes(one(sp.estado)) ? one(sp.estado) : "";
   const pageRaw = Number(one(sp.pagina) || "1");
   const page = Number.isInteger(pageRaw) && pageRaw >= 1 && pageRaw <= 10000 ? pageRaw : 1;
   const from = (page - 1) * PAGE_SIZE;
@@ -85,12 +90,19 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
   let query = supabase
     .from("orders")
     .select(
-      "id, number, code, channel, status, customer_name, customer_phone, total, savings, created_at, payment_method, payment_status, paid_at, amount_paid, payment_note, items:order_items(id, product_id, name, size, quantity, unit_price), lots:order_lot_allocations(product_id, expires_on, quantity)",
+      "id, number, code, channel, status, customer_name, customer_phone, total, savings, created_at, payment_method, payment_status, paid_at, amount_paid, payment_note, payment_reported_at, payment_rejection, payment_proof_path, items:order_items(id, product_id, name, size, quantity, unit_price), lots:order_lot_allocations(product_id, expires_on, quantity)",
       { count: "exact" },
     )
     .order("created_at", { ascending: false })
     .order("id");
-  if (estado === "sin-cobrar") {
+  if (estado === "revisar") {
+    // Transferencias que la clienta avisó y falta aprobar o rechazar.
+    query = query
+      .eq("payment_method", "transferencia")
+      .not("payment_reported_at", "is", null)
+      .neq("status", "cancelled")
+      .or("payment_status.is.null,payment_status.neq.approved");
+  } else if (estado === "sin-cobrar") {
     // Pedidos vigentes cuyo pago todavía no se marcó (o Mercado Pago no aprobó).
     query = query.neq("status", "cancelled").or("payment_status.is.null,payment_status.neq.approved");
   } else if (estado) {
@@ -108,6 +120,15 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
   const orders = error?.code === "PGRST103" ? [] : (data ?? []);
   const total = count ?? 0;
   const pageCount = Math.ceil(total / PAGE_SIZE);
+
+  // Enlaces (por 1 hora) para ver los comprobantes de los pagos por revisar.
+  const proofPaths = orders.filter((o) => needsPaymentReview(o) && o.payment_proof_path).map((o) => o.payment_proof_path!);
+  const proofUrls = new Map<string, string>();
+  if (proofPaths.length > 0) {
+    const { data: signed } = await supabase.storage.from("payment-proofs").createSignedUrls(proofPaths, 3600);
+    for (const x of signed ?? []) if (x.path && x.signedUrl) proofUrls.set(x.path, x.signedUrl);
+  }
+  const siteUrl = getSiteUrl();
 
   return (
     <div className="mx-auto max-w-5xl">
@@ -163,7 +184,13 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
         <div className="mt-6 rounded-3xl border border-dashed border-line bg-warm-white p-10 text-center">
           <ClipboardList className="mx-auto size-10 text-muted" aria-hidden="true" />
           <p className="mt-3 font-display text-xl font-bold">
-            {q ? `No hay pedidos con “${q}”.` : estado ? "No hay pedidos con este estado." : "Todavía no hay pedidos."}
+            {q
+              ? `No hay pedidos con “${q}”.`
+              : estado === "revisar"
+                ? "No hay pagos para revisar. ¡Todo al día!"
+                : estado
+                  ? "No hay pedidos con este estado."
+                  : "Todavía no hay pedidos."}
           </p>
           {!estado && !q ? (
             <p className="mt-1 text-muted">Cuando una clienta envíe un pedido por WhatsApp, lo vas a ver acá.</p>
@@ -185,6 +212,8 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
           {orders.map((o) => {
             const status = (o.status in STATUS_LABELS ? o.status : "pending") as OrderStatus;
             const units = o.items.reduce((sum, i) => sum + i.quantity, 0);
+            const review = needsPaymentReview(o);
+            const badge = paymentBadge(o.payment_method, o.payment_status, toCents(o.amount_paid), toCents(o.total), review);
             return (
               <li key={o.id} className="rounded-3xl bg-warm-white p-4 shadow-soft sm:p-5">
                 <div className="flex flex-wrap items-start justify-between gap-3">
@@ -195,11 +224,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
                       <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${STATUS_LABELS[status].tone}`}>
                         {STATUS_LABELS[status].label}
                       </span>
-                      <span
-                        className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${paymentBadge(o.payment_method, o.payment_status, toCents(o.amount_paid), toCents(o.total)).tone}`}
-                      >
-                        {paymentBadge(o.payment_method, o.payment_status, toCents(o.amount_paid), toCents(o.total)).label}
-                      </span>
+                      <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${badge.tone}`}>{badge.label}</span>
                       <span className="rounded-full border border-line px-2.5 py-0.5 text-xs font-bold text-muted">
                         {originLabel(o.channel)}
                       </span>
@@ -243,6 +268,26 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
                     </li>
                   ))}
                 </ul>
+                {review ? (
+                  <div className="mt-3">
+                    <PaymentReview
+                      orderId={o.id}
+                      code={o.code}
+                      name={o.customer_name}
+                      phone={o.customer_phone}
+                      total={formatARS(toCents(o.total) - toCents(o.amount_paid))}
+                      reportedAt={dateFormatter.format(new Date(o.payment_reported_at!))}
+                      proofUrl={o.payment_proof_path ? (proofUrls.get(o.payment_proof_path) ?? null) : null}
+                      proofIsPdf={o.payment_proof_path?.endsWith(".pdf") ?? false}
+                      trackUrl={`${siteUrl}/pedido/${o.id}`}
+                    />
+                  </div>
+                ) : o.payment_rejection && o.payment_status !== "approved" && status !== "cancelled" ? (
+                  <p className="mt-3 rounded-2xl bg-coral-soft px-3 py-2 text-sm">
+                    <span className="font-semibold">Pago no confirmado:</span> {o.payment_rejection}. Esperando que la clienta
+                    vuelva a avisar.
+                  </p>
+                ) : null}
                 {o.payment_note && o.payment_status !== "approved" ? (
                   <p className="mt-3 rounded-2xl bg-sun/40 px-3 py-2 text-sm">
                     <span className="font-semibold">Nota del cobro:</span> {o.payment_note}

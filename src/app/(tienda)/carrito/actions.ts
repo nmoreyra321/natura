@@ -56,7 +56,7 @@ export async function validateCart(input: unknown): Promise<CartValidationResult
   };
 }
 
-export type RegisterOrderResult = { ok: true; code: string | null } | { ok: false; error: string };
+export type RegisterOrderResult = { ok: true; id: string; code: string | null } | { ok: false; error: string };
 
 /**
  * Registra el pedido para el panel de Mariel justo antes de abrir WhatsApp.
@@ -96,7 +96,7 @@ export async function registerOrder(input: unknown): Promise<RegisterOrderResult
       .maybeSingle();
     code = saved?.code ?? null;
   }
-  return { ok: true, code };
+  return { ok: true, id: row.id, code };
 }
 
 export type MercadoPagoCheckoutResult = { ok: true; url: string } | { ok: false; error: string };

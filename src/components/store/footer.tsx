@@ -59,6 +59,11 @@ export function Footer({ categories }: { categories: { name: string; slug: strin
               </Link>
             </li>
             <li>
+              <Link className="hover:text-sun" href="/mi-pedido">
+                Seguir mi pedido
+              </Link>
+            </li>
+            <li>
               <Link className="hover:text-sun" href="/como-comprar">
                 Cómo comprar
               </Link>
