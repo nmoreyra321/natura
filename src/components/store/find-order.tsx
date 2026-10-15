@@ -2,11 +2,11 @@
 
 import { ChevronRight, Loader2, Search } from "lucide-react";
 import Link from "next/link";
-import { useActionState, useSyncExternalStore } from "react";
+import { useActionState } from "react";
 
 import { findOrder, type FindOrderState } from "@/app/(tienda)/pedido/actions";
 import { buttonClasses } from "@/components/ui/button";
-import { readSavedOrders, type SavedOrder } from "@/lib/my-orders";
+import { useSavedOrders } from "@/lib/my-orders";
 
 const dateFormatter = new Intl.DateTimeFormat("es-AR", {
   day: "numeric",
@@ -14,23 +14,9 @@ const dateFormatter = new Intl.DateTimeFormat("es-AR", {
   timeZone: "America/Argentina/Buenos_Aires",
 });
 
-const NONE: SavedOrder[] = [];
-let cached: { raw: string; list: SavedOrder[] } | null = null;
-/** Lee los pedidos guardados sin crear una lista nueva en cada render. */
-function snapshot(): SavedOrder[] {
-  const list = readSavedOrders();
-  const raw = JSON.stringify(list);
-  if (cached?.raw !== raw) cached = { raw, list };
-  return cached.list;
-}
-
 /** Pedidos hechos desde este celular + búsqueda por código y WhatsApp. */
 export function FindOrder() {
-  const saved = useSyncExternalStore(
-    () => () => {},
-    snapshot,
-    () => NONE,
-  );
+  const saved = useSavedOrders();
   const [state, action, pending] = useActionState<FindOrderState, FormData>(findOrder, null);
 
   return (

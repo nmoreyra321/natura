@@ -1,12 +1,13 @@
 "use client";
 
-import { Menu, MessageCircle, Search, ShoppingBag, X } from "lucide-react";
+import { ChevronRight, Menu, MessageCircle, Package, Search, ShoppingBag, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import { cartCount, cartDrawer, useCart } from "@/lib/cart-store";
+import { hideOrderReminder, useRecentOrder, useSavedOrders } from "@/lib/my-orders";
 import { CartDrawer } from "./cart-drawer";
 import { Logo } from "./logo";
 import { InstallAppButton } from "./install-app";
@@ -44,6 +45,55 @@ function CartLink() {
       <ShoppingBag className="size-6" aria-hidden="true" />
       {badge}
     </button>
+  );
+}
+
+/** Ícono "Mis pedidos", con un puntito si hay pedidos hechos desde este celular. */
+function OrdersLink() {
+  const saved = useSavedOrders();
+  return (
+    <Link
+      href="/mi-pedido"
+      className="relative inline-flex size-11 items-center justify-center rounded-full text-forest transition-colors hover:bg-forest/5"
+      aria-label={saved.length > 0 ? "Mis pedidos (tenés pedidos hechos)" : "Seguir mi pedido"}
+      title="Mis pedidos"
+    >
+      <Package className="size-5.5" aria-hidden="true" />
+      {saved.length > 0 ? (
+        <span className="absolute top-2 right-2 size-2.5 rounded-full bg-botanical-deep ring-2 ring-cream" aria-hidden="true" />
+      ) : null}
+    </Link>
+  );
+}
+
+/** Franja bajo el menú: "Tenés un pedido en curso" para volver a su página desde cualquier lado. */
+function OrderReminder() {
+  const order = useRecentOrder();
+  const pathname = usePathname();
+  if (!order || pathname.startsWith("/pedido/") || pathname === "/mi-pedido") return null;
+  return (
+    <div className="border-t border-line/70 bg-sage/60">
+      <div className="mx-auto flex max-w-7xl items-center gap-2 px-4 py-1.5 sm:px-6">
+        <Link
+          href={`/pedido/${order.id}`}
+          className="flex min-h-9 flex-1 items-center gap-2 text-sm font-semibold text-forest hover:underline"
+        >
+          <Package className="size-4 shrink-0 text-botanical-deep" aria-hidden="true" />
+          <span>
+            Tu pedido <strong>{order.code}</strong>: <span className="text-botanical-deep">ver cómo va</span>
+          </span>
+          <ChevronRight className="size-4 shrink-0" aria-hidden="true" />
+        </Link>
+        <button
+          type="button"
+          onClick={() => hideOrderReminder(order.id)}
+          className="inline-flex size-8 shrink-0 items-center justify-center rounded-full hover:bg-white/70"
+          aria-label="Ocultar aviso del pedido"
+        >
+          <X className="size-4" aria-hidden="true" />
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -135,9 +185,11 @@ export function Header({ categories }: { categories: NavCategory[] }) {
           >
             <MessageCircle className="size-5.5" aria-hidden="true" />
           </Link>
+          <OrdersLink />
           <CartLink />
         </div>
       </div>
+      <OrderReminder />
       <CartDrawer />
 
       {searchOpen ? (
@@ -177,9 +229,10 @@ export function Header({ categories }: { categories: NavCategory[] }) {
               <ul className="flex flex-col gap-1">
                 {[
                   ...links,
+                  { href: "/mi-pedido", label: "Seguir mi pedido" },
+                  { href: "/carrito", label: "Mi carrito" },
                   { href: "/como-comprar", label: "Cómo comprar" },
                   { href: "/contacto", label: "Contacto" },
-                  { href: "/carrito", label: "Mi carrito" },
                 ].map(
                   (l) => (
                     <li key={l.href}>
