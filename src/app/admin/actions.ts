@@ -1969,3 +1969,19 @@ export async function saveLoyaltyMinTotal(value: unknown): Promise<ActionResult>
     return fail(e, "No pudimos guardar el monto.");
   }
 }
+
+/** Saca una reseña de la tienda (se borra para siempre). */
+export async function deleteReview(id: unknown): Promise<ActionResult> {
+  try {
+    const { supabase } = await assertAdmin();
+    if (typeof id !== "string" || !UUID_RE.test(id)) return { ok: false, error: "Reseña inválida." };
+    const { data, error } = await supabase.from("reviews").delete().eq("id", id).select("id");
+    if (error) return fail(error, "No pudimos sacarla.");
+    if (!data?.length) return { ok: false, error: "Esa reseña ya no está." };
+    revalidatePath("/admin/resenas");
+    revalidatePath("/");
+    return { ok: true, message: "Reseña sacada de la tienda." };
+  } catch (e) {
+    return fail(e, "No pudimos sacarla.");
+  }
+}

@@ -8,6 +8,7 @@ import { CancelOrder } from "@/components/store/cancel-order";
 import { OrderMissing } from "@/components/store/order-missing";
 import { AutoRefresh, MpPayFlow, OrderPageEffects, ReportPayment } from "@/components/store/order-tracking";
 import { PaidOrderActions } from "@/components/store/paid-order-actions";
+import { ReviewForm } from "@/components/store/review-form";
 import { TransferAccount } from "@/components/store/transfer-account";
 import { buttonClasses } from "@/components/ui/button";
 import { getSiteUrl } from "@/lib/config";
@@ -89,6 +90,10 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
     ]);
     club = loyaltyStatus(purchases ?? 0, given ?? 0);
   }
+  // Reseña opcional: una por pedido, y no en los cancelados.
+  const { count: reviewed } = cancelled
+    ? { count: 1 }
+    : await admin.from("reviews").select("id", { count: "exact", head: true }).eq("order_id", order.id);
   const siteUrl = getSiteUrl();
   const trackUrl = `${siteUrl}/pedido/${order.id}`;
 
@@ -314,6 +319,8 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
             ) : null}
           </section>
         ) : null}
+
+        {!reviewed ? <ReviewForm orderId={order.id} defaultName={order.customer_name?.trim().split(" ")[0] ?? ""} /> : null}
 
         <div className="mt-6 flex flex-col gap-3 text-center">
           {cancelled && helpUrl ? (

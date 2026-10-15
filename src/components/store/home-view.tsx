@@ -2,7 +2,7 @@ import { ArrowRight, CircleCheck, Gift, MessageCircle, Sparkles } from "lucide-r
 import Image from "next/image";
 import Link from "next/link";
 
-import type { ActiveCampaign, PublicCategory, PublicProduct } from "@/lib/catalog";
+import type { ActiveCampaign, PublicCategory, PublicProduct, ReviewSummary } from "@/lib/catalog";
 import { formatARS } from "@/lib/format";
 import { GIFT_EVERY } from "@/lib/loyalty";
 import { productImageUrl } from "@/lib/images";
@@ -14,6 +14,7 @@ import { InfiniteCarousel } from "./infinite-carousel";
 import { HeroArt } from "./hero-art";
 import { LeafMark } from "./logo";
 import { ProductRail } from "./product-card";
+import { Stars } from "./stars";
 
 export type HomeData = {
   hasProducts: boolean;
@@ -29,7 +30,45 @@ export type HomeData = {
   campaign: (ActiveCampaign & { products: PublicProduct[] }) | null;
   /** Club de clientas: monto mínimo del pedido para que sume (en centavos). */
   clubMinCents: number;
+  /** Reseñas de clientas (promedio, cantidad y las últimas). */
+  reviews: ReviewSummary | null;
 };
+
+const reviewDateFmt = new Intl.DateTimeFormat("es-AR", { month: "long", year: "numeric", timeZone: "America/Argentina/Buenos_Aires" });
+
+/** «Lo que dicen nuestras clientas»: promedio de estrellas y una fila de reseñas para deslizar. */
+export function ReviewsSection({ r }: { r: ReviewSummary }) {
+  return (
+    <Section>
+      <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h2 id="resenas" className="font-display text-2xl font-bold sm:text-3xl">
+            Lo que dicen nuestras clientas 💬
+          </h2>
+          <p className="mt-1 flex flex-wrap items-center gap-2 text-sm font-semibold text-muted sm:text-base">
+            <span className="font-display text-2xl font-bold text-forest tabular">{r.average.toLocaleString("es-AR", { maximumFractionDigits: 1 })}</span>
+            <Stars value={r.average} className="size-5" />
+            <span>
+              ({r.count} {r.count === 1 ? "reseña" : "reseñas"})
+            </span>
+          </p>
+        </div>
+      </div>
+      <ul className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-3 [scrollbar-width:thin]" aria-labelledby="resenas">
+        {r.latest.map((rev) => (
+          <li key={rev.id} className="flex w-[80%] shrink-0 snap-start flex-col rounded-3xl bg-warm-white p-5 shadow-soft sm:w-[45%] lg:w-[30%]">
+            <Stars value={rev.rating} />
+            {rev.comment ? <p className="mt-2 flex-1 text-forest/90">“{rev.comment}”</p> : <span className="flex-1" />}
+            <p className="mt-3 text-sm font-bold">
+              {rev.name}
+              <span className="block text-xs font-semibold text-muted first-letter:uppercase">{reviewDateFmt.format(new Date(rev.createdAt))}</span>
+            </p>
+          </li>
+        ))}
+      </ul>
+    </Section>
+  );
+}
 
 const untilFmt = new Intl.DateTimeFormat("es-AR", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" });
 
@@ -264,6 +303,8 @@ export function HomeView({ d }: { d: HomeData }) {
               <ProductRail products={d.bestSellers.slice(0, 8)} />
             </Section>
           ) : null}
+
+          {d.reviews ? <ReviewsSection r={d.reviews} /> : null}
 
           {/* Llamado a WhatsApp */}
           {d.whatsappUrl ? (

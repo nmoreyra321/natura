@@ -6,6 +6,7 @@ import {
   getHighlights,
   getProductsByIds,
   getPublishedCount,
+  getReviewSummary,
   type PublicProduct,
 } from "@/lib/catalog";
 import { getLoyaltyMinTotal } from "@/lib/store-settings";
@@ -27,12 +28,13 @@ function pickHeroProducts(...lists: PublicProduct[][]): PublicProduct[] {
 }
 
 export default async function HomePage() {
-  const [count, categories, highlights, bestSellers, campaign] = await Promise.all([
+  const [count, categories, highlights, bestSellers, campaign, reviews] = await Promise.all([
     getPublishedCount(),
     getActiveCategories(),
     getHighlights(8),
     getBestSellers(8),
     getActiveCampaign(),
+    getReviewSummary(),
   ]);
   const clubMin = await getLoyaltyMinTotal();
   const campaignProducts = campaign ? await getProductsByIds(campaign.productIds) : [];
@@ -50,6 +52,7 @@ export default async function HomePage() {
         heroProducts: pickHeroProducts(highlights.offers, highlights.featured, bestSellers, highlights.latest),
         campaign: campaign ? { ...campaign, products: campaignProducts } : null,
         clubMinCents: Math.round(clubMin * 100),
+        reviews,
         whatsappUrl: whatsapp ? buildWhatsAppUrl(whatsapp, "¡Hola Mariel! Quería hacerte una consulta 😊") : null,
       }}
     />

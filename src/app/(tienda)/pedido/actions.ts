@@ -242,3 +242,45 @@ export async function clubProgress(orderIds: string[]): Promise<ClubProgress | n
   const s = loyaltyStatus(purchases ?? 0, given ?? 0);
   return { progress: s.progress, left: s.left, pending: s.pending, minCents: Math.round(min * 100) };
 }
+
+export type ReviewResult = { ok: true } | { ok: false; error: string };
+
+/**
+ * La clienta deja su reseña desde la página de su pedido (opcional): nombre, estrellas y
+ * comentario. Una por pedido; los pedidos cancelados no pueden dejar reseña.
+ */
+export async function submitReview(input: { orderId: string; name: string; rating: number; comment: string }): Promise<ReviewResult> {
+  const name = input.name.trim().replace(/\s+/g, " ");
+  const comment = input.comment.trim();
+  const rating = Math.round(Number(input.rating));
+  if (!UUID_RE.test(input.orderId)) return { ok: false, error: "No encontramos tu pedido." };
+  if (name.length < 2 || name.length > 60) return { ok: false, error: "Escribí tu nombre." };
+  if (!(rating >= 1 && rating <= 5)) return { ok: false, error: "Elegí cuántas estrellas le das." };
+  if (comment.length > 500) return { ok: false, error: "El comentario es muy largo (hasta 500 letras)." };
+  const admin = createAdminClient();
+  if (!admin) return { ok: false, error: "La tienda no está configurada." };
+  if (!(await allowRequest("resena", 5, 3600))) {
+    return { ok: false, error: "Probaste muchas veces. Intentá más tarde." };
+  }
+  const { data: order } = await admin.from("orders").select("id, status").eq("id", input.orderId).maybeSingle();
+  if (!order || order.status === "cancelled") return { ok: false, error: "Este pedido no puede dejar reseña." };
+
+  const { error } = await admin.from("reviews").insert({ order_id: order.id, name, rating, comment: comment || null });
+  if (error) {
+    if (error.code === "23505") return { ok: false, error: "Ya dejaste tu reseña para este pedido. ¡Gracias!" };
+    console.error("[reseña] No se pudo guardar:", error.message);
+    return { ok: false, error: "No pudimos guardar tu reseña. Probá de nuevo." };
+  }
+  after(() =>
+    notifyAdmins({
+      title: `${"⭐".repeat(rating)} Nueva reseña`,
+      body: `${name}${comment ? `: ${comment.slice(0, 100)}` : ""}`,
+      url: "/admin/resenas",
+      tag: `resena-${order.id}`,
+    }),
+  );
+  revalidatePath(`/pedido/${order.id}`);
+  revalidatePath("/");
+  revalidatePath("/admin/resenas");
+  return { ok: true };
+}
