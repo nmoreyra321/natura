@@ -34,7 +34,11 @@ const nextConfig: NextConfig = {
   },
   images: {
     remotePatterns,
-    formats: ["image/avif", "image/webp"],
+    // Un solo formato (WebP, lo leen todos los navegadores actuales) para gastar la mitad del cupo
+    // gratis de fotos de Vercel. Cada foto nueva se guarda con otro nombre, así que se puede
+    // recordar la versión achicada un mes sin volver a procesarla.
+    formats: ["image/webp"],
+    minimumCacheTTL: 2678400,
     // Solo para pruebas con Supabase local (127.0.0.1). Nunca activar en producción.
     dangerouslyAllowLocalIP: process.env.NEXT_IMAGE_ALLOW_LOCAL_IP === "1",
   },
