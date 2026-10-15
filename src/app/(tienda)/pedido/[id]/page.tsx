@@ -108,8 +108,8 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
         "Mercado Pago todavía está procesando el pago (por ejemplo, si elegiste pagar en efectivo en un punto de pago). Cuando se acredite, lo vas a ver acá.";
     }
   } else if (isTransfer && state === "paid") {
-    [tone, Icon, title] = ["good", CheckCircle2, "¡Pago aprobado!"];
-    text = "Natu Mariel ya recibió tu pago. Te escribe por WhatsApp para coordinar la entrega.";
+    [tone, Icon, title] = ["good", CheckCircle2, "¡Confirmamos tu pago!"];
+    text = "Natu Mariel ya recibió tu pago y tu pedido está confirmado. Te escribe por WhatsApp para coordinar la entrega.";
   } else if (state === "review") {
     [tone, Icon, title] = ["wait", Clock, "Estamos revisando tu pago"];
     text = (
@@ -179,11 +179,11 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
                 {n > 0 ? (
                   <span
                     aria-hidden="true"
-                    className={`absolute top-3.5 right-1/2 h-1 w-full -translate-y-1/2 ${s.done ? "bg-botanical-deep" : "bg-line"}`}
+                    className={`absolute top-3.5 right-1/2 h-1 w-full -translate-y-1/2 ${s.done && steps[n - 1].done ? "bg-botanical-deep" : "bg-line"}`}
                   />
                 ) : null}
                 <span
-                  className={`relative flex size-7 items-center justify-center rounded-full text-xs font-bold ${
+                  className={`relative z-10 flex size-7 items-center justify-center rounded-full text-xs font-bold ${
                     s.done ? "bg-botanical-deep text-white" : "border-2 border-line bg-white text-muted"
                   }`}
                 >

@@ -69,7 +69,7 @@ describe("paymentState", () => {
 describe("trackingSteps", () => {
   it("transferencia tiene el paso del pago", () => {
     const steps = trackingSteps({ ...base, status: "confirmed", payment_status: "approved" });
-    expect(steps.map((s) => s.label)).toEqual(["Pedido recibido", "Pago aprobado", "Pedido confirmado", "Entregado"]);
+    expect(steps.map((s) => s.label)).toEqual(["Pedido recibido", "Pago confirmado", "Pedido confirmado", "Entregado"]);
     expect(steps.map((s) => s.done)).toEqual([true, true, true, false]);
   });
 

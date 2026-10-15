@@ -13,8 +13,9 @@ import { toWhatsAppPhone } from "@/lib/debts";
 const REASONS = ["No me llegó el pago", "El monto no coincide con el pedido", "No se ve bien el comprobante"];
 
 /**
- * La clienta avisó que transfirió: la administradora mira el comprobante y su cuenta, y aprueba
- * o rechaza. Después se abre WhatsApp con un mensaje listo para la clienta.
+ * Pedido que se paga online (link de Mercado Pago o transferencia) y todavía no está pagado.
+ * Un solo botón, «Confirmar pago»: queda pagado, se confirma el pedido y se abre WhatsApp con un
+ * mensaje listo para la clienta. Si la clienta avisó que pagó, también se puede rechazar.
  */
 export function PaymentReview({
   orderId,
@@ -33,7 +34,8 @@ export function PaymentReview({
   phone: string | null;
   /** Total ya formateado ("$ 20.000"). */
   total: string;
-  reportedAt: string;
+  /** Cuándo avisó la clienta que pagó (null si todavía no avisó). */
+  reportedAt: string | null;
   proofUrl: string | null;
   proofIsPdf: boolean;
   trackUrl: string;
@@ -68,12 +70,21 @@ export function PaymentReview({
 
   return (
     <div className="rounded-2xl border-2 border-grape/40 bg-lilac/40 p-3 sm:p-4">
-      <p className="font-bold text-grape">💸 La clienta avisó que pagó {total}</p>
-      <p className="text-sm text-muted">
-        El {reportedAt}. Fijate en Mercado Pago o en tu cuenta que haya llegado y aprobalo.
-      </p>
+      {reportedAt ? (
+        <>
+          <p className="font-bold text-grape">💸 La clienta avisó que pagó {total}</p>
+          <p className="text-sm text-muted">
+            El {reportedAt}. Fijate en Mercado Pago o en tu cuenta que haya llegado y confirmalo.
+          </p>
+        </>
+      ) : (
+        <>
+          <p className="font-bold text-grape">💳 Esperando el pago de {total}</p>
+          <p className="text-sm text-muted">Cuando veas el pago en Mercado Pago o en tu cuenta, tocá «Confirmar pago».</p>
+        </>
+      )}
       <div className="mt-3 flex flex-wrap gap-2">
-        {proofUrl ? (
+        {!reportedAt ? null : proofUrl ? (
           <a href={proofUrl} target="_blank" rel="noopener noreferrer" className={buttonClasses("outline", "md", "bg-white")}>
             <FileText className="size-4" aria-hidden="true" /> Ver comprobante{proofIsPdf ? " (PDF)" : ""}
           </a>
@@ -86,17 +97,19 @@ export function PaymentReview({
           onClick={() =>
             run(
               () => approveTransferPayment(orderId),
-              `${hi} Soy Mariel de Natu Mariel 🌸 Recibí tu pago del pedido ${code} ✅ Ya está confirmado. ¿Coordinamos la entrega?`,
+              `${hi} Soy Mariel de Natu Mariel 🌸 Confirmamos tu pago del pedido ${code} ✅ ¡Gracias! ¿Coordinamos la entrega?`,
             )
           }
           className={buttonClasses("primary", "md")}
         >
           {pending ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : <BadgeCheck className="size-4" aria-hidden="true" />}
-          Aprobar pago
+          Confirmar pago
         </button>
-        <button type="button" disabled={pending} onClick={() => setRejecting((v) => !v)} className={buttonClasses("ghost", "md")}>
-          <ThumbsDown className="size-4" aria-hidden="true" /> No llegó
-        </button>
+        {reportedAt ? (
+          <button type="button" disabled={pending} onClick={() => setRejecting((v) => !v)} className={buttonClasses("ghost", "md")}>
+            <ThumbsDown className="size-4" aria-hidden="true" /> No llegó
+          </button>
+        ) : null}
       </div>
       {rejecting ? (
         <form

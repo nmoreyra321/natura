@@ -54,7 +54,7 @@ export type TrackingStep = { label: string; done: boolean };
 export function trackingSteps(o: TrackingOrder): TrackingStep[] {
   const confirmed = o.status === "confirmed" || o.status === "delivered";
   const steps: TrackingStep[] = [{ label: "Pedido recibido", done: true }];
-  if (o.payment_method !== "efectivo") steps.push({ label: "Pago aprobado", done: paymentState(o) === "paid" });
+  if (o.payment_method !== "efectivo") steps.push({ label: "Pago confirmado", done: paymentState(o) === "paid" });
   steps.push({ label: "Pedido confirmado", done: confirmed });
   steps.push({ label: "Entregado", done: o.status === "delivered" });
   return steps;

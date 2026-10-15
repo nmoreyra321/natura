@@ -23,10 +23,13 @@ export function OrderActions({
   id,
   code,
   status,
+  hideConfirm = false,
 }: {
   id: string;
   code: string;
   status: OrderStatus;
+  /** Pago online sin confirmar: se confirma con «Confirmar pago», no con este botón. */
+  hideConfirm?: boolean;
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -46,7 +49,7 @@ export function OrderActions({
   return (
     <div className="flex flex-wrap gap-2">
 
-      {status === "pending" ? (
+      {status === "pending" && !hideConfirm ? (
         <button type="button" disabled={pending} onClick={() => change("confirmed")} className={buttonClasses("primary", "md")}>
           <Check className="size-4" aria-hidden="true" /> Confirmar
         </button>

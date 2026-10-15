@@ -45,7 +45,7 @@ export default async function SettingsPage() {
         <h2 className="font-display text-xl font-bold">Cobrar con link de Mercado Pago o transferencia</h2>
         <p className="mt-1 mb-4 text-sm text-muted">
           Con el <strong>link de pago</strong> cargado, en el carrito aparece <strong>Mercado Pago</strong>: en la página
-          de su pedido la clienta abre tu link, paga y toca «Ya pagué». Vos lo aprobás en Pedidos. Si no hay link, se
+          de su pedido la clienta abre tu link, paga y toca «Ya pagué». Vos tocás «Confirmar pago» en Pedidos. Si no hay link, se
           ofrece <strong>Transferencia</strong> con el alias. Si borrás todo, la opción desaparece.
         </p>
         <TransferSettingsForm

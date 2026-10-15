@@ -12,7 +12,7 @@ import { cleanSearch, originLabel } from "@/lib/channels";
 import { formatARS } from "@/lib/format";
 import { getSiteUrl } from "@/lib/config";
 import { formatExpiry } from "@/lib/lots";
-import { needsPaymentReview } from "@/lib/order-tracking";
+import { needsPaymentReview, paymentState } from "@/lib/order-tracking";
 import { toCents } from "@/lib/pricing";
 
 export const metadata = { title: "Pedidos" };
@@ -213,6 +213,9 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
             const status = (o.status in STATUS_LABELS ? o.status : "pending") as OrderStatus;
             const units = o.items.reduce((sum, i) => sum + i.quantity, 0);
             const review = needsPaymentReview(o);
+            // Pago online (link de Mercado Pago o transferencia) sin confirmar: un solo botón «Confirmar pago».
+            const onlineUnpaid =
+              o.payment_method === "transferencia" && status !== "cancelled" && paymentState(o) !== "paid";
             const badge = paymentBadge(o.payment_method, o.payment_status, toCents(o.amount_paid), toCents(o.total), review);
             return (
               <li key={o.id} className="rounded-3xl bg-warm-white p-4 shadow-soft sm:p-5">
@@ -268,7 +271,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
                     </li>
                   ))}
                 </ul>
-                {review ? (
+                {onlineUnpaid ? (
                   <div className="mt-3">
                     <PaymentReview
                       orderId={o.id}
@@ -276,13 +279,14 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
                       name={o.customer_name}
                       phone={o.customer_phone}
                       total={formatARS(toCents(o.total) - toCents(o.amount_paid))}
-                      reportedAt={dateFormatter.format(new Date(o.payment_reported_at!))}
+                      reportedAt={review ? dateFormatter.format(new Date(o.payment_reported_at!)) : null}
                       proofUrl={o.payment_proof_path ? (proofUrls.get(o.payment_proof_path) ?? null) : null}
                       proofIsPdf={o.payment_proof_path?.endsWith(".pdf") ?? false}
                       trackUrl={`${siteUrl}/pedido/${o.id}`}
                     />
                   </div>
-                ) : o.payment_rejection && o.payment_status !== "approved" && status !== "cancelled" ? (
+                ) : null}
+                {onlineUnpaid && o.payment_rejection && !review ? (
                   <p className="mt-3 rounded-2xl bg-coral-soft px-3 py-2 text-sm">
                     <span className="font-semibold">Pago no confirmado:</span> {o.payment_rejection}. Esperando que la clienta
                     vuelva a avisar.
@@ -293,7 +297,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
                     <span className="font-semibold">Nota del cobro:</span> {o.payment_note}
                   </p>
                 ) : null}
-                {o.payment_method !== "mercadopago" && status !== "cancelled" ? (
+                {o.payment_method === "efectivo" && status !== "cancelled" ? (
                   <div className="mt-3">
                     <PaymentControl
                       key={`${o.amount_paid}-${o.total}`}
@@ -304,7 +308,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
                   </div>
                 ) : null}
                 <div className="mt-3">
-                  <OrderActions id={o.id} code={o.code} status={status} />
+                  <OrderActions id={o.id} code={o.code} status={status} hideConfirm={onlineUnpaid} />
                 </div>
               </li>
             );
