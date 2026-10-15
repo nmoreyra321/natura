@@ -1,6 +1,6 @@
 "use client";
 
-import { Loader2, X } from "lucide-react";
+import { Loader2, PackagePlus, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -136,15 +136,24 @@ export function AdminProductSearch({
               </ul>
             </>
           ) : (
-            <p id={listId} className="flex items-center gap-2 px-3 py-3 text-sm text-muted" role="status">
+            <div id={listId} role="status" className="px-3 py-3 text-sm text-muted">
               {loading ? (
-                <>
+                <p className="flex items-center gap-2">
                   <Loader2 className="size-4 animate-spin" aria-hidden="true" /> Buscando…
-                </>
+                </p>
               ) : (
-                `No hay productos con “${term}”.`
+                <>
+                  <p>No hay productos con “{term}”.</p>
+                  <Link
+                    href={`/admin/productos?q=${encodeURIComponent(term)}&crear=1`}
+                    onClick={close}
+                    className="mt-2 flex items-center gap-2 rounded-xl bg-sage px-3 py-2 font-bold text-botanical-deep hover:bg-botanical-deep hover:text-white"
+                  >
+                    <PackagePlus className="size-4 shrink-0" aria-hidden="true" /> Agregar “{term}” como producto nuevo
+                  </Link>
+                </>
               )}
-            </p>
+            </div>
           )}
         </div>
       ) : null}

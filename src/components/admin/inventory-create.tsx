@@ -8,14 +8,32 @@ import { buttonClasses } from "@/components/ui/button";
 import { QuickCreateProduct } from "./quick-create-product";
 
 /** En «Stock»: si lo que se buscó no está en la tienda, se puede crear ahí mismo. */
-export function InventoryCreate({ name, categories }: { name: string; categories: { id: string; name: string }[] }) {
+export function InventoryCreate({
+  name,
+  categories,
+  initialOpen = false,
+  notFound = true,
+}: {
+  name: string;
+  categories: { id: string; name: string }[];
+  /** Abrir directo el formulario (cuando se eligió «Agregar como producto nuevo» en el buscador). */
+  initialOpen?: boolean;
+  /** false: hubo resultados, pero ninguno es el que se buscaba. */
+  notFound?: boolean;
+}) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(initialOpen);
   if (!open) {
     return (
       <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-sun/50 px-4 py-3 text-sm">
         <span>
-          No encontramos <strong>«{name}»</strong> en la tienda.
+          {notFound ? (
+            <>
+              No encontramos <strong>«{name}»</strong> en la tienda.
+            </>
+          ) : (
+            <>¿No es ninguno de estos?</>
+          )}
         </span>
         <button type="button" onClick={() => setOpen(true)} className={buttonClasses("primary", "sm")}>
           <Plus className="size-4" aria-hidden="true" /> Agregar producto nuevo

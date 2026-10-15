@@ -26,7 +26,8 @@ export const metadata = { title: "Productos" };
 /** Leer la foto de la boleta puede tardar (la acción corre en esta página). */
 export const maxDuration = 120;
 
-const PAGE_SIZE = 200;
+// Todo el catálogo en una sola hoja: es más práctico bajar con el dedo que cambiar de página.
+const PAGE_SIZE = 600;
 /** Valor del filtro de categoría para ver los productos sin categoría. */
 const NO_CATEGORY = "ninguna";
 
@@ -220,6 +221,9 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
           Limpiar filtros
         </Link>
       ) : null}
+      {q.length >= 2 && products && products.length > 0 ? (
+        <InventoryCreate name={q} categories={categories ?? []} notFound={false} initialOpen={one(sp.crear) === "1"} />
+      ) : null}
 
       {error ? (
         <p className="mt-6 rounded-2xl bg-coral-soft p-4 font-semibold">No pudimos cargar los productos.</p>
@@ -237,7 +241,7 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
           ) : null}
           {q.length >= 2 && page === 1 ? (
             <div className="mt-4 text-left">
-              <InventoryCreate name={q} categories={categories ?? []} />
+              <InventoryCreate name={q} categories={categories ?? []} initialOpen={one(sp.crear) === "1"} />
             </div>
           ) : null}
           {!filtered && page === 1 ? (
