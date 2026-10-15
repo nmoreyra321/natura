@@ -1,5 +1,13 @@
 import { HomeView } from "@/components/store/home-view";
-import { getActiveCategories, getBestSellers, getHighlights, getPublishedCount, type PublicProduct } from "@/lib/catalog";
+import {
+  getActiveCampaign,
+  getActiveCategories,
+  getBestSellers,
+  getHighlights,
+  getProductsByIds,
+  getPublishedCount,
+  type PublicProduct,
+} from "@/lib/catalog";
 import { buildWhatsAppUrl, getWhatsAppNumber } from "@/lib/whatsapp";
 
 export const revalidate = 300;
@@ -18,12 +26,14 @@ function pickHeroProducts(...lists: PublicProduct[][]): PublicProduct[] {
 }
 
 export default async function HomePage() {
-  const [count, categories, highlights, bestSellers] = await Promise.all([
+  const [count, categories, highlights, bestSellers, campaign] = await Promise.all([
     getPublishedCount(),
     getActiveCategories(),
     getHighlights(8),
     getBestSellers(8),
+    getActiveCampaign(),
   ]);
+  const campaignProducts = campaign ? await getProductsByIds(campaign.productIds) : [];
   const whatsapp = getWhatsAppNumber();
 
   return (
@@ -36,6 +46,7 @@ export default async function HomePage() {
         featured: highlights.featured,
         latest: highlights.latest,
         heroProducts: pickHeroProducts(highlights.offers, highlights.featured, bestSellers, highlights.latest),
+        campaign: campaign ? { ...campaign, products: campaignProducts } : null,
         whatsappUrl: whatsapp ? buildWhatsAppUrl(whatsapp, "¡Hola Mariel! Quería hacerte una consulta 😊") : null,
       }}
     />

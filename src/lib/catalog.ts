@@ -138,6 +138,8 @@ export async function getCatalog(filters: CatalogFilters): Promise<CatalogResult
   if (filters.max !== undefined) query = query.lte("sale_price", filters.max);
   if (filters.offers) query = query.eq("is_offer", true).gt("discount_percent", 0);
 
+  // Siempre primero lo que se puede comprar; después, el orden elegido.
+  query = query.order("in_stock", { ascending: false });
   switch (filters.sort) {
     case "precio-asc":
       query = query.order("sale_price", { ascending: true });
@@ -201,7 +203,7 @@ export async function searchSuggestions(q: string, limit = 6): Promise<SearchSug
     .eq("status", "published");
   for (const pattern of patterns) query = query.filter("name", "imatch", pattern);
   const { data, error } = await query
-    .order("stock", { ascending: false })
+    .order("in_stock", { ascending: false })
     .order("is_featured", { ascending: false })
     .order("name")
     .limit(limit);
@@ -238,8 +240,9 @@ export async function getHighlights(limit = 8) {
   const supabase = createPublicClient();
   if (!supabase) return { featured: [], offers: [], latest: [] };
 
+  // Con stock primero en cada sección de la portada.
   const base = () =>
-    supabase.from("products").select(PRODUCT_SELECT).eq("status", "published");
+    supabase.from("products").select(PRODUCT_SELECT).eq("status", "published").order("in_stock", { ascending: false });
 
   const [featured, offers, latest] = await Promise.all([
     base().eq("is_featured", true).order("updated_at", { ascending: false }).limit(limit),
@@ -292,6 +295,7 @@ export async function getRelatedProducts(product: PublicProduct, limit = 4) {
     .eq("status", "published")
     .eq("category_id", product.category.id)
     .neq("id", product.id)
+    .order("in_stock", { ascending: false })
     .order("is_featured", { ascending: false })
     .limit(limit);
   return ((data ?? []) as unknown as PublicProduct[]).map(sortImages);
@@ -403,4 +407,42 @@ export async function getProductsForCart(ids: string[]): Promise<CartProductSnap
       image: images[0]?.storage_path ?? null,
     };
   });
+}
+
+export type ActiveCampaign = { title: string; slug: string; message: string | null; endsOn: string; productIds: string[] };
+
+/** La fecha especial activa hoy (la base solo muestra las activas), o null. */
+export async function getActiveCampaign(): Promise<ActiveCampaign | null> {
+  const supabase = createPublicClient();
+  if (!supabase) return null;
+  const { data, error } = await supabase
+    .from("campaigns")
+    .select("title, slug, message, ends_on, product_ids")
+    .order("ends_on", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (error || !data) return null;
+  return { title: data.title, slug: data.slug, message: data.message, endsOn: data.ends_on, productIds: data.product_ids };
+}
+
+/** Una fecha especial activa por su dirección, o null si no existe o ya terminó. */
+export async function getCampaignBySlug(slug: string): Promise<ActiveCampaign | null> {
+  const supabase = createPublicClient();
+  if (!supabase) return null;
+  const { data } = await supabase
+    .from("campaigns")
+    .select("title, slug, message, ends_on, product_ids")
+    .eq("slug", slug)
+    .maybeSingle();
+  return data ? { title: data.title, slug: data.slug, message: data.message, endsOn: data.ends_on, productIds: data.product_ids } : null;
+}
+
+/** Productos publicados de una lista (con stock primero, en el orden elegido). */
+export async function getProductsByIds(ids: string[]): Promise<PublicProduct[]> {
+  const supabase = createPublicClient();
+  if (!supabase || ids.length === 0) return [];
+  const { data } = await supabase.from("products").select(PRODUCT_SELECT).eq("status", "published").in("id", ids.slice(0, 200));
+  const byId = new Map(((data ?? []) as unknown as PublicProduct[]).map((p) => [p.id, sortImages(p)]));
+  const list = ids.map((id) => byId.get(id)).filter((p): p is PublicProduct => Boolean(p));
+  return [...list.filter((p) => p.stock > 0), ...list.filter((p) => p.stock <= 0)];
 }

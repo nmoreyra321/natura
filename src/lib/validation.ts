@@ -250,6 +250,9 @@ export const orderRequestSchema = z.object({
   customerName: z.string().trim().min(2).max(80),
   customerPhone: z.string().trim().max(30),
   paymentMethod: z.enum(["efectivo", "transferencia"]).optional(),
+  /** «Es para regalo» y la nota para el regalo (opcional). */
+  isGift: z.boolean().optional(),
+  giftNote: z.string().trim().max(200).optional(),
 });
 
 

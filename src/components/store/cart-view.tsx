@@ -70,6 +70,10 @@ export function CartView({
   const [retry, setRetry] = useState(0);
   const [customerName, setCustomerName] = useState(() => readSaved(NAME_KEY));
   const [customerPhone, setCustomerPhone] = useState(() => readSaved(PHONE_KEY));
+  // «Es para regalo»: Natu Mariel lo prepara para regalar (y se suma la nota, si escribe una).
+  const [isGift, setIsGift] = useState(false);
+  const [giftNote, setGiftNote] = useState("");
+  const gift = isGift ? { isGift: true, giftNote: giftNote.trim() || undefined } : {};
   /** Se marca al intentar enviar: recién ahí se muestran los avisos de datos faltantes. */
   const [triedSend, setTriedSend] = useState(false);
   const nameError = customerName.trim().length < 2 ? "Escribí tu nombre." : null;
@@ -374,6 +378,27 @@ export function CartView({
                   </p>
                 ) : null}
               </div>
+              <div className="rounded-2xl bg-blush/60 p-3">
+                <label className="flex cursor-pointer items-center gap-2 font-semibold">
+                  <input
+                    type="checkbox"
+                    checked={isGift}
+                    onChange={(e) => setIsGift(e.target.checked)}
+                    className="size-5 accent-[var(--coral-deep)]"
+                  />
+                  🎁 Es para regalo
+                </label>
+                {isGift ? (
+                  <input
+                    value={giftNote}
+                    onChange={(e) => setGiftNote(e.target.value)}
+                    maxLength={200}
+                    placeholder="Opcional: para quién es o qué poner en la tarjeta"
+                    aria-label="Nota para el regalo"
+                    className="mt-2 h-11 w-full rounded-full border border-line bg-white px-4 text-base focus:border-botanical focus:outline-none"
+                  />
+                ) : null}
+              </div>
               {paymentOptions.length > 1 ? (
                 <fieldset>
                   <legend className="text-sm font-semibold">¿Cómo querés pagar?</legend>
@@ -439,6 +464,7 @@ export function CartView({
                       items: items.map((i) => ({ productId: i.productId, quantity: i.quantity })),
                       customerName: name,
                       customerPhone: phone,
+                      ...gift,
                     }).catch(() => null);
                     if (res?.ok) {
                       window.location.href = res.url;
@@ -472,6 +498,7 @@ export function CartView({
                       customerName: name,
                       customerPhone: phone,
                       paymentMethod: "transferencia",
+                      ...gift,
                     }).catch(() => null);
                     if (res?.ok) {
                       // En la página del pedido avisa el pago y sube el comprobante.
@@ -511,6 +538,7 @@ export function CartView({
                     customerName: name,
                     customerPhone: phone,
                     paymentMethod: "efectivo",
+                    ...gift,
                   }).catch(() => null);
                   if (!res?.ok) {
                     // Sin pedido guardado no se manda nada: así no queda un pedido que el panel no tiene.
@@ -524,6 +552,7 @@ export function CartView({
                     customerName: name,
                     paymentMethod: paymentOptions.length > 1 ? "efectivo" : undefined,
                     trackUrl: `${siteUrl}/pedido/${res.id}`,
+                    gift: isGift ? { note: giftNote } : null,
                   });
                   if (win) {
                     win.opener = null;

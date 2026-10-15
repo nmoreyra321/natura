@@ -2,7 +2,7 @@ import { ArrowRight, CircleCheck, MessageCircle, Sparkles } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 
-import type { PublicCategory, PublicProduct } from "@/lib/catalog";
+import type { ActiveCampaign, PublicCategory, PublicProduct } from "@/lib/catalog";
 import { formatARS } from "@/lib/format";
 import { productImageUrl } from "@/lib/images";
 import { getPriceInfo } from "@/lib/pricing";
@@ -22,7 +22,11 @@ export type HomeData = {
   /** Hasta 3 productos con foto para la portada. */
   heroProducts: PublicProduct[];
   whatsappUrl: string | null;
+  /** Fecha especial activa (Día de la Madre…) y sus productos. */
+  campaign: (ActiveCampaign & { products: PublicProduct[] }) | null;
 };
+
+const untilFmt = new Intl.DateTimeFormat("es-AR", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" });
 
 /** Lo que más le importa a la clienta antes de comprar (se muestra como texto con tildes, no como botones). */
 const PERKS = ["Hace 4 años vendiendo Natura", "Productos 100% originales", "Pagás con Mercado Pago o efectivo", "Sumá compras y ganá regalos"];
@@ -82,6 +86,23 @@ export function HomeView({ d }: { d: HomeData }) {
 
   return (
     <>
+      {d.campaign ? (
+        <div className="px-3 pt-3 sm:px-6 sm:pt-5">
+          <Link
+            href={`/especial/${d.campaign.slug}`}
+            className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-2 rounded-3xl bg-gradient-to-r from-coral-deep to-grape px-5 py-3.5 text-white shadow-lift transition hover:brightness-110"
+          >
+            <span>
+              <span className="block font-display text-lg leading-tight font-bold sm:text-xl">{d.campaign.title}</span>
+              {d.campaign.message ? <span className="block text-sm opacity-90">{d.campaign.message}</span> : null}
+            </span>
+            <span className="inline-flex items-center gap-1 rounded-full bg-white px-3.5 py-1.5 text-sm font-bold text-coral-deep">
+              Ver regalos <ArrowRight className="size-4" aria-hidden="true" />
+            </span>
+          </Link>
+        </div>
+      ) : null}
+
       {/* Portada */}
       <section className="px-3 pt-3 sm:px-6 sm:pt-5">
         <div className="relative mx-auto max-w-7xl overflow-hidden rounded-[2rem] bg-gradient-to-br from-blush via-pink/70 to-lilac sm:rounded-[2.5rem]">
@@ -145,6 +166,17 @@ export function HomeView({ d }: { d: HomeData }) {
         <EmptyStore />
       ) : (
         <>
+          {d.campaign && d.campaign.products.length > 0 ? (
+            <Section>
+              <SectionHeader
+                title={d.campaign.title}
+                subtitle={`Hasta el ${untilFmt.format(new Date(`${d.campaign.endsOn}T12:00:00Z`))}`}
+                href={`/especial/${d.campaign.slug}`}
+              />
+              <ProductRail products={d.campaign.products.slice(0, 8)} />
+            </Section>
+          ) : null}
+
           {d.categories.length > 0 ? (
             <Section>
               <SectionHeader title="Comprá por categoría" href="/productos" />

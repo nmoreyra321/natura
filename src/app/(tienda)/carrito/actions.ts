@@ -65,6 +65,11 @@ function orderError(message: string | undefined): string {
   return "No pudimos registrar el pedido. Probá de nuevo.";
 }
 
+/** «Es para regalo» con su nota (si no es regalo, no se guarda nota). */
+function giftFields(d: { isGift?: boolean; giftNote?: string }) {
+  return d.isGift ? { is_gift: true, gift_note: d.giftNote?.trim() || null } : {};
+}
+
 export type RegisterOrderResult = { ok: true; id: string; code: string | null } | { ok: false; error: string };
 
 /**
@@ -101,6 +106,7 @@ export async function registerOrder(input: unknown): Promise<RegisterOrderResult
       .update({
         payment_method: parsed.data.paymentMethod === "transferencia" ? "transferencia" : "efectivo",
         customer_phone: phone,
+        ...giftFields(parsed.data),
       })
       .eq("id", row.id)
       .select("code")
@@ -143,7 +149,7 @@ export async function payWithMercadoPago(input: unknown): Promise<MercadoPagoChe
   const [{ error: markError }, { data: items }] = await Promise.all([
     admin
       .from("orders")
-      .update({ payment_method: "mercadopago", payment_status: "pending", customer_phone: phone })
+      .update({ payment_method: "mercadopago", payment_status: "pending", customer_phone: phone, ...giftFields(parsed.data) })
       .eq("id", order.id),
     admin.from("order_items").select("product_id, name, size, quantity, unit_price").eq("order_id", order.id),
   ]);

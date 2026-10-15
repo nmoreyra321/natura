@@ -92,7 +92,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
   let query = supabase
     .from("orders")
     .select(
-      "id, number, code, channel, status, customer_cancelled_at, customer_name, customer_phone, total, savings, created_at, payment_method, payment_status, paid_at, amount_paid, payment_note, payment_reported_at, payment_rejection, payment_proof_path, items:order_items(id, product_id, name, size, quantity, unit_price), lots:order_lot_allocations(product_id, expires_on, quantity)",
+      "id, number, code, channel, status, customer_cancelled_at, is_gift, gift_note, customer_name, customer_phone, total, savings, created_at, payment_method, payment_status, paid_at, amount_paid, payment_note, payment_reported_at, payment_rejection, payment_proof_path, items:order_items(id, product_id, name, size, quantity, unit_price), lots:order_lot_allocations(product_id, expires_on, quantity)",
       { count: "exact" },
     )
     .order("created_at", { ascending: false })
@@ -226,6 +226,11 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
                         {status === "cancelled" && o.customer_cancelled_at ? "Cancelado por la clienta" : STATUS_LABELS[status].label}
                       </span>
                       <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${badge.tone}`}>{badge.label}</span>
+                      {o.is_gift ? (
+                        <span className="rounded-full bg-blush px-2.5 py-0.5 text-xs font-bold text-coral-deep" title={o.gift_note ?? undefined}>
+                          🎁 Para regalo{o.gift_note ? `: ${o.gift_note}` : ""}
+                        </span>
+                      ) : null}
                       <span className="rounded-full border border-line px-2.5 py-0.5 text-xs font-bold text-muted">
                         {originLabel(o.channel)}
                       </span>

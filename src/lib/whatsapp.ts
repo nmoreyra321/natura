@@ -64,6 +64,8 @@ export function buildOrderMessage(
     transferReported?: boolean;
     /** Página donde la clienta sigue su pedido. */
     trackUrl?: string | null;
+    /** La clienta marcó «Es para regalo» (con la nota, si escribió una). */
+    gift?: { note?: string | null } | null;
   } = {},
 ): string {
   const { totalCents, savingsCents } = getOrderTotals(lines);
@@ -87,6 +89,10 @@ export function buildOrderMessage(
   ];
   if (savingsCents > 0) {
     parts.push(`Ahorro respecto del precio de revista: ${formatARS(savingsCents)}`);
+  }
+  if (extra.gift) {
+    const note = extra.gift.note?.trim();
+    parts.push("", `🎁 *Es para regalo*${note ? `: ${note}` : ""}`);
   }
   if (extra.paid) {
     parts.push(

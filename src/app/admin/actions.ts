@@ -11,6 +11,7 @@ import { isValidProductImagePath, MAX_IMAGES_PER_PRODUCT } from "@/lib/images";
 import type { NaturaLookup } from "@/lib/natura";
 import { parseExpiry } from "@/lib/lots";
 import { toWhatsAppPhone } from "@/lib/debts";
+import { campaignSlug } from "@/lib/campaigns";
 import { formatARS } from "@/lib/format";
 import { loyaltyStatus, PURCHASE_STATUSES } from "@/lib/loyalty";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -1841,5 +1842,59 @@ export async function undoLoyaltyGift(phone: unknown): Promise<ActionResult> {
     return { ok: true, message: "Listo, se deshizo el último regalo." };
   } catch (e) {
     return fail(e, "No pudimos deshacer el regalo.");
+  }
+}
+
+const campaignSchema = z.object({
+  id: z.string().regex(UUID_RE).optional(),
+  title: z.string().trim().min(2, "Poné un nombre.").max(60),
+  message: z.string().trim().max(200).optional().default(""),
+  starts_on: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Elegí desde cuándo."),
+  ends_on: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Elegí hasta cuándo."),
+  product_ids: z.array(z.string().regex(UUID_RE)).max(200).default([]),
+});
+
+/** Crea o edita una fecha especial (Día de la Madre, del Padre...). */
+export async function saveCampaign(input: unknown): Promise<ActionResult<{ id: string }>> {
+  try {
+    const { supabase } = await assertAdmin();
+    const parsed = campaignSchema.safeParse(input);
+    if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Revisá los datos." };
+    const c = parsed.data;
+    if (c.ends_on < c.starts_on) return { ok: false, error: "La fecha de fin tiene que ser después de la de inicio." };
+    const row = {
+      title: c.title,
+      message: c.message || null,
+      starts_on: c.starts_on,
+      ends_on: c.ends_on,
+      product_ids: [...new Set(c.product_ids)],
+      slug: campaignSlug(c.title, c.starts_on),
+    };
+    const { data, error } = c.id
+      ? await supabase.from("campaigns").update(row).eq("id", c.id).select("id").single()
+      : await supabase.from("campaigns").insert(row).select("id").single();
+    if (error) {
+      if (error.code === "23505") return { ok: false, error: "Ya hay una fecha especial con ese nombre este año." };
+      return fail(error, "No pudimos guardar la fecha especial.");
+    }
+    revalidatePath("/admin/fechas");
+    refreshCatalog();
+    return { ok: true, data: { id: data.id }, message: "¡Listo! Fecha especial guardada." };
+  } catch (e) {
+    return fail(e, "No pudimos guardar la fecha especial.");
+  }
+}
+
+export async function deleteCampaign(id: unknown): Promise<ActionResult> {
+  try {
+    const { supabase } = await assertAdmin();
+    if (typeof id !== "string" || !UUID_RE.test(id)) return { ok: false, error: "Fecha especial inválida." };
+    const { error } = await supabase.from("campaigns").delete().eq("id", id);
+    if (error) return fail(error, "No pudimos borrarla.");
+    revalidatePath("/admin/fechas");
+    refreshCatalog();
+    return { ok: true, message: "Fecha especial borrada." };
+  } catch (e) {
+    return fail(e, "No pudimos borrarla.");
   }
 }

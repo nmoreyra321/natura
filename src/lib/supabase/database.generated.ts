@@ -108,14 +108,14 @@ isOneToOne: false
                   ]
                 },"orders": {
                   Row: {
-                    "amount_paid": number,"channel": string,"code": string,"created_at": string,"customer_cancelled_at": string | null,"customer_name": string | null,"customer_phone": string | null,"id": string,"mp_payment_id": string | null,"number": number,"paid_at": string | null,"payment_method": string,"payment_note": string | null,"payment_proof_path": string | null,"payment_rejection": string | null,"payment_reported_at": string | null,"payment_status": string | null,"savings": number,"status": string,"stock_applied": boolean,"total": number,"updated_at": string
+                    "amount_paid": number,"channel": string,"code": string,"created_at": string,"customer_cancelled_at": string | null,"customer_name": string | null,"customer_phone": string | null,"gift_note": string | null,"id": string,"is_gift": boolean,"mp_payment_id": string | null,"number": number,"paid_at": string | null,"payment_method": string,"payment_note": string | null,"payment_proof_path": string | null,"payment_rejection": string | null,"payment_reported_at": string | null,"payment_status": string | null,"savings": number,"status": string,"stock_applied": boolean,"total": number,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "amount_paid"?: number,"channel"?: string,"code"?: string,"created_at"?: string,"customer_cancelled_at"?: string | null,"customer_name"?: string | null,"customer_phone"?: string | null,"id"?: string,"mp_payment_id"?: string | null,"number"?: never,"paid_at"?: string | null,"payment_method"?: string,"payment_note"?: string | null,"payment_proof_path"?: string | null,"payment_rejection"?: string | null,"payment_reported_at"?: string | null,"payment_status"?: string | null,"savings"?: number,"status"?: string,"stock_applied"?: boolean,"total": number,"updated_at"?: string
+                    "amount_paid"?: number,"channel"?: string,"code"?: string,"created_at"?: string,"customer_cancelled_at"?: string | null,"customer_name"?: string | null,"customer_phone"?: string | null,"gift_note"?: string | null,"id"?: string,"is_gift"?: boolean,"mp_payment_id"?: string | null,"number"?: never,"paid_at"?: string | null,"payment_method"?: string,"payment_note"?: string | null,"payment_proof_path"?: string | null,"payment_rejection"?: string | null,"payment_reported_at"?: string | null,"payment_status"?: string | null,"savings"?: number,"status"?: string,"stock_applied"?: boolean,"total": number,"updated_at"?: string
                   }
                   Update: {
-                    "amount_paid"?: number,"channel"?: string,"code"?: string,"created_at"?: string,"customer_cancelled_at"?: string | null,"customer_name"?: string | null,"customer_phone"?: string | null,"id"?: string,"mp_payment_id"?: string | null,"number"?: never,"paid_at"?: string | null,"payment_method"?: string,"payment_note"?: string | null,"payment_proof_path"?: string | null,"payment_rejection"?: string | null,"payment_reported_at"?: string | null,"payment_status"?: string | null,"savings"?: number,"status"?: string,"stock_applied"?: boolean,"total"?: number,"updated_at"?: string
+                    "amount_paid"?: number,"channel"?: string,"code"?: string,"created_at"?: string,"customer_cancelled_at"?: string | null,"customer_name"?: string | null,"customer_phone"?: string | null,"gift_note"?: string | null,"id"?: string,"is_gift"?: boolean,"mp_payment_id"?: string | null,"number"?: never,"paid_at"?: string | null,"payment_method"?: string,"payment_note"?: string | null,"payment_proof_path"?: string | null,"payment_rejection"?: string | null,"payment_reported_at"?: string | null,"payment_status"?: string | null,"savings"?: number,"status"?: string,"stock_applied"?: boolean,"total"?: number,"updated_at"?: string
                   }
                   Relationships: [
                     
@@ -177,6 +177,19 @@ isOneToOne: false
                   }
                   Update: {
                     "created_at"?: string,"due_date"?: string | null,"id"?: string,"invoice_date"?: string | null,"invoice_number"?: string | null,"total"?: number | null,"units"?: number,"updated_at"?: string
+                  }
+                  Relationships: [
+                  ]
+                },"campaigns": {
+                  Row: {
+                    "created_at": string,"ends_on": string,"id": string,"message": string | null,"product_ids": string[],"slug": string,"starts_on": string,"title": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"ends_on": string,"id"?: string,"message"?: string | null,"product_ids"?: string[],"slug": string,"starts_on": string,"title": string
+                  }
+                  Update: {
+                    "created_at"?: string,"ends_on"?: string,"id"?: string,"message"?: string | null,"product_ids"?: string[],"slug"?: string,"starts_on"?: string,"title"?: string
                   }
                   Relationships: [
                   ]
@@ -269,14 +282,14 @@ isOneToOne: false
                   ]
                 },"products": {
                   Row: {
-                    "category_id": string | null,"created_at": string,"description": string,"discount_percent": number | null,"id": string,"is_featured": boolean,"is_offer": boolean,"is_refill": boolean | null,"line": string | null,"magazine_price": number,"name": string,"natura_sku": string | null,"sale_price": number,"size": string | null,"slug": string,"status": string,"stock": number,"updated_at": string
+                    "category_id": string | null,"created_at": string,"description": string,"discount_percent": number | null,"id": string,"in_stock": boolean | null,"is_featured": boolean,"is_offer": boolean,"is_refill": boolean | null,"line": string | null,"magazine_price": number,"name": string,"natura_sku": string | null,"sale_price": number,"size": string | null,"slug": string,"status": string,"stock": number,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "category_id"?: string | null,"created_at"?: string,"description"?: string,"discount_percent"?: never,"id"?: string,"is_featured"?: boolean,"is_offer"?: boolean,"is_refill"?: never,"line"?: string | null,"magazine_price": number,"name": string,"natura_sku"?: string | null,"sale_price": number,"size"?: string | null,"slug": string,"status"?: string,"stock"?: number,"updated_at"?: string
+                    "category_id"?: string | null,"created_at"?: string,"description"?: string,"discount_percent"?: never,"id"?: string,"in_stock"?: never,"is_featured"?: boolean,"is_offer"?: boolean,"is_refill"?: never,"line"?: string | null,"magazine_price": number,"name": string,"natura_sku"?: string | null,"sale_price": number,"size"?: string | null,"slug": string,"status"?: string,"stock"?: number,"updated_at"?: string
                   }
                   Update: {
-                    "category_id"?: string | null,"created_at"?: string,"description"?: string,"discount_percent"?: never,"id"?: string,"is_featured"?: boolean,"is_offer"?: boolean,"is_refill"?: never,"line"?: string | null,"magazine_price"?: number,"name"?: string,"natura_sku"?: string | null,"sale_price"?: number,"size"?: string | null,"slug"?: string,"status"?: string,"stock"?: number,"updated_at"?: string
+                    "category_id"?: string | null,"created_at"?: string,"description"?: string,"discount_percent"?: never,"id"?: string,"in_stock"?: never,"is_featured"?: boolean,"is_offer"?: boolean,"is_refill"?: never,"line"?: string | null,"magazine_price"?: number,"name"?: string,"natura_sku"?: string | null,"sale_price"?: number,"size"?: string | null,"slug"?: string,"status"?: string,"stock"?: number,"updated_at"?: string
                   }
                   Relationships: [
                     {
