@@ -228,6 +228,7 @@ export function Header({ categories }: { categories: NavCategory[] }) {
             <nav aria-label="Menú móvil">
               <ul className="flex flex-col gap-1">
                 {[
+                  { href: "/", label: "Inicio" },
                   ...links,
                   { href: "/mi-pedido", label: "Seguir mi pedido" },
                   { href: "/carrito", label: "Mi carrito" },
@@ -240,6 +241,7 @@ export function Header({ categories }: { categories: NavCategory[] }) {
                     <li key={l.href}>
                       <Link
                         href={l.href}
+                        onClick={() => setOpen(false)}
                         className="flex min-h-12 items-center rounded-2xl px-4 text-lg font-semibold hover:bg-sun"
                       >
                         {l.label}
