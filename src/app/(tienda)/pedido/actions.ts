@@ -4,7 +4,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { toWhatsAppPhone } from "@/lib/debts";
-import { canReportPayment, normalizeOrderCode } from "@/lib/order-tracking";
+import { canCustomerCancel, canReportPayment, normalizeOrderCode, paymentState } from "@/lib/order-tracking";
+import { toCents } from "@/lib/pricing";
 import { allowRequest } from "@/lib/rate-limit";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -116,4 +117,84 @@ export async function findOrder(_prev: FindOrderState, formData: FormData): Prom
     .maybeSingle();
   if (!order) return { error: "No encontramos un pedido con ese código y ese WhatsApp." };
   redirect(`/pedido/${order.id}?guardar=1`);
+}
+
+export type CancelOrderResult = { ok: true } | { ok: false; error: string };
+
+/**
+ * La clienta cancela su pedido desde la página (quien tiene el enlace es quien lo hizo).
+ * El pedido NO se borra: queda cancelado en el panel, con la marca «Cancelado por la clienta».
+ * Los pedidos pendientes no descontaron stock, así que no hay stock que devolver.
+ */
+export async function cancelMyOrder(orderId: string): Promise<CancelOrderResult> {
+  if (!UUID_RE.test(orderId)) return { ok: false, error: "No encontramos tu pedido." };
+  const admin = createAdminClient();
+  if (!admin) return { ok: false, error: "La tienda no está configurada." };
+  if (!(await allowRequest("cancelar-pedido", 10, 3600))) {
+    return { ok: false, error: "Probaste muchas veces. Escribile a Natu Mariel por WhatsApp." };
+  }
+  const { data: order } = await admin
+    .from("orders")
+    .select("id, status, stock_applied, payment_method, payment_status, amount_paid, total, payment_reported_at, payment_rejection")
+    .eq("id", orderId)
+    .maybeSingle();
+  if (!order) return { ok: false, error: "No encontramos tu pedido." };
+  if (order.stock_applied || !canCustomerCancel(order)) {
+    return { ok: false, error: "Este pedido ya no se puede cancelar desde acá. Escribile a Natu Mariel por WhatsApp." };
+  }
+  // Solo si sigue igual (por si Natu Mariel lo confirmó o llegó un pago en este momento).
+  const { data: done, error } = await admin
+    .from("orders")
+    .update({ status: "cancelled", customer_cancelled_at: new Date().toISOString() })
+    .eq("id", orderId)
+    .eq("status", "pending")
+    .eq("stock_applied", false)
+    .is("payment_reported_at", null)
+    .select("id");
+  if (error) {
+    console.error("[cancelar] No se pudo cancelar:", error.message);
+    return { ok: false, error: "No pudimos cancelar el pedido. Probá de nuevo." };
+  }
+  if (!done?.length) return { ok: false, error: "Este pedido ya no se puede cancelar desde acá. Escribile a Natu Mariel por WhatsApp." };
+
+  revalidatePath(`/pedido/${orderId}`);
+  revalidatePath("/admin/pedidos");
+  revalidatePath("/admin");
+  return { ok: true };
+}
+
+export type MyOrderStatus = { id: string; label: string; tone: "good" | "wait" | "bad"; totalCents: number; items: number };
+
+/** En qué está cada pedido guardado en el celular (para la lista de «Seguir mi pedido»). */
+export async function myOrdersStatus(ids: string[]): Promise<MyOrderStatus[]> {
+  const valid = ids.filter((id) => UUID_RE.test(id)).slice(0, 10);
+  if (valid.length === 0) return [];
+  const admin = createAdminClient();
+  if (!admin) return [];
+  const { data } = await admin
+    .from("orders")
+    .select("id, status, total, payment_method, payment_status, amount_paid, payment_reported_at, payment_rejection, items:order_items(quantity)")
+    .in("id", valid);
+  return (data ?? []).map((o) => {
+    const state = paymentState(o);
+    const [label, tone]: [string, MyOrderStatus["tone"]] =
+      o.status === "cancelled"
+        ? ["Cancelado", "bad"]
+        : o.status === "delivered"
+          ? ["Entregado", "good"]
+          : state === "paid"
+            ? ["Pago confirmado", "good"]
+            : state === "review"
+              ? ["Verificando tu pago", "wait"]
+              : o.status === "confirmed"
+                ? ["Confirmado", "good"]
+                : ["Pendiente", "wait"];
+    return {
+      id: o.id,
+      label,
+      tone,
+      totalCents: toCents(o.total),
+      items: (o.items ?? []).reduce((s, i) => s + i.quantity, 0),
+    };
+  });
 }

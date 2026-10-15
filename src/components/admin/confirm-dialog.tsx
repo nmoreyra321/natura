@@ -9,6 +9,7 @@ export function ConfirmDialog({
   title,
   description,
   confirmLabel = "Eliminar",
+  cancelLabel = "Cancelar",
   pending = false,
   confirmWord,
   onConfirm,
@@ -18,6 +19,8 @@ export function ConfirmDialog({
   title: string;
   description: string;
   confirmLabel?: string;
+  /** Texto del botón para no hacer nada. */
+  cancelLabel?: string;
   pending?: boolean;
   /** Segunda confirmación: hay que escribir esta palabra (ej.: "BORRAR") para habilitar el botón. */
   confirmWord?: string;
@@ -69,7 +72,7 @@ export function ConfirmDialog({
           disabled={pending}
           autoFocus
         >
-          Cancelar
+          {cancelLabel}
         </Button>
         <Button
           variant="danger"

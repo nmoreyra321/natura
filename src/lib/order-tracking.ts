@@ -81,3 +81,16 @@ export function normalizeOrderCode(raw: string): string | null {
   const clean = raw.toUpperCase().replace(/[^0-9A-Z]/g, "").replace(/^NM/, "");
   return /^[0-9A-F]{6}$/.test(clean) ? `NM-${clean}` : null;
 }
+
+/**
+ * La clienta puede cancelar sola su pedido solo si Natu Mariel todavía no lo confirmó y no hay
+ * ningún pago (ni parcial, ni avisado, ni en proceso). Si hay plata de por medio, lo resuelve con
+ * Natu Mariel por WhatsApp, así nunca se pierde un pago.
+ */
+export function canCustomerCancel(o: TrackingOrder): boolean {
+  if (o.status !== "pending") return false;
+  if (toCents(o.amount_paid) > 0) return false;
+  if (o.payment_reported_at) return false;
+  if (o.payment_status && !["rejected", "cancelled"].includes(o.payment_status)) return false;
+  return true;
+}

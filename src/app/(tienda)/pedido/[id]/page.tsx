@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { CancelOrder } from "@/components/store/cancel-order";
 import { OrderMissing } from "@/components/store/order-missing";
 import { AutoRefresh, MpPayFlow, OrderPageEffects, ReportPayment } from "@/components/store/order-tracking";
 import { PaidOrderActions } from "@/components/store/paid-order-actions";
@@ -11,7 +12,7 @@ import { buttonClasses } from "@/components/ui/button";
 import { getSiteUrl } from "@/lib/config";
 import { formatARS } from "@/lib/format";
 import { GIFT_EVERY, loyaltyKey, loyaltyStatus, PURCHASE_STATUSES, type LoyaltyStatus } from "@/lib/loyalty";
-import { canReportPayment, owedOf, paymentState, trackingSteps } from "@/lib/order-tracking";
+import { canCustomerCancel, canReportPayment, owedOf, paymentState, trackingSteps } from "@/lib/order-tracking";
 import { syncMercadoPagoPayment } from "@/lib/payments";
 import { toCents } from "@/lib/pricing";
 import { getTransferDetails } from "@/lib/store-settings";
@@ -59,7 +60,7 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
   const { data: order } = await admin
     .from("orders")
     .select(
-      "id, code, created_at, status, total, savings, customer_name, customer_phone, payment_method, payment_status, amount_paid, payment_reported_at, payment_rejection, payment_proof_path, items:order_items(name, size, quantity, unit_price, magazine_price)",
+      "id, code, created_at, status, total, savings, customer_name, customer_phone, customer_cancelled_at, payment_method, payment_status, amount_paid, payment_reported_at, payment_rejection, payment_proof_path, items:order_items(name, size, quantity, unit_price, magazine_price)",
     )
     .eq("id", id)
     .maybeSingle();
@@ -114,7 +115,9 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
   let text: React.ReactNode;
   if (cancelled) {
     [tone, Icon, title] = ["bad", XCircle, "Pedido cancelado"];
-    text = "Este pedido se canceló. Si ya lo pagaste o creés que es un error, tocá «Pedir ayuda por WhatsApp» y Natu Mariel lo resuelve con vos.";
+    text = order.customer_cancelled_at
+      ? "Cancelaste este pedido. Si fue sin querer, tocá «Pedir ayuda por WhatsApp» y Natu Mariel te ayuda."
+      : "Este pedido se canceló. Si ya lo pagaste o creés que es un error, tocá «Pedir ayuda por WhatsApp» y Natu Mariel lo resuelve con vos.";
   } else if (isMp) {
     if (state === "paid") {
       [tone, Icon, title] = ["good", CheckCircle2, "¡Pago aprobado!"];
@@ -347,6 +350,15 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
           <Link href="/productos" className="text-sm font-semibold text-coral-deep hover:underline">
             Seguir mirando productos
           </Link>
+          {canCustomerCancel(order) ? (
+            <div className="mt-2 border-t border-line pt-4">
+              <CancelOrder orderId={order.id} code={order.code} />
+            </div>
+          ) : order.status === "pending" ? (
+            <p className="mt-2 border-t border-line pt-4 text-xs text-muted">
+              ¿Querés cancelar este pedido? Como ya hay un pago de por medio, escribile a Natu Mariel y lo resuelven juntas.
+            </p>
+          ) : null}
         </div>
       </div>
     </div>

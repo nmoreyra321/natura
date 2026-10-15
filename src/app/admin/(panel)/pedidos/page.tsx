@@ -92,7 +92,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
   let query = supabase
     .from("orders")
     .select(
-      "id, number, code, channel, status, customer_name, customer_phone, total, savings, created_at, payment_method, payment_status, paid_at, amount_paid, payment_note, payment_reported_at, payment_rejection, payment_proof_path, items:order_items(id, product_id, name, size, quantity, unit_price), lots:order_lot_allocations(product_id, expires_on, quantity)",
+      "id, number, code, channel, status, customer_cancelled_at, customer_name, customer_phone, total, savings, created_at, payment_method, payment_status, paid_at, amount_paid, payment_note, payment_reported_at, payment_rejection, payment_proof_path, items:order_items(id, product_id, name, size, quantity, unit_price), lots:order_lot_allocations(product_id, expires_on, quantity)",
       { count: "exact" },
     )
     .order("created_at", { ascending: false })
@@ -223,7 +223,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
                       <span className="font-display text-xl font-bold">Pedido {o.code}</span>
                       <span className="text-sm text-muted tabular">N.º interno {o.number}</span>
                       <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${STATUS_LABELS[status].tone}`}>
-                        {STATUS_LABELS[status].label}
+                        {status === "cancelled" && o.customer_cancelled_at ? "Cancelado por la clienta" : STATUS_LABELS[status].label}
                       </span>
                       <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${badge.tone}`}>{badge.label}</span>
                       <span className="rounded-full border border-line px-2.5 py-0.5 text-xs font-bold text-muted">
