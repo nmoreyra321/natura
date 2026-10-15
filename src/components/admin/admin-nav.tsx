@@ -20,7 +20,7 @@ const groups: { title: string | null; items: NavItem[] }[] = [
       { href: "/admin/vender", label: "Venta rápida", icon: CirclePlus },
       { href: "/admin/pedidos", label: "Pedidos", icon: ClipboardList },
       { href: "/admin/deudas", label: "Quién me debe", icon: HandCoins },
-      { href: "/admin/ventas", label: "Ventas", icon: TrendingUp },
+      { href: "/admin/ventas", label: "Ventas y estadísticas", icon: TrendingUp },
     ],
   },
   {

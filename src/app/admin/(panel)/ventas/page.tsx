@@ -3,10 +3,14 @@ import Link from "next/link";
 
 import { SalesChart, type SalesBar } from "@/components/admin/sales-chart";
 import { requireAdmin } from "@/lib/auth";
+import { originLabel } from "@/lib/channels";
 import { formatARS } from "@/lib/format";
+import { owedOf } from "@/lib/order-tracking";
+import { toCents } from "@/lib/pricing";
 import {
   currentMonth,
   daysInMonth,
+  localDay,
   monthLabel,
   monthlyTotals,
   monthStartIso,
@@ -18,7 +22,7 @@ import {
   type SalesOrder,
 } from "@/lib/sales";
 
-export const metadata = { title: "Ventas" };
+export const metadata = { title: "Ventas y estadísticas" };
 
 const MONTHS_IN_TREND = 6;
 
@@ -26,6 +30,54 @@ type Search = Record<string, string | string[] | undefined>;
 const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
 
 const weekday = new Intl.DateTimeFormat("es-AR", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" });
+const shortDay = new Intl.DateTimeFormat("es-AR", { day: "numeric", month: "short", timeZone: "UTC" });
+/** Ventas que se muestran de entrada; el resto, al tocar «Ver todas». */
+const SALES_SHOWN = 8;
+
+type SaleRow = SalesOrder & {
+  id: string;
+  code: string;
+  channel: string | null;
+  customer_name: string | null;
+  payment_method: string;
+  payment_status: string | null;
+  amount_paid: number | string;
+  payment_reported_at: string | null;
+  payment_rejection: string | null;
+};
+
+function SaleItem({ o }: { o: SaleRow }) {
+  const owed = owedOf(o);
+  const day = shortDay.format(new Date(`${localDay(o.created_at)}T12:00:00Z`)).replace(".", "");
+  const items = o.items.map((i) => `${i.quantity} × ${i.name}`).join(" · ");
+  return (
+    <li>
+      <Link
+        href={`/admin/pedidos?estado=todos&q=${encodeURIComponent(o.code)}`}
+        className="flex items-center gap-3 border-b border-line/60 py-3 last:border-b-0 hover:bg-cream/60 sm:px-2"
+      >
+        <span className="w-12 shrink-0 text-center text-xs font-bold uppercase leading-tight text-muted">{day}</span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate font-bold">{o.customer_name?.trim() || "Sin nombre"}</span>
+          <span className="block truncate text-xs text-muted">{items}</span>
+          <span className="block text-[11px] text-muted">
+            {originLabel(o.channel)} · {o.code}
+          </span>
+        </span>
+        <span className="shrink-0 text-right">
+          <span className="block font-bold tabular">{formatARS(toCents(o.total))}</span>
+          {owed > 0 ? (
+            <span className="mt-0.5 inline-block rounded-full bg-coral-soft px-2 py-0.5 text-[11px] font-bold text-coral-deep">
+              Debe {formatARS(owed)}
+            </span>
+          ) : (
+            <span className="mt-0.5 inline-block rounded-full bg-sage px-2 py-0.5 text-[11px] font-bold text-botanical-deep">Cobrado</span>
+          )}
+        </span>
+      </Link>
+    </li>
+  );
+}
 
 function Delta({ current, previous, previousLabel }: { current: number; previous: number; previousLabel: string }) {
   const change = percentChange(current, previous);
@@ -55,11 +107,18 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
 
   const { data, error } = await supabase
     .from("orders")
-    .select("status, total, savings, created_at, items:order_items(product_id, name, quantity, unit_price)")
+    .select(
+      "id, code, channel, customer_name, status, total, savings, created_at, payment_method, payment_status, amount_paid, payment_reported_at, payment_rejection, items:order_items(product_id, name, quantity, unit_price)",
+    )
     .gte("created_at", monthStartIso(shiftMonth(month, -(MONTHS_IN_TREND - 1))))
     .lt("created_at", monthStartIso(next))
     .limit(10000);
-  const orders = (data ?? []) as SalesOrder[];
+  const orders = (data ?? []) as SaleRow[];
+  // Ventas del mes elegido (confirmadas o entregadas), la más nueva primero.
+  const monthSales = orders
+    .filter((o) => (o.status === "confirmed" || o.status === "delivered") && localDay(o.created_at).startsWith(month))
+    .sort((a, b) => b.created_at.localeCompare(a.created_at));
+  const owedTotal = monthSales.reduce((sum, o) => sum + owedOf(o), 0);
 
   const s = summarizeMonth(orders, month);
   const p = summarizeMonth(orders, prev);
@@ -88,7 +147,7 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
     <div className="mx-auto max-w-5xl">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="font-display text-3xl font-bold">Ventas</h1>
+          <h1 className="font-display text-3xl font-bold">Ventas y estadísticas</h1>
           <p className="text-muted">Lo vendido en la tienda web y con Venta rápida (pedidos confirmados y entregados).</p>
         </div>
         <nav aria-label="Elegir mes" className="flex items-center gap-1 rounded-full bg-warm-white p-1 shadow-soft">
@@ -152,6 +211,45 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
               confirmar este mes. No se cuentan como venta hasta que los confirmes →
             </Link>
           ) : null}
+
+          {isFuture ? null : (
+            <section aria-labelledby="a-quien" className="mt-6 rounded-3xl bg-warm-white p-5 shadow-soft">
+              <div className="flex flex-wrap items-baseline justify-between gap-2">
+                <h2 id="a-quien" className="font-display text-xl font-bold">
+                  A quién le vendiste
+                </h2>
+                {owedTotal > 0 ? (
+                  <Link href="/admin/deudas" className="text-sm font-semibold text-coral-deep hover:underline">
+                    Te deben {formatARS(owedTotal)} de este mes →
+                  </Link>
+                ) : null}
+              </div>
+              <p className="text-sm text-muted">Cada venta de {monthLabel(month).toLowerCase()}. Tocá una para ver el pedido.</p>
+              {monthSales.length === 0 ? (
+                <p className="mt-3 text-muted">Todavía no hay ventas confirmadas este mes.</p>
+              ) : (
+                <>
+                  <ul className="mt-3">
+                    {monthSales.slice(0, SALES_SHOWN).map((o) => (
+                      <SaleItem key={o.id} o={o} />
+                    ))}
+                  </ul>
+                  {monthSales.length > SALES_SHOWN ? (
+                    <details className="group">
+                      <summary className="mt-2 cursor-pointer list-none text-center text-sm font-bold text-coral-deep hover:underline group-open:hidden">
+                        Ver las {monthSales.length - SALES_SHOWN} ventas restantes
+                      </summary>
+                      <ul>
+                        {monthSales.slice(SALES_SHOWN).map((o) => (
+                          <SaleItem key={o.id} o={o} />
+                        ))}
+                      </ul>
+                    </details>
+                  ) : null}
+                </>
+              )}
+            </section>
+          )}
 
           {isFuture ? null : (
             <section aria-labelledby="por-dia" className="mt-6 rounded-3xl bg-warm-white p-5 shadow-soft">
