@@ -11,6 +11,7 @@ import { AdminProductSearch } from "@/components/admin/admin-product-search";
 import { ProductsHeader } from "@/components/admin/product-tabs";
 import { LinkButton, buttonClasses } from "@/components/ui/button";
 import { inputClasses } from "@/components/ui/fields";
+import { CatalogFiltersToggle } from "@/components/store/catalog-filters-toggle";
 import { ProductImageFallback } from "@/components/store/product-card";
 import { requireAdmin } from "@/lib/auth";
 import { LOW_STOCK_THRESHOLD } from "@/lib/config";
@@ -160,11 +161,19 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
         }
       />
 
-      <form method="get" className="mt-4 grid grid-cols-2 gap-2 rounded-2xl bg-warm-white p-2.5 shadow-soft md:grid-cols-[1.6fr_1fr_1fr_1.2fr_auto]">
-        <div className="col-span-2 md:col-span-1">
-          <label htmlFor="aq" className="sr-only">Buscar por nombre</label>
-          <AdminProductSearch id="aq" defaultValue={q} placeholder="Buscar por nombre (ej.: crema ekos)" />
-        </div>
+      <form
+        method="get"
+        className="mt-4 grid grid-cols-2 gap-2 md:grid-cols-[1.6fr_1fr_1fr_1.2fr_auto] md:rounded-2xl md:bg-warm-white md:p-2.5 md:shadow-soft"
+      >
+        <CatalogFiltersToggle
+          activeCount={[estado, stock, categoria, oferta].filter(Boolean).length}
+          search={
+            <>
+              <label htmlFor="aq" className="sr-only">Buscar por nombre</label>
+              <AdminProductSearch id="aq" defaultValue={q} placeholder="Buscar por nombre (ej.: crema ekos)" />
+            </>
+          }
+        >
         <div>
           <label htmlFor="ae" className="sr-only">Estado</label>
           <select id="ae" name="estado" defaultValue={estado} className={`${inputClasses} h-10 text-sm`}>
@@ -200,6 +209,7 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
             <Search className="size-4" aria-hidden="true" /> Filtrar
           </button>
         </div>
+        </CatalogFiltersToggle>
       </form>
       {filtered ? (
         <Link href="/admin/productos" className="mt-3 inline-block text-sm font-semibold text-coral-deep hover:underline">
