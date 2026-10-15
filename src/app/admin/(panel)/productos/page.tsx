@@ -23,7 +23,7 @@ export const metadata = { title: "Productos" };
 /** Leer la foto de la boleta puede tardar (la acción corre en esta página). */
 export const maxDuration = 120;
 
-const PAGE_SIZE = 50;
+const PAGE_SIZE = 200;
 /** Valor del filtro de categoría para ver los productos sin categoría. */
 const NO_CATEGORY = "ninguna";
 

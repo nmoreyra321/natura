@@ -8,7 +8,8 @@ import { inputClasses } from "@/components/ui/fields";
 import { nameSearchPatterns } from "@/lib/search";
 import type { AdminContext } from "@/lib/auth";
 
-const PAGE_SIZE = 50;
+// Todo el catálogo en una sola hoja: es más práctico bajar con el dedo que cambiar de página.
+const PAGE_SIZE = 600;
 const NO_CATEGORY = "ninguna";
 const BASE = "/admin/productos";
 
