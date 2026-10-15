@@ -1,5 +1,6 @@
 import { CheckCircle2, CircleAlert } from "lucide-react";
 
+import { PushToggle } from "@/components/admin/push-toggle";
 import { SocialLinksForm } from "@/components/admin/social-links-form";
 import { SurchargeForm } from "@/components/admin/surcharge-form";
 import { TransferSettingsForm } from "@/components/admin/transfer-settings-form";
@@ -41,6 +42,10 @@ export default async function SettingsPage() {
     <div className="mx-auto max-w-3xl">
       <h1 className="font-display text-3xl font-bold">Configuración</h1>
       <p className="text-muted">Estado de las integraciones de la tienda.</p>
+
+      <div className="mt-6">
+        <PushToggle />
+      </div>
 
       <section className="mt-6 rounded-3xl bg-warm-white p-5 shadow-soft">
         <h2 className="font-display text-xl font-bold">Cómo te pagan las clientas</h2>

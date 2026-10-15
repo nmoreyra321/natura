@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { BuyAgain } from "@/components/store/buy-again";
 import { CancelOrder } from "@/components/store/cancel-order";
 import { OrderMissing } from "@/components/store/order-missing";
 import { AutoRefresh, MpPayFlow, OrderPageEffects, ReportPayment } from "@/components/store/order-tracking";
@@ -60,7 +61,7 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
   const { data: order } = await admin
     .from("orders")
     .select(
-      "id, code, created_at, status, total, savings, customer_name, customer_phone, customer_cancelled_at, payment_method, payment_status, amount_paid, payment_reported_at, payment_rejection, payment_proof_path, items:order_items(name, size, quantity, unit_price, magazine_price)",
+      "id, code, created_at, status, total, savings, customer_name, customer_phone, customer_cancelled_at, payment_method, payment_status, amount_paid, payment_reported_at, payment_rejection, payment_proof_path, items:order_items(product_id, name, size, quantity, unit_price, magazine_price)",
     )
     .eq("id", id)
     .maybeSingle();
@@ -337,6 +338,13 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
             </Link>
             .
           </p>
+          {order.status === "delivered" || order.status === "confirmed" || cancelled ? (
+            <BuyAgain
+              items={order.items
+                .filter((i): i is typeof i & { product_id: string } => Boolean(i.product_id))
+                .map((i) => ({ productId: i.product_id, quantity: i.quantity }))}
+            />
+          ) : null}
           {!cancelled && helpUrl ? (
             <a
               href={helpUrl}

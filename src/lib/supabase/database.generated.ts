@@ -206,6 +206,19 @@ isOneToOne: false
                   }
                   Relationships: [
                   ]
+                },"push_subscriptions": {
+                  Row: {
+                    "auth": string,"created_at": string,"endpoint": string,"p256dh": string,"user_id": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "auth": string,"created_at"?: string,"endpoint": string,"p256dh": string,"user_id"?: string | null
+                  }
+                  Update: {
+                    "auth"?: string,"created_at"?: string,"endpoint"?: string,"p256dh"?: string,"user_id"?: string | null
+                  }
+                  Relationships: [
+                  ]
                 },"restock_requests": {
                   Row: {
                     "created_at": string,"id": string,"name": string | null,"notified_at": string | null,"phone": string,"product_id": string

@@ -12,6 +12,7 @@ import type { NaturaLookup } from "@/lib/natura";
 import { parseExpiry } from "@/lib/lots";
 import { toWhatsAppPhone } from "@/lib/debts";
 import { campaignSlug } from "@/lib/campaigns";
+import { notifyAdmins } from "@/lib/push";
 import { formatARS } from "@/lib/format";
 import { loyaltyStatus, PURCHASE_STATUSES } from "@/lib/loyalty";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -1896,5 +1897,51 @@ export async function deleteCampaign(id: unknown): Promise<ActionResult> {
     return { ok: true, message: "Fecha especial borrada." };
   } catch (e) {
     return fail(e, "No pudimos borrarla.");
+  }
+}
+
+const pushSubscriptionSchema = z.object({
+  endpoint: z.string().url().startsWith("https://").max(1000),
+  keys: z.object({ p256dh: z.string().min(10).max(200), auth: z.string().min(4).max(100) }),
+});
+
+/** Activa los avisos de pedidos en este celular. */
+export async function savePushSubscription(input: unknown): Promise<ActionResult> {
+  try {
+    const { supabase } = await assertAdmin();
+    const parsed = pushSubscriptionSchema.safeParse(input);
+    if (!parsed.success) return { ok: false, error: "Este celular no permite avisos." };
+    const { endpoint, keys } = parsed.data;
+    const { error } = await supabase
+      .from("push_subscriptions")
+      .upsert({ endpoint, p256dh: keys.p256dh, auth: keys.auth }, { onConflict: "endpoint" });
+    if (error) return fail(error, "No pudimos activar los avisos.");
+    return { ok: true, message: "¡Listo! Vas a recibir un aviso con cada pedido nuevo." };
+  } catch (e) {
+    return fail(e, "No pudimos activar los avisos.");
+  }
+}
+
+/** Desactiva los avisos en este celular. */
+export async function removePushSubscription(endpoint: unknown): Promise<ActionResult> {
+  try {
+    const { supabase } = await assertAdmin();
+    if (typeof endpoint !== "string" || !endpoint.startsWith("https://")) return { ok: true };
+    const { error } = await supabase.from("push_subscriptions").delete().eq("endpoint", endpoint);
+    if (error) return fail(error, "No pudimos desactivar los avisos.");
+    return { ok: true, message: "Avisos desactivados en este celular." };
+  } catch (e) {
+    return fail(e, "No pudimos desactivar los avisos.");
+  }
+}
+
+/** Manda un aviso de prueba a los celulares con avisos activados. */
+export async function sendTestPush(): Promise<ActionResult> {
+  try {
+    await assertAdmin();
+    await notifyAdmins({ title: "🔔 Aviso de prueba", body: "Así te va a llegar cada pedido nuevo de Natu Mariel.", url: "/admin/pedidos", tag: "prueba" });
+    return { ok: true, message: "Mandamos el aviso de prueba. Si no te llegó en unos segundos, revisá los permisos del celular." };
+  } catch (e) {
+    return fail(e, "No pudimos mandar el aviso de prueba.");
   }
 }

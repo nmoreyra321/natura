@@ -1,11 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { redirect } from "next/navigation";
 
 import { toWhatsAppPhone } from "@/lib/debts";
 import { canCustomerCancel, canReportPayment, normalizeOrderCode, paymentState } from "@/lib/order-tracking";
 import { toCents } from "@/lib/pricing";
+import { notifyAdmins } from "@/lib/push";
 import { allowRequest } from "@/lib/rate-limit";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -88,6 +90,14 @@ export async function reportTransferPayment(formData: FormData): Promise<ReportP
   }
   // El comprobante anterior (si se reemplazó) ya no sirve.
   if (proofPath && order.payment_proof_path) await admin.storage.from(PROOF_BUCKET).remove([order.payment_proof_path]);
+  after(() =>
+    notifyAdmins({
+      title: "💳 Te avisaron un pago",
+      body: "Una clienta avisó que pagó. Revisalo y confirmalo en el panel.",
+      url: "/admin/pedidos",
+      tag: `pago-${orderId}`,
+    }),
+  );
 
   revalidatePath(`/pedido/${orderId}`);
   revalidatePath("/admin/pedidos");
@@ -156,6 +166,9 @@ export async function cancelMyOrder(orderId: string): Promise<CancelOrderResult>
     return { ok: false, error: "No pudimos cancelar el pedido. Probá de nuevo." };
   }
   if (!done?.length) return { ok: false, error: "Este pedido ya no se puede cancelar desde acá. Escribile a Natu Mariel por WhatsApp." };
+  after(() =>
+    notifyAdmins({ title: "❌ Pedido cancelado", body: "Una clienta canceló su pedido desde la tienda.", url: "/admin/pedidos?estado=cancelled", tag: `cancelado-${orderId}` }),
+  );
 
   revalidatePath(`/pedido/${orderId}`);
   revalidatePath("/admin/pedidos");

@@ -1,6 +1,7 @@
 import { AlertTriangle, BadgeDollarSign, BellRing, CalendarClock, ClipboardList, FileText, HandCoins } from "lucide-react";
 import Link from "next/link";
 
+import { PushToggle } from "@/components/admin/push-toggle";
 import { DashboardView, type DashboardTask } from "@/components/admin/dashboard-view";
 import { requireAdmin } from "@/lib/auth";
 import { LOW_STOCK_THRESHOLD } from "@/lib/config";
@@ -181,6 +182,10 @@ export default async function DashboardPage() {
   const date = longDate.format(atNoon(today));
 
   return (
+    <>
+    <div className="mx-auto mb-5 max-w-6xl empty:hidden">
+      <PushToggle compact />
+    </div>
     <DashboardView
       imageUrl={productImageUrl}
       d={{
@@ -235,5 +240,6 @@ export default async function DashboardPage() {
         warnings,
       }}
     />
+    </>
   );
 }

@@ -1,6 +1,10 @@
 "use server";
 
+import { after } from "next/server";
+
 import { getProductsForCart } from "@/lib/catalog";
+import { formatARS } from "@/lib/format";
+import { notifyAdmins } from "@/lib/push";
 import { getSiteUrl } from "@/lib/config";
 import { createPreference, isMercadoPagoEnabled } from "@/lib/mercadopago";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -114,6 +118,15 @@ export async function registerOrder(input: unknown): Promise<RegisterOrderResult
     if (saveError) console.error("[pedido] No se pudo guardar la forma de pago o el teléfono:", saveError.message);
     code = saved?.code ?? null;
   }
+  // Aviso al celular de Natu Mariel (después de responder, para no demorar a la clienta).
+  after(() =>
+    notifyAdmins({
+      title: `🛍 Pedido nuevo${parsed.data.isGift ? " 🎁" : ""}`,
+      body: `${parsed.data.customerName} · ${formatARS(toCents(row.total))}${parsed.data.paymentMethod === "transferencia" ? " · paga con Mercado Pago (link)" : " · efectivo"}`,
+      url: code ? `/admin/pedidos?estado=todos&q=${code}` : "/admin/pedidos",
+      tag: `pedido-${row.id}`,
+    }),
+  );
   return { ok: true, id: row.id, code };
 }
 
@@ -181,5 +194,13 @@ export async function payWithMercadoPago(input: unknown): Promise<MercadoPagoChe
     await admin.from("orders").update({ status: "cancelled", payment_status: "cancelled" }).eq("id", order.id);
     return { ok: false, error: "Mercado Pago no respondió. Probá de nuevo en un rato o elegí efectivo." };
   }
+  after(() =>
+    notifyAdmins({
+      title: `🛍 Pedido nuevo${parsed.data.isGift ? " 🎁" : ""}`,
+      body: `${parsed.data.customerName} · ${formatARS(toCents(order.total))} · paga con Mercado Pago`,
+      url: "/admin/pedidos",
+      tag: `pedido-${order.id}`,
+    }),
+  );
   return { ok: true, url: preference.url };
 }
