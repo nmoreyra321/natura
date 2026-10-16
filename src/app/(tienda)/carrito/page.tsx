@@ -8,6 +8,9 @@ import { getCustomer } from "@/lib/customer";
 import { getShippingMinTotal, getShippingZones } from "@/lib/shipping";
 import { getWhatsAppNumber } from "@/lib/whatsapp";
 
+// Depende de la sesión de la clienta: nunca se prerenderiza.
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Mi carrito",
   robots: { index: false, follow: true },

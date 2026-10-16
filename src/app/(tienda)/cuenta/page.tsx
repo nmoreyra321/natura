@@ -1,24 +1,20 @@
-import { ChevronRight, Gift, ShoppingBag } from "lucide-react";
+import { ChevronRight, Gift } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { myOrdersStatus } from "@/app/(tienda)/pedido/actions";
+import { AccountOrders } from "@/components/store/account-orders";
 import { AccountLogin } from "@/components/store/account-login";
-import { buttonClasses } from "@/components/ui/button";
 import { AccountProfile, SignOutButton } from "@/components/store/account-profile";
 import { getLoginProviders } from "@/lib/config";
 import { accountClub, getCustomer } from "@/lib/customer";
 import { formatARS } from "@/lib/format";
 import { GIFT_EVERY } from "@/lib/loyalty";
-import { createAdminClient } from "@/lib/supabase/admin";
 
 export const metadata: Metadata = {
   title: "Mi cuenta",
   robots: { index: false, follow: true },
 };
 
-const dateFmt = new Intl.DateTimeFormat("es-AR", { day: "numeric", month: "long", timeZone: "America/Argentina/Buenos_Aires" });
-const TONE = { good: "bg-sage text-botanical-deep", wait: "bg-sun text-forest", bad: "bg-coral-soft text-coral-deep" } as const;
 
 export default async function AccountPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const sp = await searchParams;
@@ -64,16 +60,7 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
     );
   }
 
-  const admin = createAdminClient();
-  const { data: rows } = admin
-    ? await admin.from("orders").select("id, code, created_at").eq("customer_user_id", customer.id).order("created_at", { ascending: false }).limit(20)
-    : { data: [] };
-  const orders = rows ?? [];
-  const [statuses, club] = await Promise.all([
-    orders.length ? myOrdersStatus(orders.map((o) => o.id)) : Promise.resolve([]),
-    customer.phone ? accountClub(customer.phone) : Promise.resolve(null),
-  ]);
-  const status = new Map(statuses.map((s) => [s.id, s]));
+  const club = customer.phone ? await accountClub(customer.phone) : null;
 
   return (
     <div className="mx-auto max-w-xl px-4 py-10 sm:py-14">
@@ -113,39 +100,7 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
 
       <section id="pedidos" className="mt-6 scroll-mt-28">
         <h2 className="font-display text-xl font-bold">Mis pedidos</h2>
-        {orders.length === 0 ? (
-          <div className="mt-3 rounded-3xl bg-warm-white p-5 text-center shadow-soft ring-1 ring-line/70">
-            <p className="text-sm text-muted">Todavía no hiciste pedidos con tu cuenta.</p>
-            <p className="mt-1 text-sm">Lo que compres con la sesión iniciada suma al Club. 🎁</p>
-            <Link href="/productos" className={buttonClasses("primary", "lg", "mt-4 w-full")}>
-              <ShoppingBag className="size-5" aria-hidden="true" /> Ir a comprar
-            </Link>
-          </div>
-        ) : (
-          <ul className="mt-3 flex flex-col gap-2">
-            {orders.map((o) => {
-              const s = status.get(o.id);
-              return (
-                <li key={o.id}>
-                  <Link
-                    href={`/pedido/${o.id}`}
-                    className="flex items-center justify-between gap-3 rounded-2xl bg-warm-white p-4 shadow-soft ring-1 ring-line/70 transition hover:-translate-y-0.5"
-                  >
-                    <span className="min-w-0">
-                      <span className="block font-bold">Pedido {o.code}</span>
-                      <span className="block text-sm text-muted">
-                        {dateFmt.format(new Date(o.created_at))}
-                        {s ? ` · ${formatARS(s.totalCents)}` : ""}
-                      </span>
-                      {s ? <span className={`mt-1 inline-block rounded-full px-2 py-0.5 text-xs font-bold ${TONE[s.tone]}`}>{s.label}</span> : null}
-                    </span>
-                    <ChevronRight className="size-5 shrink-0 text-coral-deep" aria-hidden="true" />
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        )}
+        <AccountOrders customerId={customer.id} />
       </section>
 
       <section className="mt-6 rounded-3xl bg-warm-white p-5 shadow-soft ring-1 ring-line/70">
