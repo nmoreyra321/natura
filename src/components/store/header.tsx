@@ -280,7 +280,6 @@ export function Header({ categories }: { categories: NavCategory[] }) {
                   ...links,
                   { href: "/mi-pedido", label: "Seguir mi pedido" },
                   { href: "/carrito", label: "Mi carrito" },
-                  { href: "/como-comprar", label: "Cómo comprar" },
                 ].map(
                   (l) => {
                     // El menú solo existe en el navegador (se abre con un toque), así que se puede leer la dirección.
@@ -337,6 +336,7 @@ export function Header({ categories }: { categories: NavCategory[] }) {
               <ul className="flex flex-col gap-0.5">
                 {[
                   { href: "/quienes-somos", label: "Quiénes somos" },
+                  { href: "/como-comprar", label: "Cómo comprar" },
                   { href: "/#calificaciones", label: "Reseñas" },
                   { href: "/contacto", label: "Contacto" },
                 ].map((l) => {
