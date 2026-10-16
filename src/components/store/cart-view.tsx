@@ -10,6 +10,7 @@ import { payWithMercadoPago, registerOrder, validateCart } from "@/app/(tienda)/
 import { Button, LinkButton, buttonClasses } from "@/components/ui/button";
 import { cart, useCart, useCartHydrated } from "@/lib/cart-store";
 import { toWhatsAppPhone } from "@/lib/debts";
+import { useSavedOrders } from "@/lib/my-orders";
 import { DELIVERY_TEXT, formatPercent, shippingCostCents, type ShippingZoneOption } from "@/lib/delivery";
 import { formatARS } from "@/lib/format";
 import { GIFT_EVERY } from "@/lib/loyalty";
@@ -139,6 +140,9 @@ export function CartView({
     return true;
   };
   const [sending, setSending] = useState(false);
+  /** Llegó al tope de pedidos sin confirmar: se le muestran sus pedidos de este celular para cancelar o completar. */
+  const [pendingLimit, setPendingLimit] = useState(false);
+  const savedOrders = useSavedOrders();
   const [payment, setPayment] = useState<PaymentChoice>("efectivo");
   const paymentOptions: { value: PaymentChoice; label: string; Icon: typeof Banknote }[] = [
     { value: "efectivo", label: "Efectivo", Icon: Banknote },
@@ -626,6 +630,7 @@ export function CartView({
                   onClick={async () => {
                     if (sending || blockIfMissingContact()) return;
                     setSending(true);
+                    setPendingLimit(false);
                     setError(null);
                     const name = customerName.trim();
                     const phone = customerPhone.trim();
@@ -641,6 +646,7 @@ export function CartView({
                       return;
                     }
                     setError(res?.error ?? "No pudimos conectar con Mercado Pago. Probá de nuevo.");
+                    setPendingLimit(Boolean(res && !res.ok && res.pendingLimit));
                     setSending(false);
                   }}
                 >
@@ -659,6 +665,7 @@ export function CartView({
                   onClick={async () => {
                     if (sending || blockIfMissingContact()) return;
                     setSending(true);
+                    setPendingLimit(false);
                     setError(null);
                     const name = customerName.trim();
                     const phone = customerPhone.trim();
@@ -676,6 +683,7 @@ export function CartView({
                       return;
                     }
                     setError(res?.error ?? "No pudimos registrar el pedido. Probá de nuevo.");
+                    setPendingLimit(Boolean(res && !res.ok && res.pendingLimit));
                     setSending(false);
                   }}
                 >
@@ -698,6 +706,7 @@ export function CartView({
                   e.preventDefault();
                   if (blockIfMissingContact()) return;
                   setSending(true);
+                    setPendingLimit(false);
                   const name = customerName.trim();
                   const phone = customerPhone.trim();
                   saveContact(name, phone);
@@ -711,6 +720,7 @@ export function CartView({
                   if (!res?.ok) {
                     // Sin pedido guardado no se manda nada: así no queda un pedido que el panel no tiene.
                     setError(res?.error ?? "No pudimos registrar el pedido. Revisá tu conexión y probá de nuevo.");
+                    setPendingLimit(Boolean(res && !res.ok && res.pendingLimit));
                     setSending(false);
                     return;
                   }
@@ -745,6 +755,23 @@ export function CartView({
             <p className="text-sm font-semibold text-coral-deep" role="alert">
               {error}
             </p>
+          ) : null}
+          {pendingLimit && savedOrders.length > 0 ? (
+            <div className="rounded-2xl bg-cream p-3 text-sm">
+              <p className="font-semibold">Tus pedidos hechos desde este celular:</p>
+              <ul className="mt-1.5 flex flex-col gap-1">
+                {savedOrders.slice(0, 6).map((o) => (
+                  <li key={o.id}>
+                    <Link href={`/pedido/${o.id}`} className="font-semibold text-coral-deep underline">
+                      Pedido {o.code}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-1.5 text-xs text-muted">
+                Abrí uno y tocá «Me arrepentí: cancelar mi pedido» para hacer uno nuevo con todo junto.
+              </p>
+            </div>
           ) : null}
           <p className="text-sm font-semibold text-forest/80">
             📍 Punto de encuentro en las estaciones de {DELIVERY_TEXT}

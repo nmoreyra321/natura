@@ -128,9 +128,10 @@ function deliveryFields(delivery: Delivery, productsTotal: number | string) {
  * no se crean más. Así un molesto no traba las compras de las demás, y una clienta real
  * solo ve el aviso si de verdad tiene muchos pedidos pendientes.
  */
-const MAX_PENDING_PER_PHONE = 3;
+const MAX_PENDING_PER_PHONE = 6;
+const PENDING_WINDOW_HOURS = 3;
 async function tooManyPending(admin: Admin, phone: string): Promise<boolean> {
-  const since = new Date(Date.now() - 48 * 3600 * 1000).toISOString();
+  const since = new Date(Date.now() - PENDING_WINDOW_HOURS * 3600 * 1000).toISOString();
   const { count } = await admin
     .from("orders")
     .select("id", { count: "exact", head: true })
@@ -139,9 +140,11 @@ async function tooManyPending(admin: Admin, phone: string): Promise<boolean> {
     .gte("created_at", since);
   return (count ?? 0) >= MAX_PENDING_PER_PHONE;
 }
-const PENDING_MESSAGE = `Ya tenés ${MAX_PENDING_PER_PHONE} pedidos esperando confirmación. Natu Mariel te va a escribir; si querés sumar o cambiar algo, escribile por WhatsApp.`;
+const PENDING_MESSAGE = `Ya tenés ${MAX_PENDING_PER_PHONE} pedidos esperando confirmación. Podés cancelar alguno y hacer uno completo, o escribirle a Natu Mariel por WhatsApp para sumarle productos. En unas horas vas a poder pedir de nuevo.`;
 
-export type RegisterOrderResult = { ok: true; id: string; code: string | null } | { ok: false; error: string };
+export type RegisterOrderResult =
+  | { ok: true; id: string; code: string | null }
+  | { ok: false; error: string; pendingLimit?: boolean };
 
 /**
  * Registra el pedido para el panel de Mariel justo antes de abrir WhatsApp.
@@ -159,7 +162,7 @@ export async function registerOrder(input: unknown): Promise<RegisterOrderResult
   if (!(await allowRequest("pedido", 8, 600))) {
     return { ok: false, error: "Hiciste muchos pedidos seguidos. Esperá unos minutos o escribile a Natu Mariel por WhatsApp." };
   }
-  if (await tooManyPending(admin, phone)) return { ok: false, error: PENDING_MESSAGE };
+  if (await tooManyPending(admin, phone)) return { ok: false, error: PENDING_MESSAGE, pendingLimit: true };
   const resolved = await resolveDelivery(admin, parsed.data);
   if (!resolved.ok) return resolved;
   const zoneName = resolved.delivery.zone?.name ?? null;
@@ -203,7 +206,7 @@ export async function registerOrder(input: unknown): Promise<RegisterOrderResult
   return { ok: true, id: row.id, code };
 }
 
-export type MercadoPagoCheckoutResult = { ok: true; url: string } | { ok: false; error: string };
+export type MercadoPagoCheckoutResult = { ok: true; url: string } | { ok: false; error: string; pendingLimit?: boolean };
 
 /**
  * Registra el pedido como "Mercado Pago" y devuelve el link para pagar.
@@ -221,7 +224,7 @@ export async function payWithMercadoPago(input: unknown): Promise<MercadoPagoChe
   if (!(await allowRequest("pedido", 8, 600))) {
     return { ok: false, error: "Hiciste muchos pedidos seguidos. Esperá unos minutos o escribile a Natu Mariel por WhatsApp." };
   }
-  if (await tooManyPending(admin, phone)) return { ok: false, error: PENDING_MESSAGE };
+  if (await tooManyPending(admin, phone)) return { ok: false, error: PENDING_MESSAGE, pendingLimit: true };
   const resolved = await resolveDelivery(admin, parsed.data);
   if (!resolved.ok) return resolved;
   const zoneName = resolved.delivery.zone?.name ?? null;
