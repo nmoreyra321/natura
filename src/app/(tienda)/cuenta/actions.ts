@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
-import { getCustomer } from "@/lib/customer";
+import { accountClub, getCustomer } from "@/lib/customer";
 import { toWhatsAppPhone } from "@/lib/debts";
 import { createSessionClient } from "@/lib/supabase/server";
 
@@ -24,4 +24,19 @@ export async function saveMyAccount(input: { name: string; phone: string }): Pro
   }
   revalidatePath("/cuenta");
   return { ok: true };
+}
+
+export type MyClub =
+  | { signedIn: false }
+  | { signedIn: true; hasPhone: false }
+  | { signedIn: true; hasPhone: true; progress: number; left: number; pending: number; minCents: number };
+
+/** Avance en el Club de la clienta con sesión iniciada (para la tarjeta del inicio). */
+export async function myClub(): Promise<MyClub> {
+  const customer = await getCustomer();
+  if (!customer) return { signedIn: false };
+  if (!customer.phone) return { signedIn: true, hasPhone: false };
+  const club = await accountClub(customer.phone);
+  if (!club) return { signedIn: true, hasPhone: false };
+  return { signedIn: true, hasPhone: true, progress: club.progress, left: club.left, pending: club.pending, minCents: club.minCents };
 }

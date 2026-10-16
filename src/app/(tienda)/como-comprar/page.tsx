@@ -43,7 +43,7 @@ const steps = [
 const faqsFor = (clubMin: string | null) => [
   {
     q: "¿Tengo que crear una cuenta?",
-    a: "No. Armás el carrito y hacés el pedido acá mismo, sin registrarte: solo te pedimos tu nombre y tu WhatsApp para coordinar la entrega (con ese número también sumás compras en el Club Natu Mariel).",
+    a: "No. Armás el carrito y hacés el pedido acá mismo, sin registrarte: solo te pedimos tu nombre y tu WhatsApp para coordinar la entrega. Si querés sumar compras en el Club Natu Mariel, entrá con tu cuenta de Google antes de pedir (un toque, sin contraseña).",
   },
   {
     q: "¿El pedido queda confirmado al enviarlo?",

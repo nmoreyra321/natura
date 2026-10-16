@@ -1,33 +1,33 @@
 "use client";
 
 import { CircleCheck, Gift } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
-import { clubProgress, type ClubProgress } from "@/app/(tienda)/pedido/actions";
+import { myClub, type MyClub } from "@/app/(tienda)/cuenta/actions";
+import { getLoginProviders } from "@/lib/config";
 import { formatARS } from "@/lib/format";
 import { GIFT_EVERY } from "@/lib/loyalty";
-import { useSavedOrders } from "@/lib/my-orders";
+import { AccountLogin } from "./account-login";
 
-/** Cuadrito del Club en la portada: el avance real de la clienta (si compró desde este celular). */
+/** Cuadrito del Club en la portada: el avance de la cuenta, o para entrar si no tiene sesión. */
 export function ClubProgressCard({ minCents }: { minCents: number }) {
-  const saved = useSavedOrders();
-  const ids = saved.map((o) => o.id).join(",");
-  const [data, setData] = useState<ClubProgress | null>(null);
+  const [club, setClub] = useState<MyClub | null>(null);
 
   useEffect(() => {
-    if (!ids) return;
     let alive = true;
-    clubProgress(ids.split(","))
-      .then((r) => alive && setData(r))
+    myClub()
+      .then((r) => alive && setClub(r))
       .catch(() => undefined);
     return () => {
       alive = false;
     };
-  }, [ids]);
+  }, []);
 
-  const mine = ids && data ? data : null;
+  const mine = club?.signedIn && club.hasPhone ? club : null;
   const done = mine ? (mine.pending > 0 ? GIFT_EVERY : mine.progress) : 0;
   const min = mine?.minCents ?? minCents;
+  const providers = getLoginProviders();
 
   return (
     <div className="relative flex flex-col items-center gap-2 rounded-3xl bg-white/70 p-4 text-center backdrop-blur sm:gap-3 sm:p-5">
@@ -56,17 +56,33 @@ export function ClubProgressCard({ minCents }: { minCents: number }) {
       {mine && mine.pending > 0 ? (
         <p className="font-display text-base font-bold text-coral-deep sm:text-lg">¡Te ganaste un regalo! 🎉</p>
       ) : mine ? (
-        <p className="font-display text-base font-bold sm:text-lg">
-          Llevás {mine.progress} de {GIFT_EVERY}: {mine.left === 1 ? "¡te falta 1 compra!" : `te faltan ${mine.left} compras`}
-        </p>
+        <>
+          <p className="font-display text-base font-bold sm:text-lg">
+            Llevás {mine.progress} de {GIFT_EVERY}: {mine.left === 1 ? "¡te falta 1 compra!" : `te faltan ${mine.left} compras`}
+          </p>
+          <p className="hidden text-xs text-muted sm:block">Se actualiza con cada pedido pagado completo.</p>
+        </>
+      ) : club?.signedIn ? (
+        <>
+          <p className="font-display text-base font-bold sm:text-lg">Te falta un paso</p>
+          <Link href="/cuenta" className="text-sm font-semibold text-coral-deep underline">
+            Cargá tu WhatsApp en Mi cuenta para empezar a sumar
+          </Link>
+        </>
       ) : (
-        <p className="font-display text-base font-bold sm:text-lg">
-          Tu primera compra{min > 0 ? ` de ${formatARS(min)} o más` : ""} ya cuenta
-        </p>
+        <>
+          <p className="font-display text-base font-bold sm:text-lg">
+            Entrá con tu cuenta y tu primera compra{min > 0 ? ` de ${formatARS(min)} o más` : ""} ya cuenta
+          </p>
+          {providers.length > 0 ? (
+            <div className="w-full max-w-xs">
+              <AccountLogin next="/" providers={providers} />
+            </div>
+          ) : (
+            <p className="text-xs text-muted">Muy pronto vas a poder entrar con tu cuenta.</p>
+          )}
+        </>
       )}
-      <p className="hidden text-xs text-muted sm:block">
-        {mine ? "Se actualiza con cada pedido pagado completo." : "Cuando compres desde este celular, acá vas a ver cuánto te falta."}
-      </p>
     </div>
   );
 }

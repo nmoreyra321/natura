@@ -294,14 +294,14 @@ export function HomeView({ d }: { d: HomeData }) {
                   <p className="mt-1 text-xs font-bold text-forest/70 sm:text-sm">Suman las compras de {formatARS(d.clubMinCents)} o más.</p>
                 ) : null}
                 <p className="mt-2 max-w-lg text-sm font-semibold text-forest/80 sm:text-base">
-                  No tenés que anotarte en nada: tus compras se suman solas con tu número de WhatsApp.
+                  Suman las compras que hacés en la tienda con tu cuenta. Entrás con Google en un toque, sin contraseña.
                 </p>
                 <ol className="mt-4 hidden flex-col gap-2 text-base font-bold sm:flex">
                   {[
-                    "Comprá como siempre: en la tienda, por WhatsApp o en los vivos.",
+                    "Entrá con tu cuenta (la personita de arriba) y cargá tu WhatsApp.",
                     d.clubMinCents > 0
-                      ? `Cada pedido de ${formatARS(d.clubMinCents)} o más, pagado completo, suma una compra.`
-                      : "Cada pedido pagado completo suma una compra.",
+                      ? `Comprá en la tienda con la sesión iniciada: cada pedido de ${formatARS(d.clubMinCents)} o más, pagado completo, suma una compra.`
+                      : "Comprá en la tienda con la sesión iniciada: cada pedido pagado completo suma una compra.",
                     `En tu compra número ${GIFT_EVERY}, Mariel te regala algo especial 💝`,
                   ].map((t, i) => (
                     <li key={t} className="flex items-start gap-2.5">
@@ -310,7 +310,7 @@ export function HomeView({ d }: { d: HomeData }) {
                     </li>
                   ))}
                 </ol>
-                <Link href="/productos" className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-full bg-coral-deep px-5 text-sm font-bold text-white shadow-lift transition hover:-translate-y-0.5 sm:mt-5 sm:min-h-11 sm:px-6 sm:text-base">
+                <Link href="/cuenta" className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-full bg-coral-deep px-5 text-sm font-bold text-white shadow-lift transition hover:-translate-y-0.5 sm:mt-5 sm:min-h-11 sm:px-6 sm:text-base">
                   Empezar a sumar <ArrowRight className="size-4" aria-hidden="true" />
                 </Link>
               </div>

@@ -48,8 +48,9 @@ export default async function ClubPage() {
     <div className="mx-auto max-w-3xl">
       <h1 className="font-display text-3xl font-bold">Club de clientas</h1>
       <p className="mt-1 text-muted">
-        Cada <b className="text-forest">{GIFT_EVERY} compras</b>, la clienta se gana <b className="text-forest">un regalo</b>. Las compras
-        se cuentan solas por número de WhatsApp (tienda web y Venta rápida), cuando el pedido está confirmado, <b className="text-forest">pagado completo</b>
+        Cada <b className="text-forest">{GIFT_EVERY} compras</b>, la clienta se gana <b className="text-forest">un regalo</b>. Cuentan solo
+        las compras que la clienta hace <b className="text-forest">en la tienda con su cuenta</b> (las ves con la etiqueta «👤 Con cuenta» en Pedidos),
+        cuando el pedido está confirmado, <b className="text-forest">pagado completo</b>
         {minTotal > 0 ? (
           <>
             {" "}
@@ -65,7 +66,7 @@ export default async function ClubPage() {
       ) : club.length === 0 ? (
         <div className="mt-6 rounded-3xl border border-dashed border-line bg-warm-white p-10 text-center">
           <Users className="mx-auto size-10 text-muted" aria-hidden="true" />
-          <p className="mt-3 font-display text-xl font-bold">Todavía no hay compras con teléfono.</p>
+          <p className="mt-3 font-display text-xl font-bold">Todavía no hay compras hechas con cuenta.</p>
           <p className="mt-1 text-muted">Cuando confirmes pedidos, acá vas a ver cuánto le falta a cada clienta para su regalo.</p>
         </div>
       ) : (
