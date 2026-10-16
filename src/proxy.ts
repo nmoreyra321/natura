@@ -2,7 +2,8 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 /**
- * Protege /admin: refresca la sesión de Supabase y redirige al login si no hay usuario.
+ * Refresca la sesión de Supabase. En /admin además redirige al login si no hay usuario;
+ * en «Mi cuenta» y el carrito solo mantiene viva la sesión de la clienta.
  * La verificación de permisos de administradora se repite en el servidor
  * (layout del panel y cada Server Action) y en la base de datos (RLS).
  */
@@ -12,6 +13,7 @@ export async function proxy(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   const { pathname } = request.nextUrl;
   const isLogin = pathname === "/admin/login";
+  const isAdmin = pathname.startsWith("/admin");
 
   // Sin Supabase configurado, el panel muestra su pantalla de configuración pendiente.
   if (!url || !key) return NextResponse.next({ request });
@@ -38,7 +40,7 @@ export async function proxy(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user && !isLogin) {
+  if (isAdmin && !user && !isLogin) {
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = "/admin/login";
     loginUrl.search = "";
@@ -48,10 +50,10 @@ export async function proxy(request: NextRequest) {
   }
 
   response.headers.set("Cache-Control", "private, no-store");
-  response.headers.set("X-Robots-Tag", "noindex, nofollow");
+  if (isAdmin) response.headers.set("X-Robots-Tag", "noindex, nofollow");
   return response;
 }
 
 export const config = {
-  matcher: ["/admin/:path*"],
+  matcher: ["/admin/:path*", "/cuenta", "/carrito"],
 };

@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 
 import { CartView } from "@/components/store/cart-view";
-import { getSiteUrl } from "@/lib/config";
+import { getLoginProviders, getSiteUrl } from "@/lib/config";
 import { isMercadoPagoEnabled } from "@/lib/mercadopago";
 import { getLoyaltyMinTotal, getMercadoPagoSurcharge, getTransferDetails } from "@/lib/store-settings";
+import { getCustomer } from "@/lib/customer";
 import { getShippingMinTotal, getShippingZones } from "@/lib/shipping";
 import { getWhatsAppNumber } from "@/lib/whatsapp";
 
@@ -15,12 +16,13 @@ export const metadata: Metadata = {
 export default async function CartPage() {
   const mercadoPago = isMercadoPagoEnabled();
   // Con Mercado Pago activo, la clienta paga con el link (se aprueba solo) y no se ofrece transferencia.
-  const [transfer, mpSurcharge, clubMin, shippingZones, shippingMin] = await Promise.all([
+  const [transfer, mpSurcharge, clubMin, shippingZones, shippingMin, customer] = await Promise.all([
     mercadoPago ? null : getTransferDetails(),
     mercadoPago ? getMercadoPagoSurcharge() : 0,
     getLoyaltyMinTotal(),
     getShippingZones(),
     getShippingMinTotal(),
+    getCustomer(),
   ]);
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-12">
@@ -34,6 +36,8 @@ export default async function CartPage() {
         clubMinCents={Math.round(clubMin * 100)}
         shippingZones={shippingZones}
         shippingMinCents={Math.round(shippingMin * 100)}
+        account={customer ? { name: customer.name, phone: customer.phone } : null}
+        accountsEnabled={getLoginProviders().length > 0}
       />
     </div>
   );

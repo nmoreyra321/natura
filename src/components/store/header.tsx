@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronRight, Heart, LayoutGrid, Menu, MessageCircle, Package, Search, ShoppingBag, X } from "lucide-react";
+import { ChevronRight, CircleUser, Heart, LayoutGrid, Menu, MessageCircle, Package, Search, ShoppingBag, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -232,6 +232,14 @@ export function Header({ categories }: { categories: NavCategory[] }) {
           >
             <MessageCircle className="size-5.5" aria-hidden="true" />
           </Link>
+          <Link
+            href="/cuenta"
+            className="hidden size-11 items-center justify-center rounded-full text-forest transition-colors hover:bg-forest/5 sm:inline-flex"
+            aria-label="Mi cuenta"
+            title="Mi cuenta"
+          >
+            <CircleUser className="size-5.5" aria-hidden="true" />
+          </Link>
           <OrdersLink />
           <CartLink />
         </div>
@@ -290,6 +298,7 @@ export function Header({ categories }: { categories: NavCategory[] }) {
                   items: [
                     { href: "/carrito", label: "Mi carrito" },
                     { href: "/mi-pedido", label: "Seguir mi pedido" },
+                    { href: "/cuenta", label: "Mi cuenta y Club" },
                   ],
                 },
                 {

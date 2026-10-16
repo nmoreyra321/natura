@@ -11,7 +11,7 @@ import { PaidOrderActions } from "@/components/store/paid-order-actions";
 import { AddReview } from "@/components/store/add-review";
 import { TransferAccount } from "@/components/store/transfer-account";
 import { buttonClasses } from "@/components/ui/button";
-import { getSiteUrl } from "@/lib/config";
+import { getSiteUrl, getLoginProviders } from "@/lib/config";
 import { formatARS } from "@/lib/format";
 import { GIFT_EVERY, loyaltyKey, loyaltyStatus, PURCHASE_STATUSES, type LoyaltyStatus } from "@/lib/loyalty";
 import { canCustomerCancel, canReportPayment, owedOf, paymentState, trackingSteps } from "@/lib/order-tracking";
@@ -63,7 +63,7 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
   const { data: order } = await admin
     .from("orders")
     .select(
-      "id, code, created_at, status, total, savings, customer_name, customer_phone, customer_cancelled_at, is_gift, gift_note, delivery_method, shipping_zone, shipping_address, shipping_cost, payment_method, payment_status, amount_paid, payment_reported_at, payment_rejection, payment_proof_path, items:order_items(product_id, name, size, quantity, unit_price, magazine_price)",
+      "id, code, created_at, status, total, savings, customer_name, customer_phone, customer_cancelled_at, customer_user_id, is_gift, gift_note, delivery_method, shipping_zone, shipping_address, shipping_cost, payment_method, payment_status, amount_paid, payment_reported_at, payment_rejection, payment_proof_path, items:order_items(product_id, name, size, quantity, unit_price, magazine_price)",
     )
     .eq("id", id)
     .maybeSingle();
@@ -80,7 +80,8 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
   const transfer = isTransfer ? await getTransferDetails() : null;
 
   // Club de clientas: cuántas compras lleva con este teléfono (si el pedido no está cancelado).
-  const clubKey = cancelled ? null : loyaltyKey(order.customer_phone);
+  // Solo los pedidos hechos con cuenta suman al Club.
+  const clubKey = cancelled || !order.customer_user_id ? null : loyaltyKey(order.customer_phone);
   let club: LoyaltyStatus | null = null;
   const clubMin = await getLoyaltyMinTotal();
   const shippingCents = toCents(order.shipping_cost);
@@ -92,7 +93,7 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
       : { method: "retiro" as const };
   if (clubKey) {
     const [{ count: purchases }, { count: given }] = await Promise.all([
-      admin.from("orders").select("id", { count: "exact", head: true }).eq("customer_phone", clubKey).in("status", [...PURCHASE_STATUSES]).eq("payment_status", "approved").gte("total", clubMin),
+      admin.from("orders").select("id", { count: "exact", head: true }).eq("customer_phone", clubKey).not("customer_user_id", "is", null).in("status", [...PURCHASE_STATUSES]).eq("payment_status", "approved").gte("total", clubMin),
       admin.from("loyalty_gifts").select("id", { count: "exact", head: true }).eq("phone", clubKey),
     ]);
     club = loyaltyStatus(purchases ?? 0, given ?? 0);
@@ -342,6 +343,14 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
               <p className="mt-2 text-xs text-muted">Este pedido se suma cuando esté pagado completo y confirmado.</p>
             ) : null}
           </section>
+        ) : !cancelled && !order.customer_user_id && getLoginProviders().length > 0 ? (
+          <p className="mt-6 rounded-2xl bg-gradient-to-br from-blush to-sun/40 px-4 py-3 text-sm">
+            🎁 <b>Club Natu Mariel:</b> cada {GIFT_EVERY} compras, un regalo.{" "}
+            <Link href="/cuenta" className="font-semibold text-coral-deep underline">
+              Hacete una cuenta
+            </Link>{" "}
+            con Google o Facebook para que tus próximas compras sumen.
+          </p>
         ) : null}
 
         {!reviewed && (order.status === "confirmed" || order.status === "delivered") ? (

@@ -1814,6 +1814,7 @@ export async function giveLoyaltyGift(phone: unknown): Promise<ActionResult> {
         .from("orders")
         .select("id", { count: "exact", head: true })
         .eq("customer_phone", key)
+        .not("customer_user_id", "is", null)
         .in("status", [...PURCHASE_STATUSES])
         .eq("payment_status", "approved")
         .gte("total", await getLoyaltyMinTotal()),

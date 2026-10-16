@@ -35,6 +35,8 @@ export default async function ClubPage() {
       .select("customer_name, customer_phone, status, created_at, total, payment_status")
       .in("status", [...PURCHASE_STATUSES])
       .not("customer_phone", "is", null)
+      // El Club cuenta solo los pedidos hechos con cuenta de clienta.
+      .not("customer_user_id", "is", null)
       .limit(20000),
     supabase.from("loyalty_gifts").select("phone").limit(20000),
   ]);

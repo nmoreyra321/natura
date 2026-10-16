@@ -65,3 +65,12 @@ export function isSupabaseConfigured(): boolean {
 export const PRODUCT_IMAGES_BUCKET = "product-images";
 
 export const LOW_STOCK_THRESHOLD = 3;
+
+/**
+ * Con qué se puede entrar a «Mi cuenta» (se activa cuando Google o Facebook están configurados en
+ * Supabase). Variable NEXT_PUBLIC_LOGIN_PROVIDERS, por ejemplo "google,facebook". Vacío = todavía no.
+ */
+export function getLoginProviders(): ("google" | "facebook")[] {
+  const raw = process.env.NEXT_PUBLIC_LOGIN_PROVIDERS ?? "";
+  return (["google", "facebook"] as const).filter((p) => raw.split(",").map((s) => s.trim()).includes(p));
+}

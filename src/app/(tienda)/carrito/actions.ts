@@ -12,6 +12,8 @@ import { surchargeCents, toCents } from "@/lib/pricing";
 import { getMercadoPagoSurcharge } from "@/lib/store-settings";
 import { shippingCostCents } from "@/lib/delivery";
 import { getShippingMinTotal } from "@/lib/shipping";
+import { getCustomer } from "@/lib/customer";
+import { createSessionClient } from "@/lib/supabase/server";
 import { toWhatsAppPhone } from "@/lib/debts";
 import { allowRequest } from "@/lib/rate-limit";
 import { cartRequestSchema, orderRequestSchema } from "@/lib/validation";
@@ -124,6 +126,22 @@ function deliveryFields(delivery: Delivery, productsTotal: number | string) {
 }
 
 /**
+ * Si compra con su cuenta: el pedido queda unido a la cuenta (suma al Club) y usa el WhatsApp
+ * de la cuenta. Si la cuenta todavía no tenía WhatsApp, se le guarda el de este pedido.
+ */
+async function accountFields(name: string, phone: string): Promise<{ phone: string; fields: { customer_user_id?: string } }> {
+  const customer = await getCustomer();
+  if (!customer) return { phone, fields: {} };
+  if (!customer.phone) {
+    const supabase = await createSessionClient();
+    await supabase
+      ?.from("customers")
+      .upsert({ user_id: customer.id, name: customer.name ?? name, phone }, { onConflict: "user_id" });
+  }
+  return { phone: customer.phone ?? phone, fields: { customer_user_id: customer.id } };
+}
+
+/**
  * Freno por clienta (no general): si un mismo teléfono ya tiene varios pedidos sin confirmar,
  * no se crean más. Así un molesto no traba las compras de las demás, y una clienta real
  * solo ve el aviso si de verdad tiene muchos pedidos pendientes.
@@ -153,8 +171,10 @@ export type RegisterOrderResult =
 export async function registerOrder(input: unknown): Promise<RegisterOrderResult> {
   const parsed = orderRequestSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Completá tu nombre y tu WhatsApp para enviar el pedido." };
-  const phone = toWhatsAppPhone(parsed.data.customerPhone);
-  if (!phone) return { ok: false, error: "Revisá tu número de WhatsApp (por ejemplo 11 2345-6789)." };
+  const typedPhone = toWhatsAppPhone(parsed.data.customerPhone);
+  if (!typedPhone) return { ok: false, error: "Revisá tu número de WhatsApp (por ejemplo 11 2345-6789)." };
+  const account = await accountFields(parsed.data.customerName, typedPhone);
+  const phone = account.phone;
 
   // Los pedidos se crean solo desde acá (con la clave secreta), nunca directo desde el navegador.
   const admin = createAdminClient();
@@ -187,6 +207,7 @@ export async function registerOrder(input: unknown): Promise<RegisterOrderResult
         customer_phone: phone,
         ...giftFields(parsed.data),
         ...delivery.fields,
+        ...account.fields,
       })
       .eq("id", row.id)
       .select("code")
@@ -216,8 +237,10 @@ export async function payWithMercadoPago(input: unknown): Promise<MercadoPagoChe
   if (!isMercadoPagoEnabled()) return { ok: false, error: "El pago con Mercado Pago no está disponible." };
   const parsed = orderRequestSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Completá tu nombre y tu WhatsApp para pagar." };
-  const phone = toWhatsAppPhone(parsed.data.customerPhone);
-  if (!phone) return { ok: false, error: "Revisá tu número de WhatsApp (por ejemplo 11 2345-6789)." };
+  const typedPhone = toWhatsAppPhone(parsed.data.customerPhone);
+  if (!typedPhone) return { ok: false, error: "Revisá tu número de WhatsApp (por ejemplo 11 2345-6789)." };
+  const account = await accountFields(parsed.data.customerName, typedPhone);
+  const phone = account.phone;
 
   const admin = createAdminClient();
   if (!admin) return { ok: false, error: "La tienda no está configurada para cobrar online." };
@@ -249,6 +272,7 @@ export async function payWithMercadoPago(input: unknown): Promise<MercadoPagoChe
         customer_phone: phone,
         ...giftFields(parsed.data),
         ...delivery.fields,
+        ...account.fields,
       })
       .eq("id", order.id),
     admin.from("order_items").select("product_id, name, size, quantity, unit_price").eq("order_id", order.id),

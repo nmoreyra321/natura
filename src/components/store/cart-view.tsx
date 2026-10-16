@@ -9,7 +9,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { payWithMercadoPago, registerOrder, validateCart } from "@/app/(tienda)/carrito/actions";
 import { Button, LinkButton, buttonClasses } from "@/components/ui/button";
 import { cart, useCart, useCartHydrated } from "@/lib/cart-store";
-import { toWhatsAppPhone } from "@/lib/debts";
+import { formatPhone, toWhatsAppPhone } from "@/lib/debts";
 import { useSavedOrders } from "@/lib/my-orders";
 import { DELIVERY_TEXT, formatPercent, shippingCostCents, type ShippingZoneOption } from "@/lib/delivery";
 import { formatARS } from "@/lib/format";
@@ -58,7 +58,13 @@ export function CartView({
   clubMinCents = 0,
   shippingZones = [],
   shippingMinCents = 0,
+  account = null,
+  accountsEnabled = false,
 }: {
+  /** true si ya se puede entrar con Google o Facebook. */
+  accountsEnabled?: boolean;
+  /** Clienta con la sesión iniciada (null = compra sin cuenta, no suma al Club). */
+  account?: { name: string | null; phone: string | null } | null;
   /** Compra mínima (en centavos) para poder elegir envío a domicilio. */
   shippingMinCents?: number;
   /** Localidades con envío a domicilio (vacío = solo punto de encuentro). */
@@ -83,8 +89,9 @@ export function CartView({
   const requestId = useRef(0);
   /** Se suma al tocar «Reintentar» para volver a verificar el carrito. */
   const [retry, setRetry] = useState(0);
-  const [customerName, setCustomerName] = useState(() => readSaved(NAME_KEY));
-  const [customerPhone, setCustomerPhone] = useState(() => readSaved(PHONE_KEY));
+  const [customerName, setCustomerName] = useState(() => readSaved(NAME_KEY) || account?.name || "");
+  // Con cuenta y WhatsApp cargado, se usa el de la cuenta (con ese número suma al Club).
+  const [customerPhone, setCustomerPhone] = useState(() => (account?.phone ? formatPhone(account.phone) : readSaved(PHONE_KEY)));
   // Cómo recibe el pedido: punto de encuentro (gratis) o envío a domicilio a una de las localidades.
   const [deliveryChoice, setDeliveryMethod] = useState<"retiro" | "envio">("retiro");
   // El envío a domicilio se puede elegir solo si la compra llega al mínimo (si baja, vuelve a punto de encuentro).
@@ -436,6 +443,7 @@ export function CartView({
                   maxLength={30}
                   value={customerPhone}
                   onChange={(e) => setCustomerPhone(e.target.value)}
+                  readOnly={Boolean(account?.phone)}
                   placeholder="Ej.: 11 2345-6789"
                   required
                   aria-invalid={triedSend && Boolean(phoneError)}
@@ -447,7 +455,19 @@ export function CartView({
                     {phoneError}
                   </p>
                 ) : (
-                  <p className="mt-1 px-1 text-xs text-muted">Con código de área, por ejemplo 11 2345-6789. Te escribimos ahí.</p>
+                  <p className="mt-1 px-1 text-xs text-muted">
+                    {account?.phone ? (
+                      <>
+                        Es el WhatsApp de tu cuenta. Lo cambiás en{" "}
+                        <Link href="/cuenta" className="underline">
+                          Mi cuenta
+                        </Link>
+                        .
+                      </>
+                    ) : (
+                      "Con código de área, por ejemplo 11 2345-6789. Te escribimos ahí."
+                    )}
+                  </p>
                 )}
               </div>
               <fieldset>
@@ -556,7 +576,17 @@ export function CartView({
               </fieldset>
               <p className="flex items-center gap-2 rounded-2xl bg-sun/50 px-3 py-2 text-sm">
                 <span aria-hidden="true">🎁</span>
-                {totals.totalCents >= clubMinCents ? (
+                {!account && !accountsEnabled ? (
+                  <span>Club Natu Mariel: muy pronto vas a poder sumar tus compras con tu cuenta.</span>
+                ) : !account ? (
+                  <span>
+                    ¿Querés sumar al Club Natu Mariel (cada {GIFT_EVERY} compras, un regalo)?{" "}
+                    <Link href="/cuenta?next=/carrito" className="font-semibold text-coral-deep underline">
+                      Entrá con Google o Facebook
+                    </Link>{" "}
+                    antes de hacer el pedido.
+                  </span>
+                ) : totals.totalCents >= clubMinCents ? (
                   <span>
                     Con este pedido <strong>sumás 1 compra</strong> al Club Natu Mariel: cada {GIFT_EVERY}, un regalo.
                   </span>
