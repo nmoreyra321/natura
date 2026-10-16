@@ -48,6 +48,11 @@ const nextConfig: NextConfig = {
     // recordar la versión achicada un mes sin volver a procesarla.
     formats: ["image/webp"],
     minimumCacheTTL: 2678400,
+    // Pocos tamaños por foto (cada tamaño nuevo de cada foto gasta cupo): miniaturas (96, 256),
+    // tarjetas (384, 640, 828) y la foto grande hasta 1200. Todos ya existían antes, así que lo
+    // guardado sigue sirviendo.
+    imageSizes: [96, 256],
+    deviceSizes: [384, 640, 828, 1200],
     // Solo para pruebas con Supabase local (127.0.0.1). Nunca activar en producción.
     dangerouslyAllowLocalIP: process.env.NEXT_IMAGE_ALLOW_LOCAL_IP === "1",
   },
