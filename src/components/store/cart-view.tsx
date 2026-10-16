@@ -215,6 +215,9 @@ export function CartView({
   const totals = getOrderTotals(lines);
   /** Lo que paga en total: productos más el envío (si eligió envío a domicilio). */
   const grandCents = totals.totalCents + shippingCents;
+  /** Aclaración junto al monto a pagar: que se vea que el envío está incluido (o que falta elegirlo). */
+  const shippingNote =
+    deliveryMethod !== "envio" ? "" : zone ? ` (productos + envío a ${zone.name})` : " más el envío (elegí tu localidad arriba)";
 
   if (!hydrated) {
     return (
@@ -573,7 +576,8 @@ export function CartView({
                 <p className="rounded-2xl bg-[#e6f6fd] p-3 text-sm text-[#00496f]">
                   Pagando con Mercado Pago se suma un recargo de {mpSurcharge}% (
                   {formatARS(surchargeCents(grandCents, mpSurcharge))}). Total a pagar:{" "}
-                  <strong>{formatARS(grandCents + surchargeCents(grandCents, mpSurcharge))}</strong>. En
+                  <strong>{formatARS(grandCents + surchargeCents(grandCents, mpSurcharge))}</strong>
+                  {shippingNote}. En
                   efectivo o transferencia no hay recargo.
                 </p>
               ) : null}
@@ -583,13 +587,15 @@ export function CartView({
                   {transfer.mpLink ? (
                     <span>
                       Tocá <strong>Hacer pedido</strong> y en el paso siguiente pagás{" "}
-                      <strong>{formatARS(grandCents)}</strong> con Mercado Pago (tarjeta o dinero en cuenta, sin
+                      <strong>{formatARS(grandCents)}</strong>
+                      {shippingNote} con Mercado Pago (tarjeta o dinero en cuenta, sin
                       recargo).
                     </span>
                   ) : (
                     <span>
                       Tocá <strong>Hacer pedido</strong> y en el paso siguiente te mostramos el alias para transferir{" "}
-                      <strong>{formatARS(grandCents)}</strong> (sin recargo). Ahí mismo subís el comprobante.
+                      <strong>{formatARS(grandCents)}</strong>
+                      {shippingNote} (sin recargo). Ahí mismo subís el comprobante.
                     </span>
                   )}
                 </p>
