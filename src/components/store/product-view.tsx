@@ -7,7 +7,7 @@ import { formatARS } from "@/lib/format";
 import { getPriceInfo, toCents } from "@/lib/pricing";
 import { slugify } from "@/lib/slug";
 import { buildProductInquiryMessage, buildWhatsAppUrl } from "@/lib/whatsapp";
-import { AddToCart, LiveSavings, MobileBuyBar } from "./add-to-cart";
+import { AddToCart, LiveSavings } from "./add-to-cart";
 import { Gallery } from "./gallery";
 import { Price } from "./price";
 import { DELIVERY_TEXT } from "@/lib/delivery";
@@ -33,7 +33,7 @@ export function ProductView({
   jsonLd: object;
 }) {
   return (
-    <div className="mx-auto max-w-7xl px-4 pt-5 pb-28 sm:px-6 sm:pt-8 md:pb-12">
+    <div className="mx-auto max-w-7xl px-4 pt-5 pb-12 sm:px-6 sm:pt-8">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
@@ -171,19 +171,6 @@ export function ProductView({
           <ProductRail products={related} />
         </section>
       ) : null}
-
-      <MobileBuyBar
-        product={{
-          productId: product.id,
-          slug: product.slug,
-          name: product.name,
-          size: product.size,
-          image: product.images[0]?.storage_path ?? null,
-          salePrice: toCents(product.sale_price) / 100,
-          magazinePrice: toCents(product.magazine_price) / 100,
-          stock: product.stock,
-        }}
-      />
     </div>
   );
 }

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { toast } from "sonner";
 
-import { Button, LinkButton } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { cart, cartDrawer, useCart, type CartItem } from "@/lib/cart-store";
 import { formatARS } from "@/lib/format";
 import { getPriceInfo, toCents } from "@/lib/pricing";
@@ -170,75 +170,6 @@ export function AddToCart({ product }: { product: Omit<CartItem, "quantity"> }) 
           {available <= 0 ? " Alcanzaste el stock disponible." : ""}
         </p>
       ) : null}
-    </div>
-  );
-}
-
-/**
- * Barra fija abajo en el celular con el precio y "Agregar": siempre a mano mientras se lee la
- * descripción. Si el producto ya está en el carrito, el botón lleva al carrito. No aparece si no hay stock.
- */
-export function MobileBuyBar({ product }: { product: Omit<CartItem, "quantity"> }) {
-  const items = useCart();
-  const selected = useSelectedQty(product.productId);
-  // Mientras se ve el recuadro de compra de arriba (#comprar), la barra se esconde: serían dos
-  // botones iguales. Aparece cuando la clienta baja a leer y el botón grande queda fuera de la pantalla.
-  const [buyBoxVisible, setBuyBoxVisible] = useState(false);
-  useEffect(() => {
-    const box = document.getElementById("comprar");
-    if (!box || typeof IntersectionObserver === "undefined") return;
-    const observer = new IntersectionObserver(([entry]) => setBuyBoxVisible(entry.isIntersecting), { threshold: 0.15 });
-    observer.observe(box);
-    return () => observer.disconnect();
-  }, []);
-  const inCart = items.find((i) => i.productId === product.productId)?.quantity ?? 0;
-  if (product.stock <= 0) return null;
-  const full = inCart >= product.stock;
-  // El total sigue a la cantidad elegida arriba (si elegís 2, muestra el precio de 2).
-  const qty = Math.max(1, Math.min(selected, product.stock));
-  const saleCents = toCents(product.salePrice) * qty;
-  const magazineCents = toCents(product.magazinePrice) * qty;
-  return (
-    <div
-      aria-hidden={buyBoxVisible}
-      inert={buyBoxVisible}
-      className={`fixed inset-x-0 bottom-0 z-40 border-t border-line bg-warm-white/95 px-4 py-2.5 shadow-[0_-8px_24px_-12px_rgb(59_30_74/0.25)] backdrop-blur transition-transform duration-300 md:hidden ${
-        buyBoxVisible ? "translate-y-full" : "translate-y-0"
-      }`}
-    >
-      <div className="mx-auto flex max-w-xl items-center gap-3">
-        <div className="min-w-0 flex-1 leading-tight tabular" aria-live="polite">
-          {magazineCents > saleCents ? (
-            <p className="text-xs text-muted">
-              Revista <span className="line-through decoration-coral-deep">{formatARS(magazineCents)}</span>
-            </p>
-          ) : null}
-          <p className="font-display text-xl font-bold whitespace-nowrap text-coral-deep">{formatARS(saleCents)}</p>
-          <p className="text-[0.7rem] font-semibold whitespace-nowrap text-muted">
-            en Natu Mariel{qty > 1 ? ` · ${qty} unid.` : ""}
-          </p>
-        </div>
-        {inCart > 0 ? (
-          // Ya está en el carrito: el botón lleva al carrito (las cantidades se cambian ahí o arriba).
-          <LinkButton href="/carrito" size="lg">
-            <ShoppingBag className="size-5" aria-hidden="true" />
-            Ir al carrito ({inCart})
-          </LinkButton>
-        ) : (
-          <Button
-            size="lg"
-            disabled={full}
-            onClick={() => {
-              const res = cart.add(product, qty);
-              if (res.capped) toast.warning(`Ya tenés el máximo disponible: ${res.quantity} en tu carrito.`);
-              else toast.success(qty === 1 ? "¡Agregado al carrito!" : `¡Agregaste ${qty} al carrito!`, ADDED_TOAST);
-            }}
-          >
-            <ShoppingBag className="size-5" aria-hidden="true" />
-            {full ? "Sin más stock" : "Agregar al carrito"}
-          </Button>
-        )}
-      </div>
     </div>
   );
 }
