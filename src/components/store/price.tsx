@@ -27,7 +27,7 @@ export function DiscountBadge({
 
 /**
  * Precio: cuando hay descuento se muestra bien claro la comparación «Precio en revista» (tachado)
- * contra «Precio Natu Mariel», y cuánto se ahorra. Sin descuento, solo el precio.
+ * contra «Precio en Natu Mariel», y cuánto se ahorra. Sin descuento, solo el precio.
  */
 export function Price({
   magazinePrice,
@@ -62,7 +62,7 @@ export function Price({
             </span>
           </div>
           <div className="flex flex-col justify-center gap-0.5 bg-coral-soft/60 p-3 sm:p-4">
-            <span className="text-[0.7rem] font-extrabold tracking-wide text-coral-deep uppercase sm:text-xs">Precio Natu Mariel</span>
+            <span className="text-[0.7rem] font-extrabold tracking-wide text-coral-deep uppercase sm:text-xs">Precio en Natu Mariel</span>
             <span className="tabular font-display text-2xl leading-none font-bold tracking-tight break-words text-coral-deep sm:text-4xl">
               {formatARS(info.saleCents)}
             </span>
@@ -83,7 +83,7 @@ export function Price({
         Revista <span className="tabular font-bold line-through decoration-coral-deep decoration-2">{formatARS(info.magazineCents)}</span>
       </span>
       <span className="tabular font-display text-[1.35rem] leading-tight font-bold tracking-tight text-coral-deep">
-        <span className="sr-only">Precio Natu Mariel: </span>
+        <span className="sr-only">Precio en Natu Mariel: </span>
         {formatARS(info.saleCents)}
       </span>
       <span className="w-fit rounded-full bg-sun px-2 py-0.5 text-[0.7rem] font-extrabold text-forest">Ahorrás {formatARS(info.savingsCents)}</span>

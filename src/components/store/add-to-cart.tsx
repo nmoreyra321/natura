@@ -84,13 +84,18 @@ function subscribeQty(l: () => void) {
   return () => qtyListeners.delete(l);
 }
 
-/** Cartel "¡Ahorrás $X!" que se actualiza según la cantidad elegida. */
-export function LiveSavings({ productId, magazinePrice, salePrice }: { productId: string; magazinePrice: number; salePrice: number }) {
-  const qty = useSyncExternalStore(
+/** Cantidad elegida ahora en la ficha del producto (1 si todavía no se tocó). */
+function useSelectedQty(productId: string): number {
+  return useSyncExternalStore(
     subscribeQty,
     () => selectedQty.get(productId) ?? 1,
     () => 1,
   );
+}
+
+/** Cartel "¡Ahorrás $X!" que se actualiza según la cantidad elegida. */
+export function LiveSavings({ productId, magazinePrice, salePrice }: { productId: string; magazinePrice: number; salePrice: number }) {
+  const qty = useSelectedQty(productId);
   const info = getPriceInfo(magazinePrice, salePrice);
   if (!info.hasDiscount) return null;
   return (
@@ -175,17 +180,27 @@ export function AddToCart({ product }: { product: Omit<CartItem, "quantity"> }) 
  */
 export function MobileBuyBar({ product }: { product: Omit<CartItem, "quantity"> }) {
   const items = useCart();
+  const selected = useSelectedQty(product.productId);
   const inCart = items.find((i) => i.productId === product.productId)?.quantity ?? 0;
   if (product.stock <= 0) return null;
   const full = inCart >= product.stock;
-  const saleCents = toCents(product.salePrice);
-  const magazineCents = toCents(product.magazinePrice);
+  // El total sigue a la cantidad elegida arriba (si elegís 2, muestra el precio de 2).
+  const qty = Math.max(1, Math.min(selected, product.stock));
+  const saleCents = toCents(product.salePrice) * qty;
+  const magazineCents = toCents(product.magazinePrice) * qty;
   return (
-    <div className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-warm-white/95 px-4 py-3 shadow-[0_-8px_24px_-12px_rgb(59_30_74/0.25)] backdrop-blur md:hidden">
+    <div className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-warm-white/95 px-4 py-2.5 shadow-[0_-8px_24px_-12px_rgb(59_30_74/0.25)] backdrop-blur md:hidden">
       <div className="mx-auto flex max-w-xl items-center gap-3">
-        <div className="min-w-0 flex-1 leading-tight tabular">
-          <p className="font-display text-xl font-bold text-coral-deep">{formatARS(saleCents)}</p>
-          {magazineCents > saleCents ? <p className="text-xs text-muted line-through">{formatARS(magazineCents)}</p> : null}
+        <div className="min-w-0 flex-1 leading-tight tabular" aria-live="polite">
+          {magazineCents > saleCents ? (
+            <p className="text-xs text-muted">
+              Revista <span className="line-through decoration-coral-deep">{formatARS(magazineCents)}</span>
+            </p>
+          ) : null}
+          <p className="font-display text-xl font-bold whitespace-nowrap text-coral-deep">{formatARS(saleCents)}</p>
+          <p className="text-[0.7rem] font-semibold whitespace-nowrap text-muted">
+            en Natu Mariel{qty > 1 ? ` · ${qty} unid.` : ""}
+          </p>
         </div>
         {inCart > 0 ? (
           // Ya está en el carrito: el botón lleva al carrito (las cantidades se cambian ahí o arriba).
@@ -198,10 +213,9 @@ export function MobileBuyBar({ product }: { product: Omit<CartItem, "quantity"> 
             size="lg"
             disabled={full}
             onClick={() => {
-              const res = cart.add(product, 1);
+              const res = cart.add(product, qty);
               if (res.capped) toast.warning(`Ya tenés el máximo disponible: ${res.quantity} en tu carrito.`);
-              else
-                toast.success("¡Agregado al carrito!", ADDED_TOAST);
+              else toast.success(qty === 1 ? "¡Agregado al carrito!" : `¡Agregaste ${qty} al carrito!`, ADDED_TOAST);
             }}
           >
             <ShoppingBag className="size-5" aria-hidden="true" />
