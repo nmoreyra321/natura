@@ -23,6 +23,7 @@ export default async function ReviewsPage() {
     .order("created_at", { ascending: false })
     .limit(500);
   const list = reviews ?? [];
+  const otherReplies = list.flatMap((r) => (r.reply ? [r.reply] : []));
   const average = list.length ? list.reduce((s, r) => s + r.rating, 0) / list.length : 0;
 
   return (
@@ -67,7 +68,12 @@ export default async function ReviewsPage() {
                       </>
                     ) : null}
                   </p>
-                  <ReviewReply id={r.id} reply={r.reply} />
+                  <ReviewReply
+                    id={r.id}
+                    reply={r.reply}
+                    review={{ name: r.name, rating: r.rating, comment: r.comment }}
+                    otherReplies={otherReplies.filter((t) => t !== r.reply)}
+                  />
                 </div>
                 <ReviewDelete id={r.id} name={r.name} />
               </li>

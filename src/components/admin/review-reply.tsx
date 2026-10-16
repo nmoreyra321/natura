@@ -1,24 +1,37 @@
 "use client";
 
-import { Loader2, MessageCircleReply } from "lucide-react";
+import { Loader2, MessageCircleReply, Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { replyReview } from "@/app/admin/actions";
+import { suggestReply } from "@/lib/review-reply";
 
 /** Contestar una reseña: la respuesta se ve en la tienda debajo de la reseña. */
 export function ReviewReply({
   id,
   reply,
+  review,
+  otherReplies,
 }: {
   id: string;
   reply: string | null;
+  /** La reseña, para armar una idea de respuesta. */
+  review: { name: string; rating: number; comment: string | null };
+  /** Las respuestas ya escritas a otras reseñas, para no repetirlas. */
+  otherReplies: string[];
 }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState(reply ?? "");
   const [pending, start] = useTransition();
+  const [suggested, setSuggested] = useState(false);
+
+  const suggest = () => {
+    setText((prev) => suggestReply(review, { others: otherReplies, previous: prev }));
+    setSuggested(true);
+  };
 
   const save = (value: string) =>
     start(async () => {
@@ -79,6 +92,14 @@ export function ReviewReply({
         save(text);
       }}
     >
+      <button
+        type="button"
+        onClick={suggest}
+        className="inline-flex h-9 w-fit items-center gap-1.5 rounded-full bg-lilac px-3.5 text-sm font-bold text-grape hover:bg-pink"
+      >
+        <Sparkles className="size-4" aria-hidden="true" />
+        {suggested ? "Otra idea" : "Sugerir respuesta"}
+      </button>
       <textarea
         value={text}
         onChange={(e) => setText(e.target.value)}
