@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronRight, Menu, MessageCircle, Package, Search, ShoppingBag, X } from "lucide-react";
+import { ChevronRight, Heart, LayoutGrid, Menu, MessageCircle, Package, Search, ShoppingBag, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -133,11 +133,16 @@ function isCurrent(href: string, pathname: string, search: string): boolean {
   if (href.includes("#")) return false;
   const [path, query = ""] = href.split("?");
   if (path !== pathname) return false;
-  const onOffers = new URLSearchParams(search).get("ofertas") === "1";
-  return query.includes("ofertas=1") ? onOffers : !onOffers;
+  // Ofertas y «Mujer» son la misma página de productos con otra dirección: se comparan esas partes.
+  const here = new URLSearchParams(search);
+  const link = new URLSearchParams(query);
+  return ["ofertas", "para"].every((k) => (here.get(k) ?? "") === (link.get(k) ?? ""));
 }
 
 const CURRENT = "bg-sky-100 font-bold text-sky-950";
+/** Grupos del menú del celular («Más categorías», «Conocenos»): en un recuadro, para que el título no parezca un enlace más. */
+const GROUP = "rounded-3xl bg-cream p-2 ring-1 ring-line/70";
+const GROUP_TITLE = "flex items-center gap-2 border-b border-line/80 px-3 pt-1.5 pb-2.5 mb-1 text-sm font-extrabold text-coral-deep";
 
 export function Header({ categories }: { categories: NavCategory[] }) {
   const [open, setOpen] = useState(false);
@@ -297,27 +302,39 @@ export function Header({ categories }: { categories: NavCategory[] }) {
               </ul>
             </nav>
             {categories.length > 4 ? (
-              <div>
-                <p className="px-4 pb-2 text-xs font-bold tracking-[0.14em] text-muted uppercase">Más categorías</p>
-                <ul className="flex flex-col gap-1">
-                  {categories.slice(4).map((c) => (
-                    <li key={c.slug}>
-                      <Link
-                        href={`/categorias/${c.slug}`}
-                        onClick={() => setOpen(false)}
-                        aria-current={pathname === `/categorias/${c.slug}` ? "page" : undefined}
-                        className={`flex min-h-11 items-center rounded-2xl px-4 hover:bg-sun ${pathname === `/categorias/${c.slug}` ? CURRENT : ""}`}
-                      >
-                        {c.name}
-                      </Link>
-                    </li>
-                  ))}
+              <div className={GROUP}>
+                <p className={GROUP_TITLE}>
+                  <LayoutGrid className="size-4" aria-hidden="true" /> Más categorías
+                </p>
+                <ul className="flex flex-col gap-0.5">
+                  {categories.slice(4).flatMap((c) => {
+                    const items = [{ href: `/categorias/${c.slug}`, label: c.name }];
+                    // No hay categoría «Mujer»: va el filtro «para mujer», al lado de «Hombre».
+                    if (c.slug === "hombre") items.unshift({ href: "/productos?para=mujer", label: "Mujer" });
+                    return items;
+                  }).map((l) => {
+                    const current = isCurrent(l.href, pathname, window.location.search);
+                    return (
+                      <li key={l.href}>
+                        <Link
+                          href={l.href}
+                          onClick={() => setOpen(false)}
+                          aria-current={current ? "page" : undefined}
+                          className={`flex min-h-11 items-center rounded-2xl px-4 hover:bg-sun ${current ? CURRENT : ""}`}
+                        >
+                          {l.label}
+                        </Link>
+                      </li>
+                    );
+                  })}
                 </ul>
               </div>
             ) : null}
-            <div>
-              <p className="px-4 pb-2 text-xs font-bold tracking-[0.14em] text-muted uppercase">Conocenos</p>
-              <ul className="flex flex-col gap-1">
+            <div className={GROUP}>
+              <p className={GROUP_TITLE}>
+                <Heart className="size-4" aria-hidden="true" /> Conocenos
+              </p>
+              <ul className="flex flex-col gap-0.5">
                 {[
                   { href: "/quienes-somos", label: "Quiénes somos" },
                   { href: "/#calificaciones", label: "Reseñas" },
