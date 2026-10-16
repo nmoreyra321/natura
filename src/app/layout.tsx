@@ -54,6 +54,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {children}
         <Toaster
           position="top-center"
+          // En el celular, los avisos de abajo quedan por encima de la barra de «Agregar al carrito».
+          mobileOffset={{ bottom: 96 }}
           richColors
           closeButton
           toastOptions={{ style: { fontFamily: "var(--font-nunito)" } }}

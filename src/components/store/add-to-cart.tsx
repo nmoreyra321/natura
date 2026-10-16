@@ -10,6 +10,16 @@ import { cart, cartDrawer, useCart, type CartItem } from "@/lib/cart-store";
 import { formatARS } from "@/lib/format";
 import { getPriceInfo, toCents } from "@/lib/pricing";
 
+/**
+ * Aviso de «agregado»: abajo (arriba taparía el carrito que se sacude con el «+1»),
+ * con un botón para abrir el carrito si la clienta quiere.
+ */
+const ADDED_TOAST = {
+  position: "bottom-center" as const,
+  duration: 2500,
+  action: { label: "Ver carrito", onClick: () => cartDrawer.open() },
+};
+
 export function QuantityInput({
   value,
   max,
@@ -126,7 +136,8 @@ export function AddToCart({ product }: { product: Omit<CartItem, "quantity"> }) 
             if (res.capped) {
               toast.warning(`Agregamos el máximo disponible: ${res.quantity} en tu carrito.`);
             } else {
-              cartDrawer.open();
+              // El carrito de arriba se sacude con un «+1»; el panel se abre solo si lo pide.
+              toast.success(quantity === 1 ? "¡Agregado al carrito!" : `¡Agregaste ${quantity} al carrito!`, ADDED_TOAST);
             }
             setQty(1);
           }}
@@ -189,7 +200,8 @@ export function MobileBuyBar({ product }: { product: Omit<CartItem, "quantity"> 
             onClick={() => {
               const res = cart.add(product, 1);
               if (res.capped) toast.warning(`Ya tenés el máximo disponible: ${res.quantity} en tu carrito.`);
-              else cartDrawer.open();
+              else
+                toast.success("¡Agregado al carrito!", ADDED_TOAST);
             }}
           >
             <ShoppingBag className="size-5" aria-hidden="true" />

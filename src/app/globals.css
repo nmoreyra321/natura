@@ -173,6 +173,48 @@ h3,
   animation: pop 0.4s ease-out;
 }
 
+/* Carrito del encabezado: se sacude cuando se agrega algo, y sale un «+1» que sube y se desvanece. */
+@keyframes cart-bump {
+  0% {
+    transform: scale(1) rotate(0);
+  }
+  25% {
+    transform: scale(1.3) rotate(-12deg);
+  }
+  50% {
+    transform: scale(1.15) rotate(10deg);
+  }
+  75% {
+    transform: scale(1.08) rotate(-5deg);
+  }
+  100% {
+    transform: scale(1) rotate(0);
+  }
+}
+
+.animate-cart-bump {
+  animation: cart-bump 0.6s ease-out;
+}
+
+@keyframes plus-one {
+  0% {
+    opacity: 0;
+    transform: translateY(4px) scale(0.8);
+  }
+  20% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-22px) scale(1);
+  }
+}
+
+.animate-plus-one {
+  animation: plus-one 0.9s ease-out forwards;
+}
+
 @keyframes slide-in-right {
   from {
     transform: translateX(100%);

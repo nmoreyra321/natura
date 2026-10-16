@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
-import { cartCount, cartDrawer, useCart } from "@/lib/cart-store";
+import { cartCount, cartDrawer, useCart, useCartHydrated } from "@/lib/cart-store";
 import { hideOrderReminder, useRecentOrder, useSavedOrders } from "@/lib/my-orders";
 import { CartDrawer } from "./cart-drawer";
 import { Logo } from "./logo";
@@ -17,33 +17,61 @@ type NavCategory = { name: string; slug: string };
 
 function CartLink() {
   const items = useCart();
+  const hydrated = useCartHydrated();
   const pathname = usePathname();
   const count = cartCount(items);
+
+  // Cada vez que se agrega algo, el carrito se sacude y sale un «+1». No al cargar la página
+  // (ahí el carrito «aparece» con lo guardado, no es que se haya agregado algo).
+  const [seen, setSeen] = useState({ count, hydrated });
+  const [bump, setBump] = useState(0);
+  const [added, setAdded] = useState(0);
+  if (seen.count !== count || seen.hydrated !== hydrated) {
+    if (seen.hydrated && hydrated && count > seen.count) {
+      setBump((b) => b + 1);
+      setAdded(count - seen.count);
+    }
+    setSeen({ count, hydrated });
+  }
+
   const label = count > 0 ? `Carrito: ${count} ${count === 1 ? "producto" : "productos"}` : "Carrito vacío";
   const badge =
     count > 0 ? (
       <span
-        className="absolute -top-0.5 -right-0.5 flex min-w-5 items-center justify-center rounded-full bg-coral-deep px-1.5 text-[0.7rem] leading-5 font-bold text-white tabular ring-2 ring-cream"
+        key={`n${bump}`}
+        className={`absolute -top-0.5 -right-0.5 flex min-w-5 items-center justify-center rounded-full bg-coral-deep px-1.5 text-[0.7rem] leading-5 font-bold text-white tabular ring-2 ring-cream ${bump ? "animate-pop" : ""}`}
         aria-hidden="true"
       >
         {count > 99 ? "99+" : count}
       </span>
     ) : null;
+  const plusOne = bump ? (
+    <span
+      key={`p${bump}`}
+      className="animate-plus-one pointer-events-none absolute -top-4 left-0 rounded-full bg-sun px-1.5 text-xs font-extrabold text-forest shadow-soft"
+      aria-hidden="true"
+    >
+      +{added}
+    </span>
+  ) : null;
+  const icon = <ShoppingBag key={`i${bump}`} className={`size-6 ${bump ? "animate-cart-bump" : ""}`} aria-hidden="true" />;
   const classes =
     "relative inline-flex size-11 items-center justify-center rounded-full text-forest transition-colors hover:bg-forest/5";
   // En la página del carrito el ícono no abre el panel: ya está todo a la vista.
   if (pathname === "/carrito") {
     return (
       <Link href="/carrito" className={classes} aria-label={label}>
-        <ShoppingBag className="size-6" aria-hidden="true" />
+        {icon}
         {badge}
+        {plusOne}
       </Link>
     );
   }
   return (
     <button type="button" className={classes} aria-label={label} aria-haspopup="dialog" onClick={() => cartDrawer.open()}>
-      <ShoppingBag className="size-6" aria-hidden="true" />
+      {icon}
       {badge}
+      {plusOne}
     </button>
   );
 }
