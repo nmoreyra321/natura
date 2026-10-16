@@ -543,7 +543,7 @@ export function CartView({
                         <option value="">Elegí tu localidad…</option>
                         {shippingZones.map((z) => (
                           <option key={z.id} value={z.id}>
-                            {z.name} · {formatPercent(z.percent)} de tu compra = {formatARS(shippingCostCents(productsCents, z.percent))}
+                            {z.name}
                           </option>
                         ))}
                       </select>
