@@ -668,7 +668,7 @@ export function CartView({
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-disabled={sending}
-                className={buttonClasses("whatsapp", "lg", sending ? "pointer-events-none opacity-70" : "")}
+                className={buttonClasses("primary", "lg", sending ? "pointer-events-none opacity-70" : "")}
                 onClick={async (e) => {
                   if (!whatsappNumber || sending) return;
                   e.preventDefault();
@@ -690,17 +690,17 @@ export function CartView({
                     setSending(false);
                     return;
                   }
-                  // Pasa a la página del pedido (vacía el carrito): ahí el botón grande «Enviar pedido por
-                  // WhatsApp» abre la app con un toque. Abrir WhatsApp desde acá dejaba una pestaña en blanco.
+                  // El pedido ya le llega a Natu Mariel (aviso al celular): la clienta no tiene que mandar
+                  // nada por WhatsApp. Pasa a la página de su pedido (y se vacía el carrito).
                   router.push(`/pedido/${res.id}?nuevo=1`);
                 }}
               >
                 {sending ? (
                   <Loader2 className="size-5 animate-spin" aria-hidden="true" />
                 ) : (
-                  <MessageCircle className="size-5" aria-hidden="true" />
+                  <ShoppingBag className="size-5" aria-hidden="true" />
                 )}
-                Hacer pedido por WhatsApp
+                {sending ? "Registrando tu pedido…" : "Hacer pedido"}
               </a>
               )}
             </>
@@ -731,7 +731,7 @@ export function CartView({
               ? "Te llevamos a la página segura de Mercado Pago para pagar con tarjeta, dinero en cuenta o efectivo en puntos de pago. Cuando termines, volvés a la tienda y Natu Mariel coordina la entrega con vos."
               : payment === "transferencia"
                 ? "Al tocar el botón se guarda tu pedido y pasás a su página: ahí pagás y ves cuándo se aprueba el pago."
-                : "Al enviar el pedido se abre WhatsApp con el detalle. Natu Mariel te confirmará disponibilidad, pago y entrega. El pedido queda confirmado y el stock reservado recién con esa confirmación."}
+                : "Tu pedido le llega a Natu Mariel al instante y te escribe por WhatsApp para confirmar disponibilidad y entrega. El pedido queda confirmado y el stock reservado recién con esa confirmación."}
           </p>
           <Link href="/productos" className="text-center text-sm font-semibold text-coral-deep hover:underline">
             Seguir comprando
