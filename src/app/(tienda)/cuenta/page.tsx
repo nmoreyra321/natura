@@ -1,9 +1,10 @@
-import { ChevronRight, Gift } from "lucide-react";
+import { ChevronRight, Gift, ShoppingBag } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
 import { myOrdersStatus } from "@/app/(tienda)/pedido/actions";
 import { AccountLogin } from "@/components/store/account-login";
+import { buttonClasses } from "@/components/ui/button";
 import { AccountProfile, SignOutButton } from "@/components/store/account-profile";
 import { getLoginProviders } from "@/lib/config";
 import { accountClub, getCustomer } from "@/lib/customer";
@@ -113,12 +114,13 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
       <section className="mt-6">
         <h2 className="font-display text-xl font-bold">Mis pedidos</h2>
         {orders.length === 0 ? (
-          <p className="mt-2 text-sm text-muted">
-            Todavía no hiciste pedidos con tu cuenta.{" "}
-            <Link href="/productos" className="font-semibold text-coral-deep underline">
-              Ver productos
+          <div className="mt-3 rounded-3xl bg-warm-white p-5 text-center shadow-soft ring-1 ring-line/70">
+            <p className="text-sm text-muted">Todavía no hiciste pedidos con tu cuenta.</p>
+            <p className="mt-1 text-sm">Lo que compres con la sesión iniciada suma al Club. 🎁</p>
+            <Link href="/productos" className={buttonClasses("primary", "lg", "mt-4 w-full")}>
+              <ShoppingBag className="size-5" aria-hidden="true" /> Ir a comprar
             </Link>
-          </p>
+          </div>
         ) : (
           <ul className="mt-3 flex flex-col gap-2">
             {orders.map((o) => {

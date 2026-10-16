@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertCircle, ArrowLeftRight, Banknote, CreditCard, Info, Loader2, MapPin, MessageCircle, ShoppingBag, Trash2, Truck } from "lucide-react";
+import { AlertCircle, ArrowLeftRight, Banknote, CircleUser, CreditCard, Info, Loader2, MapPin, MessageCircle, ShoppingBag, Trash2, Truck } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -403,6 +403,14 @@ export function CartView({
           ) : whatsappUrl ? (
             <>
               <div>
+                {account ? (
+                  <p className="mb-2 flex items-center gap-2 rounded-2xl bg-sage px-3 py-2 text-sm font-semibold text-botanical-deep">
+                    <CircleUser className="size-5 shrink-0" aria-hidden="true" />
+                    <span>
+                      Estás comprando con tu cuenta{account.name ? ` (${account.name.split(" ")[0]})` : ""}: este pedido suma al Club. ✓
+                    </span>
+                  </p>
+                ) : null}
                 <p className="text-sm text-muted">
                   Dejanos tu nombre y tu WhatsApp para confirmarte el pedido y avisarte cuando esté listo.
                 </p>

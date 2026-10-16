@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import { cartCount, cartDrawer, useCart, useCartHydrated } from "@/lib/cart-store";
+import { getBrowserClient } from "@/lib/supabase/browser";
 import { hideOrderReminder, useRecentOrder, useSavedOrders } from "@/lib/my-orders";
 import { CartDrawer } from "./cart-drawer";
 import { Logo } from "./logo";
@@ -77,6 +78,33 @@ function CartLink() {
 }
 
 /** Ícono "Mis pedidos", con un puntito si hay pedidos hechos desde este celular. */
+/** Ícono de «Mi cuenta», con una marquita verde si la clienta tiene la sesión iniciada. */
+function AccountLink() {
+  const [signedIn, setSignedIn] = useState(false);
+  useEffect(() => {
+    const supabase = getBrowserClient();
+    if (!supabase) return;
+    // Las sesiones con mail son del panel (administradoras), no cuentas de clientas.
+    const isCustomer = (provider: unknown) => Boolean(provider) && provider !== "email";
+    supabase.auth.getSession().then(({ data }) => setSignedIn(isCustomer(data.session?.user.app_metadata?.provider)));
+    const { data } = supabase.auth.onAuthStateChange((_e, session) => setSignedIn(isCustomer(session?.user.app_metadata?.provider)));
+    return () => data.subscription.unsubscribe();
+  }, []);
+  return (
+    <Link
+      href="/cuenta"
+      className="relative inline-flex size-11 items-center justify-center rounded-full text-forest transition-colors hover:bg-forest/5"
+      aria-label={signedIn ? "Mi cuenta (sesión iniciada)" : "Mi cuenta"}
+      title="Mi cuenta"
+    >
+      <CircleUser className="size-5.5" aria-hidden="true" />
+      {signedIn ? (
+        <span className="absolute top-2 right-2 size-2.5 rounded-full bg-botanical-deep ring-2 ring-cream" aria-hidden="true" />
+      ) : null}
+    </Link>
+  );
+}
+
 function OrdersLink() {
   const saved = useSavedOrders();
   return (
@@ -233,14 +261,7 @@ export function Header({ categories }: { categories: NavCategory[] }) {
           >
             <MessageCircle className="size-5.5" aria-hidden="true" />
           </Link>
-          <Link
-            href="/cuenta"
-            className="inline-flex size-11 items-center justify-center rounded-full text-forest transition-colors hover:bg-forest/5"
-            aria-label="Mi cuenta"
-            title="Mi cuenta"
-          >
-            <CircleUser className="size-5.5" aria-hidden="true" />
-          </Link>
+          <AccountLink />
           <OrdersLink />
           <CartLink />
         </div>

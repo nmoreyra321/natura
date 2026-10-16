@@ -92,7 +92,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
   let query = supabase
     .from("orders")
     .select(
-      "id, number, code, channel, status, customer_cancelled_at, is_gift, gift_note, delivery_method, shipping_zone, shipping_address, shipping_cost, customer_name, customer_phone, total, savings, created_at, payment_method, payment_status, paid_at, amount_paid, payment_note, payment_reported_at, payment_rejection, payment_proof_path, items:order_items(id, product_id, name, size, quantity, unit_price), lots:order_lot_allocations(product_id, expires_on, quantity)",
+      "id, number, code, channel, status, customer_cancelled_at, customer_user_id, is_gift, gift_note, delivery_method, shipping_zone, shipping_address, shipping_cost, customer_name, customer_phone, total, savings, created_at, payment_method, payment_status, paid_at, amount_paid, payment_note, payment_reported_at, payment_rejection, payment_proof_path, items:order_items(id, product_id, name, size, quantity, unit_price), lots:order_lot_allocations(product_id, expires_on, quantity)",
       { count: "exact" },
     )
     .order("created_at", { ascending: false })
@@ -234,6 +234,11 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
                       <span className="rounded-full border border-line px-2.5 py-0.5 text-xs font-bold text-muted">
                         {originLabel(o.channel)}
                       </span>
+                      {o.customer_user_id ? (
+                        <span className="rounded-full bg-sage px-2.5 py-0.5 text-xs font-bold text-botanical-deep" title="Hecho con cuenta de clienta: suma al Club">
+                          👤 Con cuenta · suma al Club
+                        </span>
+                      ) : null}
                     </p>
                     {o.delivery_method === "envio" ? (
                       <p className="mt-1 rounded-2xl bg-sage/60 px-3 py-1.5 text-sm">
