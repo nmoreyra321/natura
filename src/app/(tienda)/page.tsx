@@ -28,9 +28,12 @@ function pickHeroProducts(...lists: PublicProduct[][]): PublicProduct[] {
   return out;
 }
 
-/** Primero lo que hay en stock (lo agotado igual se muestra, al final). */
-function stockFirst(list: PublicProduct[]): PublicProduct[] {
-  return [...list.filter((p) => p.stock > 0), ...list.filter((p) => p.stock <= 0)];
+/**
+ * En la pantalla principal solo se muestra lo que hay en stock (para vender lo que tenemos).
+ * Lo agotado sigue apareciendo en las categorías y en la búsqueda, al final.
+ */
+function inStock(list: PublicProduct[]): PublicProduct[] {
+  return list.filter((p) => p.stock > 0);
 }
 
 /** Hasta 8 productos para «Todos los productos» que no estén ya en las otras filas del inicio. */
@@ -44,14 +47,15 @@ export default async function HomePage() {
   const [count, categories, highlights, bestSellers, campaign, reviews, catalog] = await Promise.all([
     getPublishedCount(),
     getActiveCategories(),
-    getHighlights(8),
-    getBestSellers(8),
+    getHighlights(8, { inStockOnly: true }),
+    getBestSellers(16),
     getActiveCampaign(),
     getReviewSummary(),
     getCatalog({ sort: "destacados", page: 1 }),
   ]);
   const clubMin = await getLoyaltyMinTotal();
-  const campaignProducts = campaign ? await getProductsByIds(campaign.productIds) : [];
+  const campaignProducts = campaign ? inStock(await getProductsByIds(campaign.productIds)) : [];
+  const sellers = inStock(bestSellers).slice(0, 8);
   const whatsapp = getWhatsAppNumber();
 
   return (
@@ -59,16 +63,16 @@ export default async function HomePage() {
       d={{
         hasProducts: (count ?? 0) > 0,
         categories,
-        offers: stockFirst(highlights.offers),
-        bestSellers,
-        featured: stockFirst(highlights.featured),
-        latest: stockFirst(highlights.latest),
-        heroProducts: pickHeroProducts(highlights.offers, highlights.featured, bestSellers, highlights.latest),
+        offers: highlights.offers,
+        bestSellers: sellers,
+        featured: highlights.featured,
+        latest: highlights.latest,
+        heroProducts: pickHeroProducts(highlights.offers, highlights.featured, sellers, highlights.latest),
         campaign: campaign ? { ...campaign, products: campaignProducts } : null,
         clubMinCents: Math.round(clubMin * 100),
         reviews,
         // «Todos los productos» al final: los que no aparecieron en las filas de arriba.
-        more: stockFirst(pickMore(catalog.products, highlights.offers, bestSellers, highlights.featured, highlights.latest)),
+        more: pickMore(inStock(catalog.products), highlights.offers, sellers, highlights.featured, highlights.latest),
         totalProducts: catalog.total || count || 0,
         whatsappUrl: whatsapp ? buildWhatsAppUrl(whatsapp, "¡Hola Mariel! Quería hacerte una consulta 😊") : null,
       }}

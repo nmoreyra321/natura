@@ -252,13 +252,15 @@ export const getPublishedCount = cache(async (): Promise<number | null> => {
   return count ?? 0;
 });
 
-export async function getHighlights(limit = 8) {
+export async function getHighlights(limit = 8, { inStockOnly = false }: { inStockOnly?: boolean } = {}) {
   const supabase = createPublicClient();
   if (!supabase) return { featured: [], offers: [], latest: [] };
 
-  // Con stock primero en cada sección de la portada.
-  const base = () =>
-    supabase.from("products").select(PRODUCT_SELECT).eq("status", "published").order("in_stock", { ascending: false });
+  // Con stock primero en cada sección (o solo con stock, para la pantalla principal).
+  const base = () => {
+    const q = supabase.from("products").select(PRODUCT_SELECT).eq("status", "published");
+    return inStockOnly ? q.eq("in_stock", true) : q.order("in_stock", { ascending: false });
+  };
 
   const [featured, offers, latest] = await Promise.all([
     base().eq("is_featured", true).order("updated_at", { ascending: false }).limit(limit),

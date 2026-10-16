@@ -365,10 +365,12 @@ export function HomeView({ d }: { d: HomeData }) {
             </Section>
           ) : null}
 
-          <Section>
-            <SectionHeader title="Novedades ✨" subtitle="Lo último que llegó a la tienda" href="/productos?orden=nuevos" />
-            <ProductRail products={d.latest.slice(0, 8)} />
-          </Section>
+          {d.latest.length > 0 ? (
+            <Section>
+              <SectionHeader title="Novedades ✨" subtitle="Lo último que llegó a la tienda" href="/productos?orden=nuevos" />
+              <ProductRail products={d.latest.slice(0, 8)} />
+            </Section>
+          ) : null}
 
           {/* Al final: para quien bajó todo sin encontrar nada, el catálogo completo. */}
           {d.more.length > 0 ? (
