@@ -181,6 +181,16 @@ export function AddToCart({ product }: { product: Omit<CartItem, "quantity"> }) 
 export function MobileBuyBar({ product }: { product: Omit<CartItem, "quantity"> }) {
   const items = useCart();
   const selected = useSelectedQty(product.productId);
+  // Mientras se ve el recuadro de compra de arriba (#comprar), la barra se esconde: serían dos
+  // botones iguales. Aparece cuando la clienta baja a leer y el botón grande queda fuera de la pantalla.
+  const [buyBoxVisible, setBuyBoxVisible] = useState(false);
+  useEffect(() => {
+    const box = document.getElementById("comprar");
+    if (!box || typeof IntersectionObserver === "undefined") return;
+    const observer = new IntersectionObserver(([entry]) => setBuyBoxVisible(entry.isIntersecting), { threshold: 0.15 });
+    observer.observe(box);
+    return () => observer.disconnect();
+  }, []);
   const inCart = items.find((i) => i.productId === product.productId)?.quantity ?? 0;
   if (product.stock <= 0) return null;
   const full = inCart >= product.stock;
@@ -189,7 +199,13 @@ export function MobileBuyBar({ product }: { product: Omit<CartItem, "quantity"> 
   const saleCents = toCents(product.salePrice) * qty;
   const magazineCents = toCents(product.magazinePrice) * qty;
   return (
-    <div className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-warm-white/95 px-4 py-2.5 shadow-[0_-8px_24px_-12px_rgb(59_30_74/0.25)] backdrop-blur md:hidden">
+    <div
+      aria-hidden={buyBoxVisible}
+      inert={buyBoxVisible}
+      className={`fixed inset-x-0 bottom-0 z-40 border-t border-line bg-warm-white/95 px-4 py-2.5 shadow-[0_-8px_24px_-12px_rgb(59_30_74/0.25)] backdrop-blur transition-transform duration-300 md:hidden ${
+        buyBoxVisible ? "translate-y-full" : "translate-y-0"
+      }`}
+    >
       <div className="mx-auto flex max-w-xl items-center gap-3">
         <div className="min-w-0 flex-1 leading-tight tabular" aria-live="polite">
           {magazineCents > saleCents ? (
