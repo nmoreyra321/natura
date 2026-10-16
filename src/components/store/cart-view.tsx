@@ -756,6 +756,15 @@ export function CartView({
               {error}
             </p>
           ) : null}
+          {pendingLimit && savedOrders.length === 0 ? (
+            <p className="rounded-2xl bg-cream p-3 text-sm">
+              Para ver tus pedidos, entrá a{" "}
+              <Link href="/mi-pedido" className="font-semibold text-coral-deep underline">
+                Seguir mi pedido
+              </Link>{" "}
+              y buscá uno con su código y tu WhatsApp: te aparecen todos.
+            </p>
+          ) : null}
           {pendingLimit && savedOrders.length > 0 ? (
             <div className="rounded-2xl bg-cream p-3 text-sm">
               <p className="font-semibold">Tus pedidos hechos desde este celular:</p>

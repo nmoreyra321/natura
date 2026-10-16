@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
-import { redirect } from "next/navigation";
 
 import { toWhatsAppPhone } from "@/lib/debts";
 import { canCustomerCancel, canReportPayment, normalizeOrderCode, paymentState } from "@/lib/order-tracking";
@@ -107,9 +106,17 @@ export async function reportTransferPayment(formData: FormData): Promise<ReportP
   return { ok: true };
 }
 
-export type FindOrderState = { error: string } | null;
+export type FindOrderState =
+  | { error: string }
+  /** Encontrado: el pedido buscado y los otros del último mes con ese WhatsApp, para guardarlos en este celular. */
+  | { found: { id: string; code: string; at: string }[]; go: string }
+  | null;
 
-/** Busca el pedido por código + WhatsApp (los dos tienen que coincidir) y lleva a su página. */
+/**
+ * Busca el pedido por código + WhatsApp (los dos tienen que coincidir). Como eso prueba que es
+ * la clienta, también devuelve sus otros pedidos del último mes, así aparecen todos en la lista
+ * aunque los haya hecho desde otro celular.
+ */
 export async function findOrder(_prev: FindOrderState, formData: FormData): Promise<FindOrderState> {
   const code = normalizeOrderCode(String(formData.get("code") ?? ""));
   const phone = toWhatsAppPhone(String(formData.get("phone") ?? ""));
@@ -128,7 +135,16 @@ export async function findOrder(_prev: FindOrderState, formData: FormData): Prom
     .eq("customer_phone", phone)
     .maybeSingle();
   if (!order) return { error: "No encontramos un pedido con ese código y ese WhatsApp." };
-  redirect(`/pedido/${order.id}?guardar=1`);
+  const since = new Date(Date.now() - 30 * 86_400_000).toISOString();
+  const { data: others } = await admin
+    .from("orders")
+    .select("id, code, created_at")
+    .eq("customer_phone", phone)
+    .gte("created_at", since)
+    .order("created_at", { ascending: false })
+    .limit(10);
+  const found = (others ?? []).map((o) => ({ id: o.id, code: o.code, at: o.created_at }));
+  return { found: found.some((o) => o.id === order.id) ? found : [...found, { id: order.id, code, at: new Date().toISOString() }], go: order.id };
 }
 
 export type CancelOrderResult = { ok: true } | { ok: false; error: string };

@@ -2,13 +2,14 @@
 
 import { ChevronRight, Loader2, Search, X } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useState } from "react";
 
 import { findOrder, myOrdersStatus, type FindOrderState, type MyOrderStatus } from "@/app/(tienda)/pedido/actions";
 import { ConfirmDialog } from "@/components/admin/confirm-dialog";
 import { buttonClasses } from "@/components/ui/button";
 import { formatARS } from "@/lib/format";
-import { forgetOrder, useSavedOrders, type SavedOrder } from "@/lib/my-orders";
+import { forgetOrder, rememberOrder, useSavedOrders, type SavedOrder } from "@/lib/my-orders";
 import { Required, RequiredNote } from "./required";
 
 const dateFormatter = new Intl.DateTimeFormat("es-AR", {
@@ -22,7 +23,14 @@ const TONE = { good: "bg-sage text-botanical-deep", wait: "bg-sun text-forest", 
 
 export function FindOrder() {
   const saved = useSavedOrders();
+  const router = useRouter();
   const [state, action, pending] = useActionState<FindOrderState, FormData>(findOrder, null);
+  // Encontrado: guarda en este celular ese pedido y los otros del último mes, y abre el buscado.
+  useEffect(() => {
+    if (!state || !("found" in state)) return;
+    for (const o of [...state.found].reverse()) rememberOrder(o);
+    router.push(`/pedido/${state.go}`);
+  }, [state, router]);
   // En qué está cada pedido (si no vuelve, es que ya no existe).
   const [status, setStatus] = useState<Map<string, MyOrderStatus> | null>(null);
   const [removing, setRemoving] = useState<SavedOrder | null>(null);
@@ -128,7 +136,7 @@ export function FindOrder() {
           />
           <span className="font-normal text-muted">El mismo que pusiste al hacer el pedido.</span>
         </label>
-        {state?.error ? (
+        {state && "error" in state ? (
           <p className="text-sm font-semibold text-coral-deep" role="alert">
             {state.error}
           </p>
