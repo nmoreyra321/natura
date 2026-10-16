@@ -95,3 +95,20 @@ describe("buildOrderMessage por transferencia", () => {
     expect(msg).not.toContain("Pedido realizado en");
   });
 });
+
+describe("pedido con envío a domicilio", () => {
+  const lines = [{ name: "Crema", size: null, quantity: 2, unitCents: 1_000_00, magazineUnitCents: 1_000_00 }];
+  it("suma el envío al total y pone la dirección", () => {
+    const msg = buildOrderMessage(lines, undefined, {
+      delivery: { method: "envio", zone: "Burzaco", address: "Av. Espora 123", costCents: 3_000_00 },
+    });
+    expect(msg).toContain("Envío a Burzaco: $ 3.000");
+    expect(msg).toContain("*Total: $ 5.000*");
+    expect(msg).toContain("Av. Espora 123 (Burzaco)");
+  });
+  it("punto de encuentro: sin costo de envío", () => {
+    const msg = buildOrderMessage(lines, undefined, { delivery: { method: "retiro" } });
+    expect(msg).toContain("*Total: $ 2.000*");
+    expect(msg).toContain("punto de encuentro");
+  });
+});

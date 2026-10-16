@@ -74,13 +74,48 @@ function giftFields(d: { isGift?: boolean; giftNote?: string }) {
   return d.isGift ? { is_gift: true, gift_note: d.giftNote?.trim() || null } : {};
 }
 
+type Admin = NonNullable<ReturnType<typeof createAdminClient>>;
+
+/**
+ * Cómo recibe el pedido. Si es envío, el precio sale de la base (nunca del navegador)
+ * según la localidad elegida.
+ */
+async function deliveryFields(
+  admin: Admin,
+  d: { deliveryMethod?: "retiro" | "envio"; shippingZoneId?: string; shippingAddress?: string },
+): Promise<
+  | { ok: true; fields: Record<string, string | number>; costCents: number; zone: string | null }
+  | { ok: false; error: string }
+> {
+  if (d.deliveryMethod !== "envio" || !d.shippingZoneId) return { ok: true, fields: { delivery_method: "retiro" }, costCents: 0, zone: null };
+  const { data: zone } = await admin
+    .from("shipping_zones")
+    .select("name, price")
+    .eq("id", d.shippingZoneId)
+    .eq("is_active", true)
+    .maybeSingle();
+  if (!zone) return { ok: false, error: "Esa localidad ya no tiene envío. Elegí otra o retirá en un punto de encuentro." };
+  const costCents = toCents(zone.price);
+  return {
+    ok: true,
+    fields: {
+      delivery_method: "envio",
+      shipping_zone: zone.name,
+      shipping_address: d.shippingAddress?.trim() ?? "",
+      shipping_cost: costCents / 100,
+    },
+    costCents,
+    zone: zone.name,
+  };
+}
+
 /**
  * Freno por clienta (no general): si un mismo teléfono ya tiene varios pedidos sin confirmar,
  * no se crean más. Así un molesto no traba las compras de las demás, y una clienta real
  * solo ve el aviso si de verdad tiene muchos pedidos pendientes.
  */
 const MAX_PENDING_PER_PHONE = 3;
-async function tooManyPending(admin: NonNullable<ReturnType<typeof createAdminClient>>, phone: string): Promise<boolean> {
+async function tooManyPending(admin: Admin, phone: string): Promise<boolean> {
   const since = new Date(Date.now() - 48 * 3600 * 1000).toISOString();
   const { count } = await admin
     .from("orders")
@@ -111,6 +146,8 @@ export async function registerOrder(input: unknown): Promise<RegisterOrderResult
     return { ok: false, error: "Hiciste muchos pedidos seguidos. Esperá unos minutos o escribile a Natu Mariel por WhatsApp." };
   }
   if (await tooManyPending(admin, phone)) return { ok: false, error: PENDING_MESSAGE };
+  const delivery = await deliveryFields(admin, parsed.data);
+  if (!delivery.ok) return delivery;
 
   const { data, error } = await admin.rpc("create_order", {
     items: parsed.data.items,
@@ -130,6 +167,9 @@ export async function registerOrder(input: unknown): Promise<RegisterOrderResult
         payment_method: parsed.data.paymentMethod === "transferencia" ? "transferencia" : "efectivo",
         customer_phone: phone,
         ...giftFields(parsed.data),
+        ...delivery.fields,
+        // El envío va dentro del total: así pagos, deudas y ventas ya lo cuentan.
+        ...(delivery.costCents > 0 ? { total: (toCents(row.total) + delivery.costCents) / 100 } : {}),
       })
       .eq("id", row.id)
       .select("code")
@@ -141,7 +181,7 @@ export async function registerOrder(input: unknown): Promise<RegisterOrderResult
   after(() =>
     notifyAdmins({
       title: `🛍 Pedido nuevo${parsed.data.isGift ? " 🎁" : ""}`,
-      body: `${parsed.data.customerName} · ${formatARS(toCents(row.total))}${parsed.data.paymentMethod === "transferencia" ? " · paga con Mercado Pago (link)" : " · efectivo"}`,
+      body: `${parsed.data.customerName} · ${formatARS(toCents(row.total) + delivery.costCents)}${parsed.data.paymentMethod === "transferencia" ? " · paga con Mercado Pago (link)" : " · efectivo"}${delivery.zone ? ` · envío a ${delivery.zone}` : ""}`,
       url: code ? `/admin/pedidos?estado=todos&q=${code}` : "/admin/pedidos",
       tag: `pedido-${row.id}`,
     }),
@@ -168,6 +208,8 @@ export async function payWithMercadoPago(input: unknown): Promise<MercadoPagoChe
     return { ok: false, error: "Hiciste muchos pedidos seguidos. Esperá unos minutos o escribile a Natu Mariel por WhatsApp." };
   }
   if (await tooManyPending(admin, phone)) return { ok: false, error: PENDING_MESSAGE };
+  const delivery = await deliveryFields(admin, parsed.data);
+  if (!delivery.ok) return delivery;
 
   const { data, error } = await admin.rpc("create_order", {
     items: parsed.data.items,
@@ -182,7 +224,14 @@ export async function payWithMercadoPago(input: unknown): Promise<MercadoPagoChe
   const [{ error: markError }, { data: items }] = await Promise.all([
     admin
       .from("orders")
-      .update({ payment_method: "mercadopago", payment_status: "pending", customer_phone: phone, ...giftFields(parsed.data) })
+      .update({
+        payment_method: "mercadopago",
+        payment_status: "pending",
+        customer_phone: phone,
+        ...giftFields(parsed.data),
+        ...delivery.fields,
+        ...(delivery.costCents > 0 ? { total: (toCents(order.total) + delivery.costCents) / 100 } : {}),
+      })
       .eq("id", order.id),
     admin.from("order_items").select("product_id, name, size, quantity, unit_price").eq("order_id", order.id),
   ]);
@@ -197,8 +246,11 @@ export async function payWithMercadoPago(input: unknown): Promise<MercadoPagoChe
     quantity: i.quantity,
     unitPrice: toCents(i.unit_price) / 100,
   }));
-  // Recargo por Mercado Pago (lo paga la clienta para cubrir la comisión).
-  const surcharge = surchargeCents(toCents(order.total), await getMercadoPagoSurcharge());
+  if (delivery.costCents > 0) {
+    lines.push({ id: "envio", title: `Envío a ${delivery.zone}`, quantity: 1, unitPrice: delivery.costCents / 100 });
+  }
+  // Recargo por Mercado Pago (lo paga la clienta para cubrir la comisión), sobre productos y envío.
+  const surcharge = surchargeCents(toCents(order.total) + delivery.costCents, await getMercadoPagoSurcharge());
   if (surcharge > 0) {
     lines.push({ id: "recargo-mp", title: "Recargo por pago con Mercado Pago", quantity: 1, unitPrice: surcharge / 100 });
   }
@@ -217,7 +269,7 @@ export async function payWithMercadoPago(input: unknown): Promise<MercadoPagoChe
   after(() =>
     notifyAdmins({
       title: `🛍 Pedido nuevo${parsed.data.isGift ? " 🎁" : ""}`,
-      body: `${parsed.data.customerName} · ${formatARS(toCents(order.total))} · paga con Mercado Pago`,
+      body: `${parsed.data.customerName} · ${formatARS(toCents(order.total) + delivery.costCents)} · paga con Mercado Pago${delivery.zone ? ` · envío a ${delivery.zone}` : ""}`,
       url: "/admin/pedidos",
       tag: `pedido-${order.id}`,
     }),

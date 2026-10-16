@@ -19,6 +19,7 @@ import { syncMercadoPagoPayment } from "@/lib/payments";
 import { toCents } from "@/lib/pricing";
 import { getLoyaltyMinTotal, getTransferDetails } from "@/lib/store-settings";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { DELIVERY_TEXT } from "@/lib/delivery";
 import { buildOrderMessage, buildWhatsAppUrl, getWhatsAppNumber } from "@/lib/whatsapp";
 
 export const metadata: Metadata = {
@@ -62,7 +63,7 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
   const { data: order } = await admin
     .from("orders")
     .select(
-      "id, code, created_at, status, total, savings, customer_name, customer_phone, customer_cancelled_at, is_gift, gift_note, payment_method, payment_status, amount_paid, payment_reported_at, payment_rejection, payment_proof_path, items:order_items(product_id, name, size, quantity, unit_price, magazine_price)",
+      "id, code, created_at, status, total, savings, customer_name, customer_phone, customer_cancelled_at, is_gift, gift_note, delivery_method, shipping_zone, shipping_address, shipping_cost, payment_method, payment_status, amount_paid, payment_reported_at, payment_rejection, payment_proof_path, items:order_items(product_id, name, size, quantity, unit_price, magazine_price)",
     )
     .eq("id", id)
     .maybeSingle();
@@ -82,7 +83,13 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
   const clubKey = cancelled ? null : loyaltyKey(order.customer_phone);
   let club: LoyaltyStatus | null = null;
   const clubMin = await getLoyaltyMinTotal();
-  const counts = toCents(order.total) >= Math.round(clubMin * 100);
+  const shippingCents = toCents(order.shipping_cost);
+  // El Club cuenta lo que compró en productos (sin el envío).
+  const counts = toCents(order.total) - shippingCents >= Math.round(clubMin * 100);
+  const delivery =
+    order.delivery_method === "envio" && order.shipping_zone
+      ? { method: "envio" as const, zone: order.shipping_zone, address: order.shipping_address ?? "", costCents: shippingCents }
+      : { method: "retiro" as const };
   if (clubKey) {
     const [{ count: purchases }, { count: given }] = await Promise.all([
       admin.from("orders").select("id", { count: "exact", head: true }).eq("customer_phone", clubKey).in("status", [...PURCHASE_STATUSES]).eq("payment_status", "approved").gte("total", clubMin),
@@ -113,7 +120,7 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
     : null;
   const message = (extra: Parameters<typeof buildOrderMessage>[2]) =>
     whatsapp
-      ? buildWhatsAppUrl(whatsapp, buildOrderMessage(lines, siteUrl, { orderCode: order.code, customerName: order.customer_name, trackUrl, ...extra }))
+      ? buildWhatsAppUrl(whatsapp, buildOrderMessage(lines, siteUrl, { orderCode: order.code, customerName: order.customer_name, trackUrl, delivery, ...extra }))
       : null;
 
   const orderWhatsAppUrl = message({ paymentMethod: "efectivo", gift: order.is_gift ? { note: order.gift_note ?? "" } : null });
@@ -305,11 +312,28 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
               <span className="shrink-0 tabular">{formatARS(toCents(i.unit_price) * i.quantity)}</span>
             </li>
           ))}
+          {delivery.method === "envio" ? (
+            <li className="flex justify-between gap-3 px-3 py-2">
+              <span>🚚 Envío a {delivery.zone}</span>
+              <span className="shrink-0 tabular">{formatARS(delivery.costCents)}</span>
+            </li>
+          ) : null}
           <li className="flex justify-between gap-3 px-3 py-2 font-extrabold">
             <span>Total</span>
             <span className="tabular">{formatARS(toCents(order.total))}</span>
           </li>
         </ul>
+        <p className="mt-3 rounded-2xl bg-cream px-3 py-2 text-left text-sm">
+          {delivery.method === "envio" ? (
+            <>
+              🚚 <b>Envío a domicilio:</b> {delivery.address} ({delivery.zone}). Natu Mariel te escribe para coordinar el día.
+            </>
+          ) : (
+            <>
+              📍 <b>Entrega en punto de encuentro</b>: estaciones de {DELIVERY_TEXT}, más que nada los sábados. El día y la estación los coordinan por WhatsApp.
+            </>
+          )}
+        </p>
 
         {club ? (
           <section aria-labelledby="club" className="mt-6 rounded-3xl bg-gradient-to-br from-blush to-sun/40 p-4">

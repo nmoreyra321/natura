@@ -108,18 +108,30 @@ isOneToOne: false
                   ]
                 },"orders": {
                   Row: {
-                    "amount_paid": number,"channel": string,"code": string,"created_at": string,"customer_cancelled_at": string | null,"customer_name": string | null,"customer_phone": string | null,"gift_note": string | null,"id": string,"is_gift": boolean,"mp_payment_id": string | null,"number": number,"paid_at": string | null,"payment_method": string,"payment_note": string | null,"payment_proof_path": string | null,"payment_rejection": string | null,"payment_reported_at": string | null,"payment_status": string | null,"savings": number,"status": string,"stock_applied": boolean,"total": number,"updated_at": string
+                    "amount_paid": number,"channel": string,"code": string,"created_at": string,"customer_cancelled_at": string | null,"customer_name": string | null,"customer_phone": string | null,"delivery_method": string,"gift_note": string | null,"id": string,"is_gift": boolean,"mp_payment_id": string | null,"number": number,"paid_at": string | null,"payment_method": string,"payment_note": string | null,"payment_proof_path": string | null,"payment_rejection": string | null,"payment_reported_at": string | null,"payment_status": string | null,"savings": number,"shipping_address": string | null,"shipping_cost": number,"shipping_zone": string | null,"status": string,"stock_applied": boolean,"total": number,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "amount_paid"?: number,"channel"?: string,"code"?: string,"created_at"?: string,"customer_cancelled_at"?: string | null,"customer_name"?: string | null,"customer_phone"?: string | null,"gift_note"?: string | null,"id"?: string,"is_gift"?: boolean,"mp_payment_id"?: string | null,"number"?: never,"paid_at"?: string | null,"payment_method"?: string,"payment_note"?: string | null,"payment_proof_path"?: string | null,"payment_rejection"?: string | null,"payment_reported_at"?: string | null,"payment_status"?: string | null,"savings"?: number,"status"?: string,"stock_applied"?: boolean,"total": number,"updated_at"?: string
+                    "amount_paid"?: number,"channel"?: string,"code"?: string,"created_at"?: string,"customer_cancelled_at"?: string | null,"customer_name"?: string | null,"customer_phone"?: string | null,"delivery_method"?: string,"gift_note"?: string | null,"id"?: string,"is_gift"?: boolean,"mp_payment_id"?: string | null,"number"?: never,"paid_at"?: string | null,"payment_method"?: string,"payment_note"?: string | null,"payment_proof_path"?: string | null,"payment_rejection"?: string | null,"payment_reported_at"?: string | null,"payment_status"?: string | null,"savings"?: number,"shipping_address"?: string | null,"shipping_cost"?: number,"shipping_zone"?: string | null,"status"?: string,"stock_applied"?: boolean,"total": number,"updated_at"?: string
                   }
                   Update: {
-                    "amount_paid"?: number,"channel"?: string,"code"?: string,"created_at"?: string,"customer_cancelled_at"?: string | null,"customer_name"?: string | null,"customer_phone"?: string | null,"gift_note"?: string | null,"id"?: string,"is_gift"?: boolean,"mp_payment_id"?: string | null,"number"?: never,"paid_at"?: string | null,"payment_method"?: string,"payment_note"?: string | null,"payment_proof_path"?: string | null,"payment_rejection"?: string | null,"payment_reported_at"?: string | null,"payment_status"?: string | null,"savings"?: number,"status"?: string,"stock_applied"?: boolean,"total"?: number,"updated_at"?: string
+                    "amount_paid"?: number,"channel"?: string,"code"?: string,"created_at"?: string,"customer_cancelled_at"?: string | null,"customer_name"?: string | null,"customer_phone"?: string | null,"delivery_method"?: string,"gift_note"?: string | null,"id"?: string,"is_gift"?: boolean,"mp_payment_id"?: string | null,"number"?: never,"paid_at"?: string | null,"payment_method"?: string,"payment_note"?: string | null,"payment_proof_path"?: string | null,"payment_rejection"?: string | null,"payment_reported_at"?: string | null,"payment_status"?: string | null,"savings"?: number,"shipping_address"?: string | null,"shipping_cost"?: number,"shipping_zone"?: string | null,"status"?: string,"stock_applied"?: boolean,"total"?: number,"updated_at"?: string
                   }
                   Relationships: [
                     
                   ]
+                },"shipping_zones": {
+                  Row: {
+                    "created_at": string,"id": string,"is_active": boolean,"name": string,"position": number,"price": number,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"id"?: string,"is_active"?: boolean,"name": string,"position"?: number,"price": number,"updated_at"?: string
+                  }
+                  Update: {
+                    "created_at"?: string,"id"?: string,"is_active"?: boolean,"name"?: string,"position"?: number,"price"?: number,"updated_at"?: string
+                  }
+                  Relationships: []
                 },"receipt_aliases": {
                   Row: {
                     "description": string,"product_id": string,"updated_at": string

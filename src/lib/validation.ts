@@ -258,7 +258,14 @@ export const orderRequestSchema = z.object({
   /** «Es para regalo» y la nota para el regalo (opcional). */
   isGift: z.boolean().optional(),
   giftNote: z.string().trim().max(200).optional(),
-});
+  /** Punto de encuentro (gratis) o envío a domicilio (con localidad y dirección). */
+  deliveryMethod: z.enum(["retiro", "envio"]).optional(),
+  shippingZoneId: z.uuid().optional(),
+  shippingAddress: z.string().trim().max(200).optional(),
+}).refine(
+  (d) => d.deliveryMethod !== "envio" || (Boolean(d.shippingZoneId) && (d.shippingAddress?.length ?? 0) >= 5),
+  { message: "Elegí tu localidad y escribí tu dirección para el envío.", path: ["shippingAddress"] },
+);
 
 
 /** Convierte los errores de Zod en { campo: mensaje } para mostrar en el formulario. */

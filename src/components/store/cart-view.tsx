@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertCircle, ArrowLeftRight, Banknote, CreditCard, Info, Loader2, MessageCircle, ShoppingBag, Trash2 } from "lucide-react";
+import { AlertCircle, ArrowLeftRight, Banknote, CreditCard, Info, Loader2, MapPin, MessageCircle, ShoppingBag, Trash2, Truck } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -10,7 +10,7 @@ import { payWithMercadoPago, registerOrder, validateCart } from "@/app/(tienda)/
 import { Button, LinkButton, buttonClasses } from "@/components/ui/button";
 import { cart, useCart, useCartHydrated } from "@/lib/cart-store";
 import { toWhatsAppPhone } from "@/lib/debts";
-import { DELIVERY_TEXT } from "@/lib/delivery";
+import { DELIVERY_TEXT, type ShippingZoneOption } from "@/lib/delivery";
 import { formatARS } from "@/lib/format";
 import { GIFT_EVERY } from "@/lib/loyalty";
 import { productImageUrl } from "@/lib/images";
@@ -27,6 +27,8 @@ type PaymentChoice = "efectivo" | "transferencia" | "mercadopago";
 
 const NAME_KEY = "natu-mariel:nombre";
 const PHONE_KEY = "natu-mariel:telefono";
+const ADDRESS_KEY = "natu-mariel:direccion";
+const ZONE_KEY = "natu-mariel:localidad";
 
 function readSaved(key: string): string {
   try {
@@ -53,7 +55,10 @@ export function CartView({
   transfer = null,
   mpSurcharge = 0,
   clubMinCents = 0,
+  shippingZones = [],
 }: {
+  /** Localidades con envío a domicilio (vacío = solo punto de encuentro). */
+  shippingZones?: ShippingZoneOption[];
   /** Club de clientas: monto mínimo del pedido para que sume una compra. */
   clubMinCents?: number;
   whatsappNumber: string | null;
@@ -76,10 +81,22 @@ export function CartView({
   const [retry, setRetry] = useState(0);
   const [customerName, setCustomerName] = useState(() => readSaved(NAME_KEY));
   const [customerPhone, setCustomerPhone] = useState(() => readSaved(PHONE_KEY));
-  // «Es para regalo»: Natu Mariel lo prepara para regalar (y se suma la nota, si escribe una).
-  const [isGift, setIsGift] = useState(false);
-  const [giftNote, setGiftNote] = useState("");
-  const gift = isGift ? { isGift: true, giftNote: giftNote.trim() || undefined } : {};
+  // Cómo recibe el pedido: punto de encuentro (gratis) o envío a domicilio a una de las localidades.
+  const [deliveryMethod, setDeliveryMethod] = useState<"retiro" | "envio">("retiro");
+  const [zoneId, setZoneId] = useState(() => {
+    const saved = readSaved(ZONE_KEY);
+    return shippingZones.some((z) => z.id === saved) ? saved : "";
+  });
+  const [address, setAddress] = useState(() => readSaved(ADDRESS_KEY));
+  const zone = deliveryMethod === "envio" ? shippingZones.find((z) => z.id === zoneId) : undefined;
+  const shippingCents = zone?.priceCents ?? 0;
+  const delivery =
+    deliveryMethod === "envio"
+      ? { deliveryMethod: "envio" as const, shippingZoneId: zoneId || undefined, shippingAddress: address.trim() }
+      : { deliveryMethod: "retiro" as const };
+  const zoneError = deliveryMethod === "envio" && !zone ? "Elegí tu localidad." : null;
+  const addressError =
+    deliveryMethod === "envio" && address.trim().length < 5 ? "Escribí tu dirección (calle y número)." : null;
   /** Se marca al intentar enviar: recién ahí se muestran los avisos de datos faltantes. */
   const [triedSend, setTriedSend] = useState(false);
   const nameError = customerName.trim().length < 2 ? "Escribí tu nombre." : null;
@@ -90,9 +107,28 @@ export function CartView({
       : null;
   /** true si faltan datos: muestra los avisos y lleva al primer casillero a completar. */
   const blockIfMissingContact = (): boolean => {
-    if (!nameError && !phoneError) return false;
+    const first = nameError
+      ? "nombre-pedido"
+      : phoneError
+        ? "telefono-pedido"
+        : zoneError
+          ? "localidad-envio"
+          : addressError
+            ? "direccion-envio"
+            : null;
+    if (!first) {
+      try {
+        if (deliveryMethod === "envio") {
+          window.localStorage.setItem(ZONE_KEY, zoneId);
+          window.localStorage.setItem(ADDRESS_KEY, address.trim());
+        }
+      } catch {
+        // Sin almacenamiento: no pasa nada, la próxima vez lo vuelve a escribir.
+      }
+      return false;
+    }
     setTriedSend(true);
-    document.getElementById(nameError ? "nombre-pedido" : "telefono-pedido")?.focus();
+    document.getElementById(first)?.focus();
     return true;
   };
   const [sending, setSending] = useState(false);
@@ -177,6 +213,8 @@ export function CartView({
     [items],
   );
   const totals = getOrderTotals(lines);
+  /** Lo que paga en total: productos más el envío (si eligió envío a domicilio). */
+  const grandCents = totals.totalCents + shippingCents;
 
   if (!hydrated) {
     return (
@@ -306,15 +344,21 @@ export function CartView({
               </dd>
             </div>
           ) : null}
+          {deliveryMethod === "envio" ? (
+            <div className="flex justify-between">
+              <dt className="text-muted">Envío{zone ? ` a ${zone.name}` : ""}</dt>
+              <dd>{zone ? formatARS(shippingCents) : "Elegí tu localidad"}</dd>
+            </div>
+          ) : null}
           <div className="mt-2 flex items-baseline justify-between gap-2 border-t border-line pt-3">
             <dt className="text-lg font-bold">Total</dt>
             <dd className="flex flex-wrap items-baseline justify-end gap-x-2 text-right">
               {totals.savingsCents > 0 ? (
                 <span className="text-base font-semibold text-muted line-through tabular" aria-label="Precio de revista">
-                  {formatARS(totals.totalCents + totals.savingsCents)}
+                  {formatARS(grandCents + totals.savingsCents)}
                 </span>
               ) : null}
-              <span className="text-2xl font-extrabold text-coral-deep tabular">{formatARS(totals.totalCents)}</span>
+              <span className="text-2xl font-extrabold text-coral-deep tabular">{formatARS(grandCents)}</span>
             </dd>
           </div>
         </dl>
@@ -389,6 +433,102 @@ export function CartView({
                   <p className="mt-1 px-1 text-xs text-muted">Con código de área, por ejemplo 11 2345-6789. Te escribimos ahí.</p>
                 )}
               </div>
+              <fieldset>
+                <legend className="text-sm font-semibold">
+                  ¿Cómo lo recibís?
+                  <Required />
+                </legend>
+                <div className="mt-1.5 grid grid-cols-2 gap-2">
+                  {[
+                    { value: "retiro" as const, label: "Punto de encuentro", note: "Gratis", Icon: MapPin },
+                    ...(shippingZones.length > 0
+                      ? [
+                          {
+                            value: "envio" as const,
+                            label: "Envío a domicilio",
+                            note: `Desde ${formatARS(Math.min(...shippingZones.map((z) => z.priceCents)))}`,
+                            Icon: Truck,
+                          },
+                        ]
+                      : []),
+                  ].map(({ value, label, note, Icon }) => (
+                    <label
+                      key={value}
+                      className={`flex cursor-pointer flex-col items-center justify-center gap-0.5 rounded-2xl border-2 px-2 py-2.5 text-center text-sm font-bold transition-colors ${deliveryMethod === value ? "border-forest bg-sun/60" : "border-line bg-white hover:bg-cream"}`}
+                    >
+                      <input
+                        type="radio"
+                        name="forma-de-entrega"
+                        value={value}
+                        checked={deliveryMethod === value}
+                        onChange={() => setDeliveryMethod(value)}
+                        className="sr-only"
+                      />
+                      <Icon className="size-5" aria-hidden="true" />
+                      {label}
+                      <span className="text-xs font-semibold text-muted">{note}</span>
+                    </label>
+                  ))}
+                </div>
+                {deliveryMethod === "retiro" ? (
+                  <p className="mt-1.5 px-1 text-xs text-muted">
+                    En las estaciones de {DELIVERY_TEXT}, más que nada los sábados. El día y la estación los coordinás con
+                    Natu Mariel por WhatsApp.
+                  </p>
+                ) : (
+                  <div className="mt-3 flex flex-col gap-3">
+                    <div>
+                      <label htmlFor="localidad-envio" className="text-sm font-semibold">
+                        Tu localidad
+                        <Required />
+                      </label>
+                      <select
+                        id="localidad-envio"
+                        value={zoneId}
+                        onChange={(e) => setZoneId(e.target.value)}
+                        aria-invalid={triedSend && Boolean(zoneError)}
+                        className={`mt-1 h-11 w-full rounded-full border bg-white px-4 text-base focus:border-botanical focus:outline-none ${triedSend && zoneError ? "border-coral-deep" : "border-line"}`}
+                      >
+                        <option value="">Elegí tu localidad…</option>
+                        {shippingZones.map((z) => (
+                          <option key={z.id} value={z.id}>
+                            {z.name} · {formatARS(z.priceCents)}
+                          </option>
+                        ))}
+                      </select>
+                      {triedSend && zoneError ? (
+                        <p className="mt-1 text-sm font-semibold text-coral-deep">{zoneError}</p>
+                      ) : (
+                        <p className="mt-1 px-1 text-xs text-muted">
+                          ¿Tu localidad no está? Elegí punto de encuentro o consultanos por WhatsApp.
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <label htmlFor="direccion-envio" className="text-sm font-semibold">
+                        Tu dirección
+                        <Required />
+                      </label>
+                      <input
+                        id="direccion-envio"
+                        type="text"
+                        autoComplete="street-address"
+                        maxLength={200}
+                        value={address}
+                        onChange={(e) => setAddress(e.target.value)}
+                        placeholder="Ej.: Av. Hipólito Yrigoyen 1234, entre Rivadavia y Mitre"
+                        aria-invalid={triedSend && Boolean(addressError)}
+                        className={`mt-1 h-11 w-full rounded-full border bg-white px-4 text-base focus:border-botanical focus:outline-none ${triedSend && addressError ? "border-coral-deep" : "border-line"}`}
+                      />
+                      {triedSend && addressError ? (
+                        <p className="mt-1 text-sm font-semibold text-coral-deep">{addressError}</p>
+                      ) : (
+                        <p className="mt-1 px-1 text-xs text-muted">Calle, número y entre calles (piso o depto si hace falta).</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </fieldset>
               <p className="flex items-center gap-2 rounded-2xl bg-sun/50 px-3 py-2 text-sm">
                 <span aria-hidden="true">🎁</span>
                 {totals.totalCents >= clubMinCents ? (
@@ -402,27 +542,6 @@ export function CartView({
                   </span>
                 )}
               </p>
-              <div className="rounded-2xl bg-blush/60 p-3">
-                <label className="flex cursor-pointer items-center gap-2 font-semibold">
-                  <input
-                    type="checkbox"
-                    checked={isGift}
-                    onChange={(e) => setIsGift(e.target.checked)}
-                    className="size-5 accent-[var(--coral-deep)]"
-                  />
-                  🎁 Es para regalo
-                </label>
-                {isGift ? (
-                  <input
-                    value={giftNote}
-                    onChange={(e) => setGiftNote(e.target.value)}
-                    maxLength={200}
-                    placeholder="Opcional: para quién es o qué poner en la tarjeta"
-                    aria-label="Nota para el regalo"
-                    className="mt-2 h-11 w-full rounded-full border border-line bg-white px-4 text-base focus:border-botanical focus:outline-none"
-                  />
-                ) : null}
-              </div>
               {paymentOptions.length > 1 ? (
                 <fieldset>
                   <legend className="text-sm font-semibold">
@@ -453,8 +572,8 @@ export function CartView({
               {payment === "mercadopago" && mercadoPago && mpSurcharge > 0 ? (
                 <p className="rounded-2xl bg-[#e6f6fd] p-3 text-sm text-[#00496f]">
                   Pagando con Mercado Pago se suma un recargo de {mpSurcharge}% (
-                  {formatARS(surchargeCents(totals.totalCents, mpSurcharge))}). Total a pagar:{" "}
-                  <strong>{formatARS(totals.totalCents + surchargeCents(totals.totalCents, mpSurcharge))}</strong>. En
+                  {formatARS(surchargeCents(grandCents, mpSurcharge))}). Total a pagar:{" "}
+                  <strong>{formatARS(grandCents + surchargeCents(grandCents, mpSurcharge))}</strong>. En
                   efectivo o transferencia no hay recargo.
                 </p>
               ) : null}
@@ -464,13 +583,13 @@ export function CartView({
                   {transfer.mpLink ? (
                     <span>
                       Tocá <strong>Hacer pedido</strong> y en el paso siguiente pagás{" "}
-                      <strong>{formatARS(totals.totalCents)}</strong> con Mercado Pago (tarjeta o dinero en cuenta, sin
+                      <strong>{formatARS(grandCents)}</strong> con Mercado Pago (tarjeta o dinero en cuenta, sin
                       recargo).
                     </span>
                   ) : (
                     <span>
                       Tocá <strong>Hacer pedido</strong> y en el paso siguiente te mostramos el alias para transferir{" "}
-                      <strong>{formatARS(totals.totalCents)}</strong> (sin recargo). Ahí mismo subís el comprobante.
+                      <strong>{formatARS(grandCents)}</strong> (sin recargo). Ahí mismo subís el comprobante.
                     </span>
                   )}
                 </p>
@@ -491,7 +610,7 @@ export function CartView({
                       items: items.map((i) => ({ productId: i.productId, quantity: i.quantity })),
                       customerName: name,
                       customerPhone: phone,
-                      ...gift,
+                      ...delivery,
                     }).catch(() => null);
                     if (res?.ok) {
                       window.location.href = res.url;
@@ -525,7 +644,7 @@ export function CartView({
                       customerName: name,
                       customerPhone: phone,
                       paymentMethod: "transferencia",
-                      ...gift,
+                      ...delivery,
                     }).catch(() => null);
                     if (res?.ok) {
                       // En la página del pedido avisa el pago y sube el comprobante.
@@ -563,7 +682,7 @@ export function CartView({
                     customerName: name,
                     customerPhone: phone,
                     paymentMethod: "efectivo",
-                    ...gift,
+                    ...delivery,
                   }).catch(() => null);
                   if (!res?.ok) {
                     // Sin pedido guardado no se manda nada: así no queda un pedido que el panel no tiene.
@@ -604,7 +723,8 @@ export function CartView({
             </p>
           ) : null}
           <p className="text-sm font-semibold text-forest/80">
-            📍 Entregas en zona sur: puntos de encuentro en {DELIVERY_TEXT}.
+            📍 Punto de encuentro en las estaciones de {DELIVERY_TEXT}
+            {shippingZones.length > 0 ? " o envío a domicilio" : ""}.
           </p>
           <p className="text-sm leading-relaxed text-muted">
             {payment === "mercadopago" && mercadoPago

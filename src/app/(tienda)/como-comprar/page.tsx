@@ -36,7 +36,7 @@ const steps = [
   {
     icon: Handshake,
     title: "Recibís tu pedido",
-    text: `Coordinan juntas el día y el punto de encuentro en zona sur (${DELIVERY_TEXT}). ¡Y a disfrutar!`,
+    text: `Coordinan juntas el día y la entrega: en la estación (${DELIVERY_TEXT}) o en tu casa si elegiste envío. ¡Y a disfrutar!`,
   },
 ];
 
@@ -55,7 +55,7 @@ const faqsFor = (clubMin: string | null) => [
   },
   {
     q: "¿Dónde entregan?",
-    a: `Entregamos en zona sur, en puntos de encuentro en ${DELIVERY_TEXT}. El día y el lugar los coordinás con Mariel por WhatsApp. Si estás en otra zona, escribinos y lo vemos.`,
+    a: `De dos formas: gratis en punto de encuentro en las estaciones del Roca de ${DELIVERY_TEXT} (más que nada los sábados), o con envío a domicilio en zona sur (Lanús, Lomas, Temperley, Adrogué, Burzaco, Glew, Guernica, Alejandro Korn, Monte Grande y alrededores), con un costo según tu localidad que ves en el carrito. Si estás en otra zona, escribinos y lo vemos.`,
   },
   {
     q: "¿Cómo sé en qué está mi pedido?",

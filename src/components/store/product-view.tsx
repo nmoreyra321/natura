@@ -110,7 +110,7 @@ export function ProductView({
             </div>
             <p className="flex items-start gap-2 text-sm font-semibold text-forest/80">
               <MapPin className="mt-0.5 size-4 shrink-0 text-coral-deep" aria-hidden="true" />
-              Entregas en zona sur: puntos de encuentro en {DELIVERY_TEXT}.
+              Punto de encuentro en las estaciones de {DELIVERY_TEXT} (más que nada los sábados) o envío a domicilio en zona sur.
             </p>
             <AddToCart
               product={{

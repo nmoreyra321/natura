@@ -1,6 +1,7 @@
 import { CheckCircle2, CircleAlert } from "lucide-react";
 
 import { PushToggle } from "@/components/admin/push-toggle";
+import { ShippingPricesForm } from "@/components/admin/shipping-prices-form";
 import { SocialLinksForm } from "@/components/admin/social-links-form";
 import { SurchargeForm } from "@/components/admin/surcharge-form";
 import { TransferSettingsForm } from "@/components/admin/transfer-settings-form";
@@ -36,6 +37,7 @@ export default async function SettingsPage() {
     .select("transfer_alias, transfer_cbu, transfer_holder, transfer_bank, mp_link, mp_surcharge_percent, facebook_url, instagram_url")
     .eq("id", 1)
     .maybeSingle();
+  const { data: zones } = await supabase.from("shipping_zones").select("id, name, price").order("position").order("name");
   const whatsapp = getWhatsAppNumber();
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ? getSiteUrl() : null;
   return (
@@ -63,6 +65,15 @@ export default async function SettingsPage() {
             bank: settings?.transfer_bank ?? "",
           }}
         />
+      </section>
+
+      <section className="mt-4 rounded-3xl bg-warm-white p-5 shadow-soft">
+        <h2 className="font-display text-xl font-bold">Envíos a domicilio</h2>
+        <p className="mt-1 mb-4 text-sm text-muted">
+          Lo que paga la clienta por el envío, según su localidad. Se suma solo al total del pedido. Un precio de referencia:
+          lo que te cobraría una moto de Uber o DiDi desde tu casa hasta ahí.
+        </p>
+        <ShippingPricesForm zones={(zones ?? []).map((z) => ({ id: z.id, name: z.name, price: Number(z.price) }))} />
       </section>
 
       <section className="mt-4 rounded-3xl bg-warm-white p-5 shadow-soft">

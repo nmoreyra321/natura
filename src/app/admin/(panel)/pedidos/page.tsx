@@ -92,7 +92,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
   let query = supabase
     .from("orders")
     .select(
-      "id, number, code, channel, status, customer_cancelled_at, is_gift, gift_note, customer_name, customer_phone, total, savings, created_at, payment_method, payment_status, paid_at, amount_paid, payment_note, payment_reported_at, payment_rejection, payment_proof_path, items:order_items(id, product_id, name, size, quantity, unit_price), lots:order_lot_allocations(product_id, expires_on, quantity)",
+      "id, number, code, channel, status, customer_cancelled_at, is_gift, gift_note, delivery_method, shipping_zone, shipping_address, shipping_cost, customer_name, customer_phone, total, savings, created_at, payment_method, payment_status, paid_at, amount_paid, payment_note, payment_reported_at, payment_rejection, payment_proof_path, items:order_items(id, product_id, name, size, quantity, unit_price), lots:order_lot_allocations(product_id, expires_on, quantity)",
       { count: "exact" },
     )
     .order("created_at", { ascending: false })
@@ -235,6 +235,12 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
                         {originLabel(o.channel)}
                       </span>
                     </p>
+                    {o.delivery_method === "envio" ? (
+                      <p className="mt-1 rounded-2xl bg-sage/60 px-3 py-1.5 text-sm">
+                        🚚 <b>Envío a {o.shipping_zone}</b> ({formatARS(toCents(o.shipping_cost))}, incluido en el total):{" "}
+                        {o.shipping_address}
+                      </p>
+                    ) : null}
                     <OrderContact
                       orderId={o.id}
                       code={o.code}

@@ -2012,3 +2012,55 @@ export async function replyReview(id: unknown, reply: unknown): Promise<ActionRe
     return fail(e, "No pudimos guardar la respuesta.");
   }
 }
+
+/** Envíos a domicilio: guarda el precio de cada localidad. */
+export async function saveShippingPrices(input: unknown): Promise<ActionResult> {
+  try {
+    const { supabase } = await assertAdmin();
+    const parsed = z
+      .array(z.object({ id: z.string().regex(UUID_RE), price: z.number().min(0).max(1_000_000) }))
+      .max(50)
+      .safeParse(input);
+    if (!parsed.success) return { ok: false, error: "Revisá los precios: tienen que ser números (0 = envío gratis)." };
+    const now = new Date().toISOString();
+    const results = await Promise.all(
+      parsed.data.map((z) =>
+        supabase.from("shipping_zones").update({ price: Math.round(z.price * 100) / 100, updated_at: now }).eq("id", z.id),
+      ),
+    );
+    const failed = results.find((r) => r.error);
+    if (failed?.error) return fail(failed.error, "No pudimos guardar los precios.");
+    revalidatePath("/carrito");
+    revalidatePath("/admin/configuracion");
+    return { ok: true, message: "Precios de envío guardados." };
+  } catch (e) {
+    return fail(e, "No pudimos guardar los precios.");
+  }
+}
+
+/** Envíos a domicilio: sube (o baja) todos los precios un %, redondeando a $100. */
+export async function raiseShippingPrices(percent: unknown): Promise<ActionResult> {
+  try {
+    const { supabase } = await assertAdmin();
+    const p = typeof percent === "number" ? percent : Number.NaN;
+    if (!Number.isFinite(p) || p <= -90 || p > 500 || p === 0) return { ok: false, error: "Escribí un porcentaje válido (por ejemplo 10)." };
+    const { data, error } = await supabase.from("shipping_zones").select("id, price");
+    if (error || !data) return fail(error, "No pudimos leer los precios.");
+    const now = new Date().toISOString();
+    const results = await Promise.all(
+      data.map((z) =>
+        supabase
+          .from("shipping_zones")
+          .update({ price: Math.max(Math.round((Number(z.price) * (1 + p / 100)) / 100) * 100, 0), updated_at: now })
+          .eq("id", z.id),
+      ),
+    );
+    const failed = results.find((r) => r.error);
+    if (failed?.error) return fail(failed.error, "No pudimos actualizar los precios.");
+    revalidatePath("/carrito");
+    revalidatePath("/admin/configuracion");
+    return { ok: true, message: `Listo: todos los envíos ${p > 0 ? "subieron" : "bajaron"} un ${Math.abs(p)}%.` };
+  } catch (e) {
+    return fail(e, "No pudimos actualizar los precios.");
+  }
+}

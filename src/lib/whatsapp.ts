@@ -66,6 +66,8 @@ export function buildOrderMessage(
     trackUrl?: string | null;
     /** La clienta marcó «Es para regalo» (con la nota, si escribió una). */
     gift?: { note?: string | null } | null;
+    /** Cómo lo recibe: envío a domicilio (localidad, dirección y costo) o punto de encuentro. */
+    delivery?: { method: "retiro" } | { method: "envio"; zone: string; address: string; costCents: number } | null;
   } = {},
 ): string {
   const { totalCents, savingsCents } = getOrderTotals(lines);
@@ -85,10 +87,18 @@ export function buildOrderMessage(
     "",
     ...rows,
     "",
-    `*Total: ${formatARS(totalCents)}*`,
+    ...(extra.delivery?.method === "envio"
+      ? [`Envío a ${extra.delivery.zone}: ${formatARS(extra.delivery.costCents)}`]
+      : []),
+    `*Total: ${formatARS(totalCents + (extra.delivery?.method === "envio" ? extra.delivery.costCents : 0))}*`,
   ];
   if (savingsCents > 0) {
     parts.push(`Ahorro respecto del precio de revista: ${formatARS(savingsCents)}`);
+  }
+  if (extra.delivery?.method === "envio") {
+    parts.push("", `🚚 *Envío a domicilio:* ${extra.delivery.address} (${extra.delivery.zone})`);
+  } else if (extra.delivery?.method === "retiro") {
+    parts.push("", "📍 *Entrega:* en punto de encuentro");
   }
   if (extra.gift) {
     const note = extra.gift.note?.trim();
