@@ -6,8 +6,21 @@ import { useEffect, useRef, useState } from "react";
 
 import { ReviewForm } from "./review-form";
 
-/** Botón «Dejar mi reseña» del inicio: abre una ventana con el formulario. */
-export function AddReview() {
+/**
+ * Botón que abre una ventana con el formulario de reseña. En el inicio es «Dejar mi reseña»;
+ * en la página del pedido va con el pedido y el nombre ya cargado.
+ */
+export function AddReview({
+  orderId,
+  defaultName,
+  label = "Dejar mi reseña",
+  className = "inline-flex shrink-0 items-center gap-1.5 rounded-full bg-coral-deep px-3.5 py-1.5 text-sm font-bold text-white transition hover:brightness-110",
+}: {
+  orderId?: string;
+  defaultName?: string;
+  label?: string;
+  className?: string;
+} = {}) {
   const router = useRouter();
   const ref = useRef<HTMLDialogElement>(null);
   const [open, setOpen] = useState(false);
@@ -34,9 +47,9 @@ export function AddReview() {
           setRound((r) => r + 1);
           setOpen(true);
         }}
-        className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-coral-deep px-3.5 py-1.5 text-sm font-bold text-white transition hover:brightness-110"
+        className={className}
       >
-        <PenLine className="size-4" aria-hidden="true" /> Dejar mi reseña
+        <PenLine className="size-4" aria-hidden="true" /> {label}
       </button>
       <dialog
         ref={ref}
@@ -50,10 +63,10 @@ export function AddReview() {
         <div className="mb-3 flex items-start justify-between gap-3">
           <div>
             <h2 id="dejar-resena" className="font-display text-xl font-bold">
-              Dejá tu reseña
+              {orderId ? "¿Cómo viene tu compra?" : "Dejá tu reseña"}
             </h2>
             <p className="text-sm text-muted">
-              Contanos cómo te fue con Natu Mariel 💖
+              {orderId ? "Es opcional y nos ayuda muchísimo 💖" : "Contanos cómo te fue con Natu Mariel 💖"}
             </p>
           </div>
           <button
@@ -65,7 +78,7 @@ export function AddReview() {
             <X className="size-5" aria-hidden="true" />
           </button>
         </div>
-        {open ? <ReviewForm key={round} bare /> : null}
+        {open ? <ReviewForm key={round} bare orderId={orderId} defaultName={defaultName} /> : null}
       </dialog>
     </>
   );

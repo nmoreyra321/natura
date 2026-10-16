@@ -8,7 +8,7 @@ import { CancelOrder } from "@/components/store/cancel-order";
 import { OrderMissing } from "@/components/store/order-missing";
 import { AutoRefresh, MpPayFlow, OrderPageEffects, ReportPayment } from "@/components/store/order-tracking";
 import { PaidOrderActions } from "@/components/store/paid-order-actions";
-import { ReviewForm } from "@/components/store/review-form";
+import { AddReview } from "@/components/store/add-review";
 import { TransferAccount } from "@/components/store/transfer-account";
 import { buttonClasses } from "@/components/ui/button";
 import { getSiteUrl } from "@/lib/config";
@@ -341,7 +341,21 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
           </section>
         ) : null}
 
-        {!reviewed ? <ReviewForm orderId={order.id} defaultName={order.customer_name?.trim() ?? ""} /> : null}
+        {!reviewed ? (
+          // Discreto: una línea con un botón que abre la reseña en una ventana (es opcional).
+          <div className="mt-6 flex flex-wrap items-center justify-between gap-x-3 gap-y-2 rounded-2xl bg-cream px-4 py-3 text-left">
+            <p className="text-sm">
+              <b className="text-forest">¿Cómo viene tu compra hasta ahora?</b>{" "}
+              <span className="text-muted">Si querés, contanos. Es opcional 💖</span>
+            </p>
+            <AddReview
+              orderId={order.id}
+              defaultName={order.customer_name?.trim() ?? ""}
+              label="Contar"
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-white px-3.5 py-1.5 text-sm font-bold text-coral-deep ring-1 ring-line transition hover:bg-blush"
+            />
+          </div>
+        ) : null}
 
         <div className="mt-6 flex flex-col gap-3 text-center">
           {cancelled && helpUrl ? (
