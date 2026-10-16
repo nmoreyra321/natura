@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
+import { Button, LinkButton } from "@/components/ui/button";
 import { cart, cartDrawer, useCart, type CartItem } from "@/lib/cart-store";
 import { formatARS } from "@/lib/format";
 import { getPriceInfo, toCents } from "@/lib/pricing";
@@ -160,7 +160,7 @@ export function AddToCart({ product }: { product: Omit<CartItem, "quantity"> }) 
 
 /**
  * Barra fija abajo en el celular con el precio y "Agregar": siempre a mano mientras se lee la
- * descripción. Suma de a una unidad y abre el carrito. No aparece si no hay stock.
+ * descripción. Si el producto ya está en el carrito, el botón lleva al carrito. No aparece si no hay stock.
  */
 export function MobileBuyBar({ product }: { product: Omit<CartItem, "quantity"> }) {
   const items = useCart();
@@ -176,18 +176,26 @@ export function MobileBuyBar({ product }: { product: Omit<CartItem, "quantity"> 
           <p className="font-display text-xl font-bold text-coral-deep">{formatARS(saleCents)}</p>
           {magazineCents > saleCents ? <p className="text-xs text-muted line-through">{formatARS(magazineCents)}</p> : null}
         </div>
-        <Button
-          size="lg"
-          disabled={full}
-          onClick={() => {
-            const res = cart.add(product, 1);
-            if (res.capped) toast.warning(`Ya tenés el máximo disponible: ${res.quantity} en tu carrito.`);
-            else cartDrawer.open();
-          }}
-        >
-          <ShoppingBag className="size-5" aria-hidden="true" />
-          {full ? "Sin más stock" : "Agregar al carrito"}
-        </Button>
+        {inCart > 0 ? (
+          // Ya está en el carrito: el botón lleva al carrito (las cantidades se cambian ahí o arriba).
+          <LinkButton href="/carrito" size="lg">
+            <ShoppingBag className="size-5" aria-hidden="true" />
+            Ir al carrito ({inCart})
+          </LinkButton>
+        ) : (
+          <Button
+            size="lg"
+            disabled={full}
+            onClick={() => {
+              const res = cart.add(product, 1);
+              if (res.capped) toast.warning(`Ya tenés el máximo disponible: ${res.quantity} en tu carrito.`);
+              else cartDrawer.open();
+            }}
+          >
+            <ShoppingBag className="size-5" aria-hidden="true" />
+            {full ? "Sin más stock" : "Agregar al carrito"}
+          </Button>
+        )}
       </div>
     </div>
   );
