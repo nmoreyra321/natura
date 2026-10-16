@@ -248,9 +248,6 @@ export function Header({ categories }: { categories: NavCategory[] }) {
                   { href: "/mi-pedido", label: "Seguir mi pedido" },
                   { href: "/carrito", label: "Mi carrito" },
                   { href: "/como-comprar", label: "Cómo comprar" },
-                  { href: "/#calificaciones", label: "Reseñas" },
-                  { href: "/quienes-somos", label: "Quiénes somos" },
-                  { href: "/contacto", label: "Contacto" },
                 ].map(
                   (l) => {
                     // El menú solo existe en el navegador (se abre con un toque), así que se puede leer la dirección.
@@ -290,6 +287,30 @@ export function Header({ categories }: { categories: NavCategory[] }) {
                 </ul>
               </div>
             ) : null}
+            <div>
+              <p className="px-4 pb-2 text-xs font-bold tracking-[0.14em] text-muted uppercase">Conocenos</p>
+              <ul className="flex flex-col gap-1">
+                {[
+                  { href: "/quienes-somos", label: "Quiénes somos" },
+                  { href: "/#calificaciones", label: "Reseñas" },
+                  { href: "/contacto", label: "Contacto" },
+                ].map((l) => {
+                  const current = isCurrent(l.href, pathname, window.location.search);
+                  return (
+                    <li key={l.href}>
+                      <Link
+                        href={l.href}
+                        onClick={() => setOpen(false)}
+                        aria-current={current ? "page" : undefined}
+                        className={`flex min-h-11 items-center rounded-2xl px-4 hover:bg-sun ${current ? CURRENT : ""}`}
+                      >
+                        {l.label}
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
           </div>
         </div>,
             document.body,
