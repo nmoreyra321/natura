@@ -76,7 +76,8 @@ export async function CatalogView({
     filters.line,
     filters.refills,
     filters.min !== undefined || filters.max !== undefined,
-    filters.offers,
+    // En «Todos los productos», ofertas es la página «Ofertas» en sí (no un filtro elegido).
+    fixedCategory && filters.offers,
     filters.gender,
     !fixedCategory && filters.category,
     filters.sort !== "destacados",
