@@ -10,7 +10,7 @@ import { payWithMercadoPago, registerOrder, validateCart } from "@/app/(tienda)/
 import { Button, LinkButton, buttonClasses } from "@/components/ui/button";
 import { cart, useCart, useCartHydrated } from "@/lib/cart-store";
 import { toWhatsAppPhone } from "@/lib/debts";
-import { DELIVERY_TEXT, shippingCostCents, type ShippingZoneOption } from "@/lib/delivery";
+import { DELIVERY_TEXT, formatPercent, shippingCostCents, type ShippingZoneOption } from "@/lib/delivery";
 import { formatARS } from "@/lib/format";
 import { GIFT_EVERY } from "@/lib/loyalty";
 import { productImageUrl } from "@/lib/images";
@@ -356,7 +356,10 @@ export function CartView({
           ) : null}
           {deliveryMethod === "envio" ? (
             <div className="flex justify-between">
-              <dt className="text-muted">Envío{zone ? ` a ${zone.name}` : ""}</dt>
+              <dt className="text-muted">
+                Envío{zone ? ` a ${zone.name}` : ""}
+                {zone ? <span className="block text-xs">{formatPercent(zone.percent)} de tu compra</span> : null}
+              </dt>
               <dd>{zone ? formatARS(shippingCents) : "Elegí tu localidad"}</dd>
             </div>
           ) : null}
@@ -457,7 +460,7 @@ export function CartView({
                             value: "envio" as const,
                             label: "Envío a domicilio",
                             note: envioAllowed
-                              ? "Según tu localidad"
+                              ? "Un % de tu compra, según la localidad"
                               : `Desde ${formatARS(shippingMinCents)} de compra (te faltan ${formatARS(shippingMinCents - productsCents)})`,
                             Icon: Truck,
                           },
@@ -508,7 +511,7 @@ export function CartView({
                         <option value="">Elegí tu localidad…</option>
                         {shippingZones.map((z) => (
                           <option key={z.id} value={z.id}>
-                            {z.name} · {formatARS(shippingCostCents(productsCents, z.percent))}
+                            {z.name} · {formatPercent(z.percent)} de tu compra = {formatARS(shippingCostCents(productsCents, z.percent))}
                           </option>
                         ))}
                       </select>
@@ -516,7 +519,9 @@ export function CartView({
                         <p className="mt-1 text-sm font-semibold text-coral-deep">{zoneError}</p>
                       ) : (
                         <p className="mt-1 px-1 text-xs text-muted">
-                          ¿Tu localidad no está? Elegí punto de encuentro o consultanos por WhatsApp.
+                          {zone
+                            ? `El envío es el ${formatPercent(zone.percent)} de tu compra (${formatARS(productsCents)}): ${formatARS(shippingCents)}. El % depende de la distancia desde Glew.`
+                            : "Cada localidad tiene su % según la distancia desde Glew. ¿La tuya no está? Elegí punto de encuentro o consultanos por WhatsApp."}
                         </p>
                       )}
                     </div>

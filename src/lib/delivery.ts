@@ -15,3 +15,8 @@ export function shippingCostCents(productsCents: number, percent: number): numbe
   if (!(percent > 0) || !(productsCents > 0)) return 0;
   return Math.ceil((productsCents * percent) / 100 / 10_000) * 10_000;
 }
+
+/** «9 %», «7,5 %». */
+export function formatPercent(percent: number): string {
+  return `${percent.toLocaleString("es-AR", { maximumFractionDigits: 2 })} %`;
+}
