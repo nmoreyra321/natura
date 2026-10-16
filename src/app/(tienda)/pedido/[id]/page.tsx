@@ -341,8 +341,8 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
           </section>
         ) : null}
 
-        {!reviewed ? (
-          // Discreto: una línea con un botón que abre la reseña en una ventana (es opcional).
+        {!reviewed && (order.status === "confirmed" || order.status === "delivered") ? (
+          // Recién cuando el pedido está confirmado. Discreto: una línea con un botón que abre la reseña (es opcional).
           <div className="mt-6 flex flex-wrap items-center justify-between gap-x-3 gap-y-2 rounded-2xl bg-cream px-4 py-3 text-left">
             <p className="text-sm">
               <b className="text-forest">¿Cómo viene tu compra hasta ahora?</b>{" "}

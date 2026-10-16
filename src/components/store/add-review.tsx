@@ -66,7 +66,9 @@ export function AddReview({
               {orderId ? "¿Cómo viene tu compra?" : "Dejá tu reseña"}
             </h2>
             <p className="text-sm text-muted">
-              {orderId ? "Es opcional y nos ayuda muchísimo 💖" : "Contanos cómo te fue con Natu Mariel 💖"}
+              {orderId
+                ? "Es opcional y nos ayuda muchísimo 💖"
+                : "¿Ya nos compraste? Si es así, nos ayudaría mucho que nos cuentes brevemente tu experiencia, así otras clientas conocen cómo atendemos y cómo trabajamos. ¡Te lo agradecemos muchísimo! 💖"}
             </p>
           </div>
           <button
