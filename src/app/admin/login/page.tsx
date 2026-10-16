@@ -13,6 +13,8 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Ingresar al panel",
   robots: { index: false, follow: false },
+  manifest: "/panel.webmanifest",
+  appleWebApp: { capable: true, title: "Panel NM" },
 };
 
 export default async function LoginPage() {

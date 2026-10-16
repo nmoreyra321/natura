@@ -86,7 +86,10 @@ export function Footer({ categories }: { categories: { name: string; slug: strin
       </div>
       <div className="border-t border-white/15">
         <p className="mx-auto max-w-7xl px-4 py-5 text-sm text-white/80 sm:px-6">
-          © {year} Natu Mariel. Precios en pesos argentinos (ARS). Pedidos sujetos a confirmación.
+          © {year} Natu Mariel. Precios en pesos argentinos (ARS). Pedidos sujetos a confirmación.{" "}
+          <Link href="/admin" className="text-white/50 underline-offset-2 hover:text-white hover:underline">
+            Acceso administradoras
+          </Link>
         </p>
       </div>
     </footer>

@@ -11,6 +11,9 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: { default: "Panel", template: "%s · Panel Natu Mariel" },
   robots: { index: false, follow: false },
+  // «Agregar a inicio» estando en el panel crea su propio ícono, que abre directo el panel.
+  manifest: "/panel.webmanifest",
+  appleWebApp: { capable: true, title: "Panel NM" },
 };
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
