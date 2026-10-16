@@ -72,14 +72,14 @@ async function shrinkPhoto(file: File): Promise<File | null> {
   }
 }
 
-/** La clienta sube el comprobante y avisa que ya transfirió. Después se abre WhatsApp para avisarle a Mariel. */
+/** La clienta sube el comprobante y avisa que ya pagó (a Natu Mariel le llega el aviso al celular). */
 export function ReportPayment({
   orderId,
-  whatsappUrl,
   proofOptional = false,
 }: {
   orderId: string;
-  whatsappUrl: string | null;
+  /** Ya no se usa acá (WhatsApp queda como botón aparte en la página del pedido). */
+  whatsappUrl?: string | null;
   /** Pago con link de Mercado Pago: el comprobante es opcional y se muestra chiquito. */
   proofOptional?: boolean;
 }) {
@@ -93,8 +93,6 @@ export function ReportPayment({
     if (sending) return;
     setSending(true);
     setError(null);
-    // La pestaña de WhatsApp se abre ya (durante el toque) para que el navegador no la bloquee.
-    const win = whatsappUrl ? window.open("", "_blank") : null;
     let proof = file;
     if (file && file.type.startsWith("image/")) proof = (await shrinkPhoto(file)) ?? file;
     const data = new FormData();
@@ -102,15 +100,12 @@ export function ReportPayment({
     if (proof) data.set("proof", proof);
     const res = await reportTransferPayment(data).catch(() => null);
     if (!res?.ok) {
-      win?.close();
       setError(res?.error ?? "No pudimos avisar el pago. Revisá tu conexión y probá de nuevo.");
       setSending(false);
       return;
     }
-    if (win && whatsappUrl) {
-      win.opener = null;
-      win.location.href = whatsappUrl;
-    }
+    // No se abre WhatsApp solo (dejaba una pestaña en blanco): a Natu Mariel le llega el aviso al
+    // celular, y la página muestra el botón «Avisarle por WhatsApp» por si la clienta quiere.
     toast.success("¡Listo! Natu Mariel va a revisar tu pago.");
     setSending(false);
     router.refresh();

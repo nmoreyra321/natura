@@ -62,7 +62,7 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
   const { data: order } = await admin
     .from("orders")
     .select(
-      "id, code, created_at, status, total, savings, customer_name, customer_phone, customer_cancelled_at, payment_method, payment_status, amount_paid, payment_reported_at, payment_rejection, payment_proof_path, items:order_items(product_id, name, size, quantity, unit_price, magazine_price)",
+      "id, code, created_at, status, total, savings, customer_name, customer_phone, customer_cancelled_at, is_gift, gift_note, payment_method, payment_status, amount_paid, payment_reported_at, payment_rejection, payment_proof_path, items:order_items(product_id, name, size, quantity, unit_price, magazine_price)",
     )
     .eq("id", id)
     .maybeSingle();
@@ -115,6 +115,10 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
     whatsapp
       ? buildWhatsAppUrl(whatsapp, buildOrderMessage(lines, siteUrl, { orderCode: order.code, customerName: order.customer_name, trackUrl, ...extra }))
       : null;
+
+  const orderWhatsAppUrl = message({ paymentMethod: "efectivo", gift: order.is_gift ? { note: order.gift_note ?? "" } : null });
+  // Recién hecho en efectivo: el envío por WhatsApp va arriba de todo, bien grande.
+  const sendOnWhatsApp = isNew && order.payment_method === "efectivo" && order.status === "pending" && Boolean(orderWhatsAppUrl);
 
   // Qué se le muestra arriba de todo.
   let tone: Tone;
@@ -208,6 +212,23 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
           </p>
           <div className="mt-4">{text}</div>
         </div>
+
+        {sendOnWhatsApp ? (
+          // Pedido en efectivo recién hecho: el último paso es mandarlo por WhatsApp (un toque de la
+          // clienta abre la app directo, sin dejar pestañas en blanco).
+          <div className="mt-6 rounded-3xl border-2 border-[#25D366] bg-[#e7f9ee] p-4 text-center">
+            <p className="font-display text-lg font-bold">Último paso: enviá tu pedido por WhatsApp</p>
+            <p className="mt-1 text-sm text-forest/80">Se abre WhatsApp con tu pedido ya escrito. Solo tocá enviar.</p>
+            <a
+              href={orderWhatsAppUrl ?? "#"}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={buttonClasses("whatsapp", "lg", "mt-3 w-full")}
+            >
+              <MessageCircle className="size-5" aria-hidden="true" /> Enviar pedido por WhatsApp
+            </a>
+          </div>
+        ) : null}
 
         {!cancelled ? (
           <ol className="mt-6 flex items-start" aria-label="Cómo va tu pedido">
@@ -334,9 +355,9 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
               Volver al carrito
             </Link>
           ) : null}
-          {order.payment_method === "efectivo" && order.status === "pending" && whatsapp ? (
+          {order.payment_method === "efectivo" && order.status === "pending" && whatsapp && !sendOnWhatsApp ? (
             <a
-              href={message({ paymentMethod: "efectivo" }) ?? "#"}
+              href={orderWhatsAppUrl ?? "#"}
               target="_blank"
               rel="noopener noreferrer"
               className={buttonClasses("outline", "md")}

@@ -545,8 +545,6 @@ export function CartView({
                   if (!whatsappNumber || sending) return;
                   e.preventDefault();
                   if (blockIfMissingContact()) return;
-                  // La pestaña se abre ya (durante el clic) para que el navegador no la bloquee.
-                  const win = window.open("", "_blank");
                   setSending(true);
                   const name = customerName.trim();
                   const phone = customerPhone.trim();
@@ -560,24 +558,12 @@ export function CartView({
                   }).catch(() => null);
                   if (!res?.ok) {
                     // Sin pedido guardado no se manda nada: así no queda un pedido que el panel no tiene.
-                    win?.close();
                     setError(res?.error ?? "No pudimos registrar el pedido. Revisá tu conexión y probá de nuevo.");
                     setSending(false);
                     return;
                   }
-                  const message = buildOrderMessage(lines, siteUrl, {
-                    orderCode: res.code,
-                    customerName: name,
-                    paymentMethod: paymentOptions.length > 1 ? "efectivo" : undefined,
-                    trackUrl: `${siteUrl}/pedido/${res.id}`,
-                    gift: isGift ? { note: giftNote } : null,
-                  });
-                  if (win) {
-                    win.opener = null;
-                    win.location.href = buildWhatsAppUrl(whatsappNumber, message);
-                  }
-                  // Esta pestaña pasa a la página del pedido (vacía el carrito). Si el navegador bloqueó
-                  // WhatsApp, ahí está el botón «Mandar el pedido por WhatsApp».
+                  // Pasa a la página del pedido (vacía el carrito): ahí el botón grande «Enviar pedido por
+                  // WhatsApp» abre la app con un toque. Abrir WhatsApp desde acá dejaba una pestaña en blanco.
                   router.push(`/pedido/${res.id}?nuevo=1`);
                 }}
               >
