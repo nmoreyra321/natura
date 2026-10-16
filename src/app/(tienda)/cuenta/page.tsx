@@ -111,7 +111,7 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
         )}
       </section>
 
-      <section className="mt-6">
+      <section id="pedidos" className="mt-6 scroll-mt-28">
         <h2 className="font-display text-xl font-bold">Mis pedidos</h2>
         {orders.length === 0 ? (
           <div className="mt-3 rounded-3xl bg-warm-white p-5 text-center shadow-soft ring-1 ring-line/70">
