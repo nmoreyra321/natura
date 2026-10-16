@@ -1,3 +1,4 @@
+import { CategoryDiscount } from "@/components/admin/category-discount";
 import { CategoryEditor } from "@/components/admin/category-editor";
 import { ProductsHeader } from "@/components/admin/product-tabs";
 import { requireAdmin } from "@/lib/auth";
@@ -23,7 +24,10 @@ export default async function CategoriesPage() {
     <div className="mx-auto max-w-6xl">
       <ProductsHeader active="categorias" />
       <div className="mx-auto mt-5 max-w-3xl">
-      <p className="text-muted">
+      <CategoryDiscount
+        categories={(categories ?? []).map((c) => ({ id: c.id, name: c.name, total: counts.get(c.id)?.total ?? 0 }))}
+      />
+      <p className="mt-6 text-muted">
         Una categoría aparece en la tienda solo si está visible y tiene al menos un producto publicado.
       </p>
       <div className="mt-6 flex flex-col gap-3">

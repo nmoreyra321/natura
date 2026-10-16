@@ -2047,3 +2047,55 @@ export async function saveShippingSettings(input: unknown): Promise<ActionResult
     return fail(e, "No pudimos guardar los envíos.");
   }
 }
+
+/**
+ * Descuento por categoría: el precio especial de TODOS los productos de la categoría pasa a ser
+ * la revista menos el %. Con «mostrar en Ofertas», además aparecen en la página de Ofertas.
+ */
+export async function applyCategoryDiscount(input: unknown): Promise<ActionResult<{ updated: number }>> {
+  try {
+    const { supabase } = await assertAdmin();
+    const parsed = z
+      .object({ categoryId: z.string().regex(UUID_RE), percent: z.number().min(0).max(99), markOffer: z.boolean() })
+      .safeParse(input);
+    if (!parsed.success) return { ok: false, error: "Elegí una categoría y un descuento entre 0 y 99 %." };
+    const { categoryId, percent, markOffer } = parsed.data;
+    const { data: rows, error: readError } = await supabase
+      .from("products")
+      .select("id, magazine_price, is_offer")
+      .eq("category_id", categoryId)
+      .limit(5000);
+    if (readError) return fail(readError, "No pudimos leer los productos de la categoría.");
+    if (!rows?.length) return { ok: false, error: "Esa categoría no tiene productos." };
+
+    const results = await Promise.all(
+      rows.map((p) => {
+        const sale_price = salePriceFromDiscount(p.magazine_price, percent);
+        if (!Number.isFinite(sale_price)) return Promise.resolve({ error: null, skipped: true });
+        const discounted = sale_price < Number(p.magazine_price);
+        // Sin descuento no puede seguir como oferta; con «mostrar en Ofertas», pasa a oferta.
+        const is_offer = discounted && (markOffer || p.is_offer);
+        return supabase
+          .from("products")
+          .update({ sale_price, is_offer })
+          .eq("id", p.id)
+          .then(({ error }) => ({ error, skipped: false }));
+      }),
+    );
+    const failed = results.find((r) => r.error);
+    if (failed?.error) return fail(failed.error, "No pudimos actualizar algunos precios.");
+    refreshCatalog();
+    revalidatePath("/admin/productos");
+    const updated = results.filter((r) => !r.skipped).length;
+    return {
+      ok: true,
+      data: { updated },
+      message:
+        percent === 0
+          ? `Listo: ${updated} ${updated === 1 ? "producto quedó" : "productos quedaron"} al precio de revista.`
+          : `Listo: ${updated} ${updated === 1 ? "producto" : "productos"} con ${percent}% de descuento.`,
+    };
+  } catch (e) {
+    return fail(e, "No pudimos aplicar el descuento.");
+  }
+}
