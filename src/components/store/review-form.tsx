@@ -5,6 +5,7 @@ import { useState, useTransition } from "react";
 
 import { submitReview } from "@/app/(tienda)/pedido/actions";
 import { buttonClasses } from "@/components/ui/button";
+import { Required, RequiredNote } from "./required";
 
 const LABELS = ["", "Mala", "Regular", "Buena", "Muy buena", "¡Excelente!"];
 
@@ -89,8 +90,12 @@ export function ReviewForm({
         </>
       )}
 
-      <fieldset className="mt-3">
-        <legend className="text-sm font-semibold">Tu puntaje</legend>
+      <RequiredNote className="mt-2" />
+      <fieldset className="mt-2">
+        <legend className="text-sm font-semibold">
+          Tu puntaje
+          <Required />
+        </legend>
         <div
           className="mt-1 flex items-center gap-1"
           onMouseLeave={() => setHover(0)}
@@ -121,6 +126,7 @@ export function ReviewForm({
 
       <label className="mt-3 block text-sm font-semibold">
         Tu nombre y apellido
+        <Required />
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
@@ -129,9 +135,11 @@ export function ReviewForm({
           required
           className="mt-1 h-11 w-full rounded-full border border-line bg-white px-4 text-base font-normal"
         />
+        <span className="mt-1 block px-1 text-xs font-normal text-muted">Así se publica en la tienda, por ejemplo «Laura Gómez».</span>
       </label>
       <label className="mt-3 block text-sm font-semibold">
         Tu reseña
+        <Required />
         <textarea
           value={comment}
           required

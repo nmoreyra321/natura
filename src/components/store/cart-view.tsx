@@ -20,6 +20,7 @@ import type { TransferDetails } from "@/lib/store-settings";
 import { QuantityInput } from "./add-to-cart";
 import { SavingsCelebration } from "./savings-celebration";
 import { ProductImageFallback } from "./product-card";
+import { Required, RequiredNote } from "./required";
 
 type Status = "idle" | "checking" | "ok" | "error";
 type PaymentChoice = "efectivo" | "transferencia" | "mercadopago";
@@ -334,11 +335,13 @@ export function CartView({
           ) : whatsappUrl ? (
             <>
               <div>
-                <p className="mb-2 text-sm text-muted">
+                <p className="text-sm text-muted">
                   Dejanos tu nombre y tu WhatsApp para confirmarte el pedido y avisarte cuando esté listo.
                 </p>
+                <RequiredNote className="mb-2" />
                 <label htmlFor="nombre-pedido" className="text-sm font-semibold">
                   Nombre y apellido
+                  <Required />
                 </label>
                 <input
                   id="nombre-pedido"
@@ -362,6 +365,7 @@ export function CartView({
               <div>
                 <label htmlFor="telefono-pedido" className="text-sm font-semibold">
                   Tu WhatsApp
+                  <Required />
                 </label>
                 <input
                   id="telefono-pedido"
@@ -381,7 +385,9 @@ export function CartView({
                   <p id="telefono-error" className="mt-1 text-sm font-semibold text-coral-deep">
                     {phoneError}
                   </p>
-                ) : null}
+                ) : (
+                  <p className="mt-1 px-1 text-xs text-muted">Con código de área, por ejemplo 11 2345-6789. Te escribimos ahí.</p>
+                )}
               </div>
               <p className="flex items-center gap-2 rounded-2xl bg-sun/50 px-3 py-2 text-sm">
                 <span aria-hidden="true">🎁</span>
@@ -419,7 +425,10 @@ export function CartView({
               </div>
               {paymentOptions.length > 1 ? (
                 <fieldset>
-                  <legend className="text-sm font-semibold">¿Cómo querés pagar?</legend>
+                  <legend className="text-sm font-semibold">
+                    ¿Cómo querés pagar?
+                    <Required />
+                  </legend>
                   <div className={`mt-1.5 grid gap-2 ${paymentOptions.length === 3 ? "grid-cols-3" : "grid-cols-2"}`}>
                     {paymentOptions.map(({ value, label, Icon }) => (
                       <label

@@ -5,6 +5,7 @@ import { useState, useTransition } from "react";
 
 import { requestRestock } from "@/app/(tienda)/productos/actions";
 import { buttonClasses } from "@/components/ui/button";
+import { Required, RequiredNote } from "./required";
 
 /** "Avisame cuando vuelva": la clienta deja su WhatsApp en un producto sin stock. */
 export function RestockForm({ productId }: { productId: string }) {
@@ -45,6 +46,7 @@ export function RestockForm({ productId }: { productId: string }) {
       }}
     >
       <p className="font-semibold">Dejanos tu WhatsApp y te avisamos cuando vuelva a haber stock.</p>
+      <RequiredNote />
       <label className="text-sm font-semibold">
         Nombre <span className="font-normal text-muted">(opcional)</span>
         <input
@@ -57,6 +59,7 @@ export function RestockForm({ productId }: { productId: string }) {
       </label>
       <label className="text-sm font-semibold">
         Celular con código de área
+        <Required />
         <input
           type="tel"
           inputMode="tel"

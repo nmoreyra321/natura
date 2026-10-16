@@ -9,6 +9,7 @@ import { ConfirmDialog } from "@/components/admin/confirm-dialog";
 import { buttonClasses } from "@/components/ui/button";
 import { formatARS } from "@/lib/format";
 import { forgetOrder, useSavedOrders, type SavedOrder } from "@/lib/my-orders";
+import { Required, RequiredNote } from "./required";
 
 const dateFormatter = new Intl.DateTimeFormat("es-AR", {
   day: "numeric",
@@ -96,8 +97,12 @@ export function FindOrder() {
 
       <form action={action} className="mt-8 flex flex-col gap-4 rounded-3xl bg-warm-white p-5 shadow-soft ring-1 ring-line/70">
         <h2 className="font-display text-xl font-bold">{saved.length > 0 ? "¿Es otro pedido?" : "Buscá tu pedido"}</h2>
+        <RequiredNote className="-mt-2" />
         <label className="flex flex-col gap-1 text-sm font-bold">
-          Código del pedido
+          <span>
+            Código del pedido
+            <Required />
+          </span>
           <input
             name="code"
             required
@@ -108,7 +113,10 @@ export function FindOrder() {
           <span className="font-normal text-muted">Está en la página de tu pedido y en el mensaje de WhatsApp.</span>
         </label>
         <label className="flex flex-col gap-1 text-sm font-bold">
-          Tu WhatsApp
+          <span>
+            Tu WhatsApp
+            <Required />
+          </span>
           <input
             name="phone"
             required
