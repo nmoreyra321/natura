@@ -10,6 +10,8 @@ import { createPreference, isMercadoPagoEnabled } from "@/lib/mercadopago";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { surchargeCents, toCents } from "@/lib/pricing";
 import { getMercadoPagoSurcharge } from "@/lib/store-settings";
+import { shippingCostCents } from "@/lib/delivery";
+import { getShippingMinTotal } from "@/lib/shipping";
 import { toWhatsAppPhone } from "@/lib/debts";
 import { allowRequest } from "@/lib/rate-limit";
 import { cartRequestSchema, orderRequestSchema } from "@/lib/validation";
@@ -76,36 +78,48 @@ function giftFields(d: { isGift?: boolean; giftNote?: string }) {
 
 type Admin = NonNullable<ReturnType<typeof createAdminClient>>;
 
+type DeliveryInput = { items: { productId: string; quantity: number }[]; deliveryMethod?: "retiro" | "envio"; shippingZoneId?: string };
+type Delivery = { zone: { name: string; percent: number } | null; address: string | null };
+
 /**
- * Cómo recibe el pedido. Si es envío, el precio sale de la base (nunca del navegador)
- * según la localidad elegida.
+ * Cómo recibe el pedido. Si es envío, la localidad y su % salen de la base (nunca del navegador),
+ * y solo se acepta si la compra llega al mínimo para envíos.
  */
-async function deliveryFields(
+async function resolveDelivery(
   admin: Admin,
-  d: { deliveryMethod?: "retiro" | "envio"; shippingZoneId?: string; shippingAddress?: string },
-): Promise<
-  | { ok: true; fields: Record<string, string | number>; costCents: number; zone: string | null }
-  | { ok: false; error: string }
-> {
-  if (d.deliveryMethod !== "envio" || !d.shippingZoneId) return { ok: true, fields: { delivery_method: "retiro" }, costCents: 0, zone: null };
-  const { data: zone } = await admin
-    .from("shipping_zones")
-    .select("name, price")
-    .eq("id", d.shippingZoneId)
-    .eq("is_active", true)
-    .maybeSingle();
+  d: DeliveryInput & { shippingAddress?: string },
+): Promise<{ ok: true; delivery: Delivery } | { ok: false; error: string }> {
+  if (d.deliveryMethod !== "envio" || !d.shippingZoneId) return { ok: true, delivery: { zone: null, address: null } };
+  const [{ data: zone }, minTotal, products] = await Promise.all([
+    admin.from("shipping_zones").select("name, percent").eq("id", d.shippingZoneId).eq("is_active", true).maybeSingle(),
+    getShippingMinTotal(),
+    getProductsForCart([...new Set(d.items.map((i) => i.productId))]),
+  ]);
   if (!zone) return { ok: false, error: "Esa localidad ya no tiene envío. Elegí otra o retirá en un punto de encuentro." };
-  const costCents = toCents(zone.price);
+  const prices = new Map((products ?? []).map((p) => [p.id, toCents(p.sale_price)]));
+  const productsCents = d.items.reduce((sum, i) => sum + (prices.get(i.productId) ?? 0) * i.quantity, 0);
+  const minCents = Math.round(minTotal * 100);
+  if (productsCents < minCents) {
+    return { ok: false, error: `El envío a domicilio es para compras desde ${formatARS(minCents)}. Elegí punto de encuentro o sumá productos.` };
+  }
+  return { ok: true, delivery: { zone: { name: zone.name, percent: Number(zone.percent) }, address: d.shippingAddress?.trim() ?? "" } };
+}
+
+/** Datos del envío para guardar en el pedido, con el costo calculado sobre el total real de productos. */
+function deliveryFields(delivery: Delivery, productsTotal: number | string) {
+  if (!delivery.zone) return { costCents: 0, fields: { delivery_method: "retiro" } };
+  const productsCents = toCents(productsTotal);
+  const costCents = shippingCostCents(productsCents, delivery.zone.percent);
   return {
-    ok: true,
+    costCents,
     fields: {
       delivery_method: "envio",
-      shipping_zone: zone.name,
-      shipping_address: d.shippingAddress?.trim() ?? "",
+      shipping_zone: delivery.zone.name,
+      shipping_address: delivery.address ?? "",
       shipping_cost: costCents / 100,
+      // El envío va dentro del total: así pagos, deudas y ventas ya lo cuentan.
+      total: (productsCents + costCents) / 100,
     },
-    costCents,
-    zone: zone.name,
   };
 }
 
@@ -146,8 +160,9 @@ export async function registerOrder(input: unknown): Promise<RegisterOrderResult
     return { ok: false, error: "Hiciste muchos pedidos seguidos. Esperá unos minutos o escribile a Natu Mariel por WhatsApp." };
   }
   if (await tooManyPending(admin, phone)) return { ok: false, error: PENDING_MESSAGE };
-  const delivery = await deliveryFields(admin, parsed.data);
-  if (!delivery.ok) return delivery;
+  const resolved = await resolveDelivery(admin, parsed.data);
+  if (!resolved.ok) return resolved;
+  const zoneName = resolved.delivery.zone?.name ?? null;
 
   const { data, error } = await admin.rpc("create_order", {
     items: parsed.data.items,
@@ -158,6 +173,7 @@ export async function registerOrder(input: unknown): Promise<RegisterOrderResult
     console.error("[pedido] No se pudo registrar:", error?.message);
     return { ok: false, error: orderError(error?.message) };
   }
+  const delivery = deliveryFields(resolved.delivery, row.total);
   // El código (al azar) y la forma de pago los maneja el servidor: la clienta no puede leer ni editar pedidos.
   let code: string | null = null;
   {
@@ -168,8 +184,6 @@ export async function registerOrder(input: unknown): Promise<RegisterOrderResult
         customer_phone: phone,
         ...giftFields(parsed.data),
         ...delivery.fields,
-        // El envío va dentro del total: así pagos, deudas y ventas ya lo cuentan.
-        ...(delivery.costCents > 0 ? { total: (toCents(row.total) + delivery.costCents) / 100 } : {}),
       })
       .eq("id", row.id)
       .select("code")
@@ -181,7 +195,7 @@ export async function registerOrder(input: unknown): Promise<RegisterOrderResult
   after(() =>
     notifyAdmins({
       title: `🛍 Pedido nuevo${parsed.data.isGift ? " 🎁" : ""}`,
-      body: `${parsed.data.customerName} · ${formatARS(toCents(row.total) + delivery.costCents)}${parsed.data.paymentMethod === "transferencia" ? " · paga con Mercado Pago (link)" : " · efectivo"}${delivery.zone ? ` · envío a ${delivery.zone}` : ""}`,
+      body: `${parsed.data.customerName} · ${formatARS(toCents(row.total) + delivery.costCents)}${parsed.data.paymentMethod === "transferencia" ? " · paga con Mercado Pago (link)" : " · efectivo"}${zoneName ? ` · envío a ${zoneName}` : ""}`,
       url: code ? `/admin/pedidos?estado=todos&q=${code}` : "/admin/pedidos",
       tag: `pedido-${row.id}`,
     }),
@@ -208,8 +222,9 @@ export async function payWithMercadoPago(input: unknown): Promise<MercadoPagoChe
     return { ok: false, error: "Hiciste muchos pedidos seguidos. Esperá unos minutos o escribile a Natu Mariel por WhatsApp." };
   }
   if (await tooManyPending(admin, phone)) return { ok: false, error: PENDING_MESSAGE };
-  const delivery = await deliveryFields(admin, parsed.data);
-  if (!delivery.ok) return delivery;
+  const resolved = await resolveDelivery(admin, parsed.data);
+  if (!resolved.ok) return resolved;
+  const zoneName = resolved.delivery.zone?.name ?? null;
 
   const { data, error } = await admin.rpc("create_order", {
     items: parsed.data.items,
@@ -220,6 +235,7 @@ export async function payWithMercadoPago(input: unknown): Promise<MercadoPagoChe
     console.error("[pedido] No se pudo registrar:", error?.message);
     return { ok: false, error: orderError(error?.message) };
   }
+  const delivery = deliveryFields(resolved.delivery, order.total);
 
   const [{ error: markError }, { data: items }] = await Promise.all([
     admin
@@ -230,7 +246,6 @@ export async function payWithMercadoPago(input: unknown): Promise<MercadoPagoChe
         customer_phone: phone,
         ...giftFields(parsed.data),
         ...delivery.fields,
-        ...(delivery.costCents > 0 ? { total: (toCents(order.total) + delivery.costCents) / 100 } : {}),
       })
       .eq("id", order.id),
     admin.from("order_items").select("product_id, name, size, quantity, unit_price").eq("order_id", order.id),
@@ -247,7 +262,7 @@ export async function payWithMercadoPago(input: unknown): Promise<MercadoPagoChe
     unitPrice: toCents(i.unit_price) / 100,
   }));
   if (delivery.costCents > 0) {
-    lines.push({ id: "envio", title: `Envío a ${delivery.zone}`, quantity: 1, unitPrice: delivery.costCents / 100 });
+    lines.push({ id: "envio", title: `Envío a ${zoneName}`, quantity: 1, unitPrice: delivery.costCents / 100 });
   }
   // Recargo por Mercado Pago (lo paga la clienta para cubrir la comisión), sobre productos y envío.
   const surcharge = surchargeCents(toCents(order.total) + delivery.costCents, await getMercadoPagoSurcharge());
@@ -269,7 +284,7 @@ export async function payWithMercadoPago(input: unknown): Promise<MercadoPagoChe
   after(() =>
     notifyAdmins({
       title: `🛍 Pedido nuevo${parsed.data.isGift ? " 🎁" : ""}`,
-      body: `${parsed.data.customerName} · ${formatARS(toCents(order.total) + delivery.costCents)} · paga con Mercado Pago${delivery.zone ? ` · envío a ${delivery.zone}` : ""}`,
+      body: `${parsed.data.customerName} · ${formatARS(toCents(order.total) + delivery.costCents)} · paga con Mercado Pago${zoneName ? ` · envío a ${zoneName}` : ""}`,
       url: "/admin/pedidos",
       tag: `pedido-${order.id}`,
     }),

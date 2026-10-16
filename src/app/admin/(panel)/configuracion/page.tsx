@@ -34,10 +34,10 @@ export default async function SettingsPage() {
   const { supabase } = await requireAdmin();
   const { data: settings } = await supabase
     .from("store_settings")
-    .select("transfer_alias, transfer_cbu, transfer_holder, transfer_bank, mp_link, mp_surcharge_percent, facebook_url, instagram_url")
+    .select("transfer_alias, transfer_cbu, transfer_holder, transfer_bank, mp_link, mp_surcharge_percent, facebook_url, instagram_url, shipping_min_total")
     .eq("id", 1)
     .maybeSingle();
-  const { data: zones } = await supabase.from("shipping_zones").select("id, name, price").order("position").order("name");
+  const { data: zones } = await supabase.from("shipping_zones").select("id, name, percent").order("position").order("name");
   const whatsapp = getWhatsAppNumber();
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ? getSiteUrl() : null;
   return (
@@ -70,10 +70,13 @@ export default async function SettingsPage() {
       <section className="mt-4 rounded-3xl bg-warm-white p-5 shadow-soft">
         <h2 className="font-display text-xl font-bold">Envíos a domicilio</h2>
         <p className="mt-1 mb-4 text-sm text-muted">
-          Lo que paga la clienta por el envío, según su localidad. Se suma solo al total del pedido. Un precio de referencia:
-          lo que te cobraría una moto de Uber o DiDi desde tu casa hasta ahí.
+          La clienta paga un % de su compra según la localidad, y se suma solo al total del pedido. Como es un %, si
+          suben los precios, el envío sube solo.
         </p>
-        <ShippingPricesForm zones={(zones ?? []).map((z) => ({ id: z.id, name: z.name, price: Number(z.price) }))} />
+        <ShippingPricesForm
+          zones={(zones ?? []).map((z) => ({ id: z.id, name: z.name, percent: Number(z.percent) }))}
+          minTotal={Number(settings?.shipping_min_total ?? 35000)}
+        />
       </section>
 
       <section className="mt-4 rounded-3xl bg-warm-white p-5 shadow-soft">

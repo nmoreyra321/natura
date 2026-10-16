@@ -10,7 +10,7 @@ import { payWithMercadoPago, registerOrder, validateCart } from "@/app/(tienda)/
 import { Button, LinkButton, buttonClasses } from "@/components/ui/button";
 import { cart, useCart, useCartHydrated } from "@/lib/cart-store";
 import { toWhatsAppPhone } from "@/lib/debts";
-import { DELIVERY_TEXT, type ShippingZoneOption } from "@/lib/delivery";
+import { DELIVERY_TEXT, shippingCostCents, type ShippingZoneOption } from "@/lib/delivery";
 import { formatARS } from "@/lib/format";
 import { GIFT_EVERY } from "@/lib/loyalty";
 import { productImageUrl } from "@/lib/images";
@@ -56,7 +56,10 @@ export function CartView({
   mpSurcharge = 0,
   clubMinCents = 0,
   shippingZones = [],
+  shippingMinCents = 0,
 }: {
+  /** Compra mínima (en centavos) para poder elegir envío a domicilio. */
+  shippingMinCents?: number;
   /** Localidades con envío a domicilio (vacío = solo punto de encuentro). */
   shippingZones?: ShippingZoneOption[];
   /** Club de clientas: monto mínimo del pedido para que sume una compra. */
@@ -82,14 +85,18 @@ export function CartView({
   const [customerName, setCustomerName] = useState(() => readSaved(NAME_KEY));
   const [customerPhone, setCustomerPhone] = useState(() => readSaved(PHONE_KEY));
   // Cómo recibe el pedido: punto de encuentro (gratis) o envío a domicilio a una de las localidades.
-  const [deliveryMethod, setDeliveryMethod] = useState<"retiro" | "envio">("retiro");
+  const [deliveryChoice, setDeliveryMethod] = useState<"retiro" | "envio">("retiro");
+  // El envío a domicilio se puede elegir solo si la compra llega al mínimo (si baja, vuelve a punto de encuentro).
+  const productsCents = items.reduce((sum, i) => sum + toCents(i.salePrice) * i.quantity, 0);
+  const envioAllowed = shippingZones.length > 0 && productsCents >= shippingMinCents;
+  const deliveryMethod = envioAllowed ? deliveryChoice : "retiro";
   const [zoneId, setZoneId] = useState(() => {
     const saved = readSaved(ZONE_KEY);
     return shippingZones.some((z) => z.id === saved) ? saved : "";
   });
   const [address, setAddress] = useState(() => readSaved(ADDRESS_KEY));
   const zone = deliveryMethod === "envio" ? shippingZones.find((z) => z.id === zoneId) : undefined;
-  const shippingCents = zone?.priceCents ?? 0;
+  const shippingCents = zone ? shippingCostCents(productsCents, zone.percent) : 0;
   const delivery =
     deliveryMethod === "envio"
       ? { deliveryMethod: "envio" as const, shippingZoneId: zoneId || undefined, shippingAddress: address.trim() }
@@ -449,21 +456,26 @@ export function CartView({
                           {
                             value: "envio" as const,
                             label: "Envío a domicilio",
-                            note: `Desde ${formatARS(Math.min(...shippingZones.map((z) => z.priceCents)))}`,
+                            note: envioAllowed
+                              ? "Según tu localidad"
+                              : `Desde ${formatARS(shippingMinCents)} de compra (te faltan ${formatARS(shippingMinCents - productsCents)})`,
                             Icon: Truck,
                           },
                         ]
                       : []),
-                  ].map(({ value, label, note, Icon }) => (
+                  ].map(({ value, label, note, Icon }) => {
+                    const off = value === "envio" && !envioAllowed;
+                    return (
                     <label
                       key={value}
-                      className={`flex cursor-pointer flex-col items-center justify-center gap-0.5 rounded-2xl border-2 px-2 py-2.5 text-center text-sm font-bold transition-colors ${deliveryMethod === value ? "border-forest bg-sun/60" : "border-line bg-white hover:bg-cream"}`}
+                      className={`flex flex-col items-center justify-center gap-0.5 rounded-2xl border-2 px-2 py-2.5 text-center text-sm font-bold transition-colors ${off ? "cursor-not-allowed border-line bg-cream/60 text-muted" : deliveryMethod === value ? "cursor-pointer border-forest bg-sun/60" : "cursor-pointer border-line bg-white hover:bg-cream"}`}
                     >
                       <input
                         type="radio"
                         name="forma-de-entrega"
                         value={value}
                         checked={deliveryMethod === value}
+                        disabled={off}
                         onChange={() => setDeliveryMethod(value)}
                         className="sr-only"
                       />
@@ -471,7 +483,8 @@ export function CartView({
                       {label}
                       <span className="text-xs font-semibold text-muted">{note}</span>
                     </label>
-                  ))}
+                    );
+                  })}
                 </div>
                 {deliveryMethod === "retiro" ? (
                   <p className="mt-1.5 px-1 text-xs text-muted">
@@ -495,7 +508,7 @@ export function CartView({
                         <option value="">Elegí tu localidad…</option>
                         {shippingZones.map((z) => (
                           <option key={z.id} value={z.id}>
-                            {z.name} · {formatARS(z.priceCents)}
+                            {z.name} · {formatARS(shippingCostCents(productsCents, z.percent))}
                           </option>
                         ))}
                       </select>

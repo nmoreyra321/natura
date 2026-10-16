@@ -55,7 +55,7 @@ const faqsFor = (clubMin: string | null) => [
   },
   {
     q: "¿Dónde entregan?",
-    a: `De dos formas: gratis en punto de encuentro en las estaciones del Roca de ${DELIVERY_TEXT} (más que nada los sábados), o con envío a domicilio en zona sur (Lanús, Lomas, Temperley, Adrogué, Burzaco, Glew, Guernica, Alejandro Korn, Monte Grande y alrededores), con un costo según tu localidad que ves en el carrito. Si estás en otra zona, escribinos y lo vemos.`,
+    a: `De dos formas: gratis en punto de encuentro en las estaciones del Roca de ${DELIVERY_TEXT} (más que nada los sábados), o con envío a domicilio en zona sur (Lanús, Lomas, Temperley, Adrogué, Burzaco, Glew, Guernica, Alejandro Korn, Monte Grande y alrededores), para compras desde un monto mínimo: el costo es un porcentaje de la compra según tu localidad y lo ves en el carrito antes de pedir. Si estás en otra zona, escribinos y lo vemos.`,
   },
   {
     q: "¿Cómo sé en qué está mi pedido?",

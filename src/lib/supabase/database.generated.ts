@@ -122,14 +122,14 @@ isOneToOne: false
                   ]
                 },"shipping_zones": {
                   Row: {
-                    "created_at": string,"id": string,"is_active": boolean,"name": string,"position": number,"price": number,"updated_at": string
+                    "created_at": string,"id": string,"is_active": boolean,"name": string,"percent": number,"position": number,"price": number,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"id"?: string,"is_active"?: boolean,"name": string,"position"?: number,"price": number,"updated_at"?: string
+                    "created_at"?: string,"id"?: string,"is_active"?: boolean,"name": string,"percent"?: number,"position"?: number,"price": number,"updated_at"?: string
                   }
                   Update: {
-                    "created_at"?: string,"id"?: string,"is_active"?: boolean,"name"?: string,"position"?: number,"price"?: number,"updated_at"?: string
+                    "created_at"?: string,"id"?: string,"is_active"?: boolean,"name"?: string,"percent"?: number,"position"?: number,"price"?: number,"updated_at"?: string
                   }
                   Relationships: []
                 },"receipt_aliases": {
@@ -273,14 +273,14 @@ isOneToOne: false
                   ]
                 },"store_settings": {
                   Row: {
-                    "facebook_url": string | null,"id": number,"instagram_url": string | null,"loyalty_min_total": number,"mp_link": string | null,"mp_surcharge_percent": number,"transfer_alias": string | null,"transfer_bank": string | null,"transfer_cbu": string | null,"transfer_holder": string | null,"updated_at": string
+                    "facebook_url": string | null,"id": number,"instagram_url": string | null,"loyalty_min_total": number,"mp_link": string | null,"mp_surcharge_percent": number,"shipping_min_total": number,"transfer_alias": string | null,"transfer_bank": string | null,"transfer_cbu": string | null,"transfer_holder": string | null,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "facebook_url"?: string | null,"id"?: number,"instagram_url"?: string | null,"loyalty_min_total"?: number,"mp_link"?: string | null,"mp_surcharge_percent"?: number,"transfer_alias"?: string | null,"transfer_bank"?: string | null,"transfer_cbu"?: string | null,"transfer_holder"?: string | null,"updated_at"?: string
+                    "facebook_url"?: string | null,"id"?: number,"instagram_url"?: string | null,"loyalty_min_total"?: number,"mp_link"?: string | null,"mp_surcharge_percent"?: number,"shipping_min_total"?: number,"transfer_alias"?: string | null,"transfer_bank"?: string | null,"transfer_cbu"?: string | null,"transfer_holder"?: string | null,"updated_at"?: string
                   }
                   Update: {
-                    "facebook_url"?: string | null,"id"?: number,"instagram_url"?: string | null,"loyalty_min_total"?: number,"mp_link"?: string | null,"mp_surcharge_percent"?: number,"transfer_alias"?: string | null,"transfer_bank"?: string | null,"transfer_cbu"?: string | null,"transfer_holder"?: string | null,"updated_at"?: string
+                    "facebook_url"?: string | null,"id"?: number,"instagram_url"?: string | null,"loyalty_min_total"?: number,"mp_link"?: string | null,"mp_surcharge_percent"?: number,"shipping_min_total"?: number,"transfer_alias"?: string | null,"transfer_bank"?: string | null,"transfer_cbu"?: string | null,"transfer_holder"?: string | null,"updated_at"?: string
                   }
                   Relationships: [
                     

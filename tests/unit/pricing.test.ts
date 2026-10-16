@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { shippingCostCents } from "@/lib/delivery";
 import { formatARS } from "@/lib/format";
 import { getPriceInfo, planMagazinePriceUpdate, salePriceFromDiscount, surchargeCents, toCents } from "@/lib/pricing";
 
@@ -104,5 +105,18 @@ describe("surchargeCents", () => {
   it("sin recargo devuelve 0", () => {
     expect(surchargeCents(2_000_000, 0)).toBe(0);
     expect(surchargeCents(0, 8)).toBe(0);
+  });
+});
+
+
+describe("costo del envío (% de la compra)", () => {
+  it("redondea hacia arriba a $100", () => {
+    expect(shippingCostCents(35_000_00, 5)).toBe(1_800_00);
+    expect(shippingCostCents(40_000_00, 7)).toBe(2_800_00);
+    expect(shippingCostCents(35_100_00, 9)).toBe(3_200_00);
+  });
+  it("0 % o compra vacía: sin costo", () => {
+    expect(shippingCostCents(35_000_00, 0)).toBe(0);
+    expect(shippingCostCents(0, 5)).toBe(0);
   });
 });
