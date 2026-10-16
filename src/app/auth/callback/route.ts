@@ -12,7 +12,8 @@ export async function GET(request: NextRequest) {
   if (code) {
     const supabase = await createSessionClient();
     const { error } = (await supabase?.auth.exchangeCodeForSession(code)) ?? { error: true };
-    if (!error) return NextResponse.redirect(`${origin}${next}`);
+    // «bienvenida=1»: la tienda muestra el cartelito de «Ya entraste a tu cuenta».
+    if (!error) return NextResponse.redirect(`${origin}${next}${next.includes("?") ? "&" : "?"}bienvenida=1`);
   }
   return NextResponse.redirect(`${origin}/cuenta?error=1`);
 }

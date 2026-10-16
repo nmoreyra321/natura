@@ -30,7 +30,19 @@ export function AccountMenu() {
       const name = typeof m.full_name === "string" ? m.full_name : typeof m.name === "string" ? m.name : null;
       setMe({ name, email: user.email ?? null });
     };
-    supabase.auth.getSession().then(({ data }) => read(data.session?.user));
+    supabase.auth.getSession().then(({ data }) => {
+      read(data.session?.user);
+      // Recién entró con Google o Facebook: cartelito de bienvenida y se limpia la dirección.
+      const url = new URL(window.location.href);
+      if (url.searchParams.get("bienvenida") === "1") {
+        url.searchParams.delete("bienvenida");
+        window.history.replaceState(window.history.state, "", url.pathname + url.search + url.hash);
+        const m = data.session?.user.user_metadata ?? {};
+        const full = typeof m.full_name === "string" ? m.full_name : typeof m.name === "string" ? m.name : "";
+        const first = full.split(" ")[0];
+        if (data.session) toast.success(`¡Hola${first ? `, ${first}` : ""}! Ya entraste a tu cuenta 🎉`, { position: "bottom-center", duration: 3000 });
+      }
+    });
     const { data } = supabase.auth.onAuthStateChange((_e, session) => read(session?.user));
     return () => data.subscription.unsubscribe();
   }, []);
