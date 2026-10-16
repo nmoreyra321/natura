@@ -93,6 +93,8 @@ export function AccountMenu() {
                   onClick={async () => {
                     await getBrowserClient()?.auth.signOut();
                     setOpen(false);
+                    // Al salir, vuelve al inicio de la tienda.
+                    router.push("/");
                     router.refresh();
                   }}
                   className={`${item} text-muted`}

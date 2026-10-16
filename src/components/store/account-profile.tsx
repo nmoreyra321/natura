@@ -77,6 +77,7 @@ export function SignOutButton() {
       onClick={async () => {
         setPending(true);
         await getBrowserClient()?.auth.signOut();
+        router.push("/");
         router.refresh();
       }}
       className="inline-flex items-center gap-1.5 text-sm font-semibold text-muted underline disabled:opacity-60"
