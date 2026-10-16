@@ -14,7 +14,9 @@ export async function allowRequest(action: string, max: number, windowSeconds: n
   const admin = createAdminClient();
   if (!admin) return true;
   const h = await headers();
-  const ip = (h.get("x-forwarded-for") ?? "").split(",")[0]?.trim() || h.get("x-real-ip") || "desconocida";
+  const raw = (h.get("x-forwarded-for") ?? "").split(",")[0]?.trim() || h.get("x-real-ip") || "desconocida";
+  // Con IPv6 una misma persona puede tener millones de direcciones: se cuenta por bloque (/64).
+  const ip = raw.includes(":") ? raw.split(":").slice(0, 4).join(":") : raw;
   // La IP no se guarda tal cual: solo un resumen que no se puede revertir.
   const key = `${action}:${createHash("sha256").update(ip).digest("hex").slice(0, 32)}`;
   const { data, error } = await admin.rpc("rate_limit_hit", { p_key: key, p_max: max, p_seconds: windowSeconds });

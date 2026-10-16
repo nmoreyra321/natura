@@ -1,4 +1,5 @@
 import { ChevronDown, Handshake, MessageCircle, PackageCheck, ShoppingBag } from "lucide-react";
+import { DELIVERY_TEXT } from "@/lib/delivery";
 import { formatARS } from "@/lib/format";
 import { getLoyaltyMinTotal } from "@/lib/store-settings";
 import type { Metadata } from "next";
@@ -24,8 +25,8 @@ const steps = [
   },
   {
     icon: MessageCircle,
-    title: "Enviá el pedido por WhatsApp",
-    text: "Antes de enviarlo verificamos precios y stock. Se abre WhatsApp con el detalle, los precios y el total.",
+    title: "Hacé el pedido",
+    text: "Elegí cómo pagar. En efectivo, tocá «Hacer pedido por WhatsApp». Con Mercado Pago, tocá «Hacer pedido» y pagás ahí mismo.",
   },
   {
     icon: PackageCheck,
@@ -34,8 +35,8 @@ const steps = [
   },
   {
     icon: Handshake,
-    title: "Pagás y recibís",
-    text: "Coordinan juntas el pago y la entrega. ¡Y a disfrutar tus productos!",
+    title: "Recibís tu pedido",
+    text: `Coordinan juntas el día y el punto de encuentro en zona sur (${DELIVERY_TEXT}). ¡Y a disfrutar!`,
   },
 ];
 
@@ -50,7 +51,11 @@ const faqsFor = (clubMin: string | null) => [
   },
   {
     q: "¿Cómo pago y cómo recibo el pedido?",
-    a: "En el carrito elegís cómo pagar: en efectivo o con Mercado Pago (sin recargo: en la página de tu pedido tocás «Pagar con Mercado Pago», pagás con tarjeta o dinero en cuenta y después tocás «Ya pagué»). Cuando Mariel aprueba el pago lo ves ahí mismo, y la entrega la coordinan por WhatsApp.",
+    a: "En el carrito elegís cómo pagar: en efectivo (al recibir) o con Mercado Pago. Con Mercado Pago, en la página de tu pedido tocás «Pagar con Mercado Pago», pagás con tarjeta o dinero en cuenta y después tocás «Ya realicé el pago». Cuando Mariel aprueba el pago lo ves ahí mismo, y la entrega la coordinan por WhatsApp.",
+  },
+  {
+    q: "¿Dónde entregan?",
+    a: `Entregamos en zona sur, en puntos de encuentro en ${DELIVERY_TEXT}. El día y el lugar los coordinás con Mariel por WhatsApp. Si estás en otra zona, escribinos y lo vemos.`,
   },
   {
     q: "¿Cómo sé en qué está mi pedido?",

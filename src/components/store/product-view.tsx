@@ -1,4 +1,4 @@
-import { ChevronRight, CircleCheck, MessageCircle } from "lucide-react";
+import { ChevronRight, CircleCheck, MapPin, MessageCircle } from "lucide-react";
 import Link from "next/link";
 
 import { buttonClasses } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { buildProductInquiryMessage, buildWhatsAppUrl } from "@/lib/whatsapp";
 import { AddToCart, LiveSavings, MobileBuyBar } from "./add-to-cart";
 import { Gallery } from "./gallery";
 import { Price } from "./price";
+import { DELIVERY_TEXT } from "@/lib/delivery";
 import { ProductRail } from "./product-card";
 import { RestockForm } from "./restock-form";
 import { ShareButton } from "./share-button";
@@ -104,6 +105,10 @@ export function ProductView({
               <LiveSavings productId={product.id} magazinePrice={product.magazine_price} salePrice={product.sale_price} />
               <StockBadge stock={product.stock} className="mt-3" />
             </div>
+            <p className="flex items-start gap-2 text-sm font-semibold text-forest/80">
+              <MapPin className="mt-0.5 size-4 shrink-0 text-coral-deep" aria-hidden="true" />
+              Entregas en zona sur: puntos de encuentro en {DELIVERY_TEXT}.
+            </p>
             <AddToCart
               product={{
                 productId: product.id,

@@ -74,6 +74,24 @@ function giftFields(d: { isGift?: boolean; giftNote?: string }) {
   return d.isGift ? { is_gift: true, gift_note: d.giftNote?.trim() || null } : {};
 }
 
+/**
+ * Freno por clienta (no general): si un mismo teléfono ya tiene varios pedidos sin confirmar,
+ * no se crean más. Así un molesto no traba las compras de las demás, y una clienta real
+ * solo ve el aviso si de verdad tiene muchos pedidos pendientes.
+ */
+const MAX_PENDING_PER_PHONE = 3;
+async function tooManyPending(admin: NonNullable<ReturnType<typeof createAdminClient>>, phone: string): Promise<boolean> {
+  const since = new Date(Date.now() - 48 * 3600 * 1000).toISOString();
+  const { count } = await admin
+    .from("orders")
+    .select("id", { count: "exact", head: true })
+    .eq("customer_phone", phone)
+    .eq("status", "pending")
+    .gte("created_at", since);
+  return (count ?? 0) >= MAX_PENDING_PER_PHONE;
+}
+const PENDING_MESSAGE = `Ya tenés ${MAX_PENDING_PER_PHONE} pedidos esperando confirmación. Natu Mariel te va a escribir; si querés sumar o cambiar algo, escribile por WhatsApp.`;
+
 export type RegisterOrderResult = { ok: true; id: string; code: string | null } | { ok: false; error: string };
 
 /**
@@ -92,6 +110,7 @@ export async function registerOrder(input: unknown): Promise<RegisterOrderResult
   if (!(await allowRequest("pedido", 8, 600))) {
     return { ok: false, error: "Hiciste muchos pedidos seguidos. Esperá unos minutos o escribile a Natu Mariel por WhatsApp." };
   }
+  if (await tooManyPending(admin, phone)) return { ok: false, error: PENDING_MESSAGE };
 
   const { data, error } = await admin.rpc("create_order", {
     items: parsed.data.items,
@@ -148,6 +167,7 @@ export async function payWithMercadoPago(input: unknown): Promise<MercadoPagoChe
   if (!(await allowRequest("pedido", 8, 600))) {
     return { ok: false, error: "Hiciste muchos pedidos seguidos. Esperá unos minutos o escribile a Natu Mariel por WhatsApp." };
   }
+  if (await tooManyPending(admin, phone)) return { ok: false, error: PENDING_MESSAGE };
 
   const { data, error } = await admin.rpc("create_order", {
     items: parsed.data.items,

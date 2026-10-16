@@ -150,10 +150,18 @@ export function MpLinkPay({ link, totalCents, onOpen }: { link: string; totalCen
       >
         Pagar con Mercado Pago
       </a>
-      <p className="text-xs text-muted">
-        Se abre Mercado Pago: escribí <strong>{formatARS(totalCents)}</strong> (ya lo copiamos) y pagá con tarjeta o dinero
-        en cuenta. Después volvé a esta página.
-      </p>
+      <ol className="flex list-decimal flex-col gap-1 pl-5 text-sm text-forest/85">
+        <li>
+          Tocá <strong>Pagar con Mercado Pago</strong>.
+        </li>
+        <li>
+          En «Monto» pegá o escribí <strong className="tabular">{amount}</strong> (ya lo copiamos).
+        </li>
+        <li>Pagá con tarjeta o dinero en cuenta.</li>
+        <li>
+          Volvé a esta página y tocá <strong>Ya realicé el pago</strong>.
+        </li>
+      </ol>
     </div>
   );
 }

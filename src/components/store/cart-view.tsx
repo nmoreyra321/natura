@@ -10,6 +10,7 @@ import { payWithMercadoPago, registerOrder, validateCart } from "@/app/(tienda)/
 import { Button, LinkButton, buttonClasses } from "@/components/ui/button";
 import { cart, useCart, useCartHydrated } from "@/lib/cart-store";
 import { toWhatsAppPhone } from "@/lib/debts";
+import { DELIVERY_TEXT } from "@/lib/delivery";
 import { formatARS } from "@/lib/format";
 import { GIFT_EVERY } from "@/lib/loyalty";
 import { productImageUrl } from "@/lib/images";
@@ -280,7 +281,7 @@ export function CartView({
                     </p>
                   </div>
                   {item.quantity >= item.stock ? (
-                    <p className="text-xs text-muted">Máximo disponible: {item.stock}</p>
+                    <p className="text-sm text-muted">Máximo disponible: {item.stock}</p>
                   ) : null}
                 </div>
               </li>
@@ -607,7 +608,10 @@ export function CartView({
               {error}
             </p>
           ) : null}
-          <p className="text-xs leading-relaxed text-muted">
+          <p className="text-sm font-semibold text-forest/80">
+            📍 Entregas en zona sur: puntos de encuentro en {DELIVERY_TEXT}.
+          </p>
+          <p className="text-sm leading-relaxed text-muted">
             {payment === "mercadopago" && mercadoPago
               ? "Te llevamos a la página segura de Mercado Pago para pagar con tarjeta, dinero en cuenta o efectivo en puntos de pago. Cuando termines, volvés a la tienda y Natu Mariel coordina la entrega con vos."
               : payment === "transferencia"

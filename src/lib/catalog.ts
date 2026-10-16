@@ -4,6 +4,7 @@ import { cache } from "react";
 
 import { nameSearchPatterns } from "@/lib/search";
 import { slugify } from "@/lib/slug";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createPublicClient } from "@/lib/supabase/server";
 import type { CategoryRow, ProductImageRow, ProductRow } from "@/lib/supabase/types";
 
@@ -277,7 +278,10 @@ export async function getHighlights(limit = 8) {
 export async function getBestSellers(limit = 8): Promise<PublicProduct[]> {
   const supabase = createPublicClient();
   if (!supabase) return [];
-  const { data: ranking, error } = await supabase.rpc("best_sellers", { max_items: limit });
+  // El ranking de ventas no es público: se pide con la clave del servidor.
+  const admin = createAdminClient();
+  if (!admin) return [];
+  const { data: ranking, error } = await admin.rpc("best_sellers", { max_items: limit });
   if (error || !ranking?.length) return [];
   const ids = ranking.map((r) => r.product_id);
   const { data } = await supabase.from("products").select(PRODUCT_SELECT).eq("status", "published").in("id", ids);

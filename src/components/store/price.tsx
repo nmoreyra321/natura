@@ -21,14 +21,14 @@ export function DiscountBadge({
       className={`sticker inline-flex flex-col items-center justify-center rounded-full border-[3px] border-white bg-coral-deep leading-none font-display font-bold text-white shadow-lift tabular ${big ? "size-20 text-2xl" : "size-14 text-lg"} ${className}`}
     >
       −{info.discountPercent}%
-      <span className={`font-sans font-extrabold tracking-wide uppercase ${big ? "mt-0.5 text-[0.65rem]" : "text-[0.5rem]"}`}>
-        off
-      </span>
     </span>
   );
 }
 
-/** Precio especial destacado; precio de revista tachado solo si hay descuento real. */
+/**
+ * Precio: cuando hay descuento se muestra bien claro la comparación «Precio en revista» (tachado)
+ * contra «Precio Natu Mariel», y cuánto se ahorra. Sin descuento, solo el precio.
+ */
 export function Price({
   magazinePrice,
   salePrice,
@@ -41,29 +41,52 @@ export function Price({
   showSavings?: boolean;
 }) {
   const info = getPriceInfo(magazinePrice, salePrice);
-  const big = size === "lg";
-  return (
-    <div className="flex flex-col gap-1">
-      <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-0.5">
-        <span
-          className={`tabular font-display font-bold tracking-tight ${info.hasDiscount ? "text-coral-deep" : "text-forest"} ${big ? "text-4xl sm:text-5xl" : "text-[1.35rem]"}`}
-        >
-          <span className="sr-only">{info.hasDiscount ? "Precio Natu Mariel: " : "Precio: "}</span>
-          {formatARS(info.saleCents)}
-        </span>
-        {info.hasDiscount ? (
-          <span className={`tabular font-semibold text-muted line-through decoration-coral-deep/60 decoration-2 ${big ? "text-lg" : "text-sm"}`}>
-            <span className="sr-only">Precio de revista: </span>
-            {formatARS(info.magazineCents)}
-          </span>
+
+  if (!info.hasDiscount) {
+    return (
+      <span className={`tabular font-display font-bold tracking-tight text-forest ${size === "lg" ? "text-4xl sm:text-5xl" : "text-[1.35rem]"}`}>
+        <span className="sr-only">Precio: </span>
+        {formatARS(info.saleCents)}
+      </span>
+    );
+  }
+
+  if (size === "lg") {
+    return (
+      <div className="flex w-full max-w-md flex-col gap-2">
+        <div className="grid grid-cols-2 overflow-hidden rounded-3xl border-2 border-coral-deep/25 bg-white">
+          <div className="flex flex-col justify-center gap-0.5 bg-cream/70 p-3 sm:p-4">
+            <span className="text-xs font-extrabold tracking-wide text-muted uppercase">Precio en revista</span>
+            <span className="tabular text-xl font-bold text-muted line-through decoration-coral-deep decoration-2 sm:text-2xl">
+              {formatARS(info.magazineCents)}
+            </span>
+          </div>
+          <div className="flex flex-col justify-center gap-0.5 bg-coral-soft/60 p-3 sm:p-4">
+            <span className="text-xs font-extrabold tracking-wide text-coral-deep uppercase">Precio Natu Mariel</span>
+            <span className="tabular font-display text-3xl leading-none font-bold tracking-tight text-coral-deep sm:text-4xl">
+              {formatARS(info.saleCents)}
+            </span>
+          </div>
+        </div>
+        {showSavings ? (
+          <p className="inline-flex w-fit items-center gap-1.5 rounded-full bg-sun px-3.5 py-1.5 text-sm font-extrabold text-forest">
+            ¡Ahorrás {formatARS(info.savingsCents)}!{info.discountPercent >= 1 ? ` Un ${info.discountPercent}% menos que en la revista` : ""}
+          </p>
         ) : null}
       </div>
-      {showSavings && info.hasDiscount ? (
-        <p className="inline-flex w-fit items-center gap-1.5 rounded-full bg-sun px-3 py-1 text-sm font-extrabold text-forest">
-          ¡Ahorrás {formatARS(info.savingsCents)}!
-          {info.discountPercent >= 1 ? ` ${info.discountPercent}% menos que en revista` : ""}
-        </p>
-      ) : null}
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-0.5">
+      <span className="text-xs font-semibold text-muted">
+        Revista <span className="tabular font-bold line-through decoration-coral-deep decoration-2">{formatARS(info.magazineCents)}</span>
+      </span>
+      <span className="tabular font-display text-[1.35rem] leading-tight font-bold tracking-tight text-coral-deep">
+        <span className="sr-only">Precio Natu Mariel: </span>
+        {formatARS(info.saleCents)}
+      </span>
+      <span className="w-fit rounded-full bg-sun px-2 py-0.5 text-[0.7rem] font-extrabold text-forest">Ahorrás {formatARS(info.savingsCents)}</span>
     </div>
   );
 }

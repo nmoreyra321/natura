@@ -42,7 +42,7 @@ describe("getPriceInfo", () => {
 
 describe("formatARS", () => {
   it("usa formato argentino", () => {
-    expect(formatARS(1250000)).toBe("$ 12.500,00");
+    expect(formatARS(1250000)).toBe("$ 12.500");
     expect(formatARS(99)).toBe("$ 0,99");
     expect(formatARS(123456789)).toBe("$ 1.234.567,89");
   });

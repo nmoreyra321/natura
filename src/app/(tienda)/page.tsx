@@ -28,6 +28,11 @@ function pickHeroProducts(...lists: PublicProduct[][]): PublicProduct[] {
   return out;
 }
 
+/** Primero lo que hay en stock (lo agotado igual se muestra, al final). */
+function stockFirst(list: PublicProduct[]): PublicProduct[] {
+  return [...list.filter((p) => p.stock > 0), ...list.filter((p) => p.stock <= 0)];
+}
+
 /** Hasta 8 productos para «Todos los productos» que no estén ya en las otras filas del inicio. */
 function pickMore(all: PublicProduct[], ...shown: PublicProduct[][]): PublicProduct[] {
   const seen = new Set(shown.flatMap((list) => list.slice(0, 8).map((p) => p.id)));
@@ -54,16 +59,16 @@ export default async function HomePage() {
       d={{
         hasProducts: (count ?? 0) > 0,
         categories,
-        offers: highlights.offers,
+        offers: stockFirst(highlights.offers),
         bestSellers,
-        featured: highlights.featured,
-        latest: highlights.latest,
+        featured: stockFirst(highlights.featured),
+        latest: stockFirst(highlights.latest),
         heroProducts: pickHeroProducts(highlights.offers, highlights.featured, bestSellers, highlights.latest),
         campaign: campaign ? { ...campaign, products: campaignProducts } : null,
         clubMinCents: Math.round(clubMin * 100),
         reviews,
         // «Todos los productos» al final: los que no aparecieron en las filas de arriba.
-        more: pickMore(catalog.products, highlights.offers, bestSellers, highlights.featured, highlights.latest),
+        more: stockFirst(pickMore(catalog.products, highlights.offers, bestSellers, highlights.featured, highlights.latest)),
         totalProducts: catalog.total || count || 0,
         whatsappUrl: whatsapp ? buildWhatsAppUrl(whatsapp, "¡Hola Mariel! Quería hacerte una consulta 😊") : null,
       }}

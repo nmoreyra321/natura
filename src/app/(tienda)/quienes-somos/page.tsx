@@ -5,6 +5,7 @@ import Link from "next/link";
 import { LeafMark } from "@/components/store/logo";
 import { getSocialLinks } from "@/lib/store-settings";
 import { buildWhatsAppUrl, getWhatsAppNumber } from "@/lib/whatsapp";
+import { DELIVERY_TEXT } from "@/lib/delivery";
 
 export const metadata: Metadata = {
   title: "Quiénes somos",
@@ -18,7 +19,7 @@ const WHY = [
   { icon: BadgePercent, title: "Precios especiales", text: "Más baratos que en la revista, en todos los productos.", tone: "bg-sun" },
   { icon: ShieldCheck, title: "Productos originales", text: "Todo es Natura original, como lo recibo de la marca.", tone: "bg-sage" },
   { icon: Heart, title: "Te asesoro", text: "Te ayudo a elegir el perfume, la crema o el regalo ideal.", tone: "bg-pink" },
-  { icon: Truck, title: "Entrega coordinada", text: "Arreglamos juntas el día y el lugar que te quede cómodo.", tone: "bg-lilac" },
+  { icon: Truck, title: "Entrega coordinada", text: `En zona sur: puntos de encuentro en ${DELIVERY_TEXT}. Arreglamos juntas el día.`, tone: "bg-lilac" },
 ];
 
 function FacebookIcon({ className }: { className?: string }) {

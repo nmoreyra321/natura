@@ -20,6 +20,15 @@ function escapeRegex(char: string): string {
  * su versión con tilde, para que "jabon" encuentre "Jabón". A diferencia de un comodín,
  * la vocal no coincide con cualquier letra: "humor" no encuentra "splash Mora".
  */
+/** Palabras que la clienta usa pero no figuran así en los nombres de Natura. */
+const SYNONYMS: Record<string, string> = {
+  perfume: "(perfum|fragancia|colonia|eau de (toilette|parfum|cologne)|deo parfum)",
+  perfumes: "(perfum|fragancia|colonia|eau de (toilette|parfum|cologne)|deo parfum)",
+  fragancia: "(perfum|fragancia|colonia|eau de (toilette|parfum|cologne)|deo parfum)",
+  fragancias: "(perfum|fragancia|colonia|eau de (toilette|parfum|cologne)|deo parfum)",
+  colonia: "(colonia|eau de (toilette|cologne))",
+};
+
 export function nameSearchPatterns(q: string): string[] {
   return q
     .toLowerCase()
@@ -27,6 +36,7 @@ export function nameSearchPatterns(q: string): string[] {
     .filter(Boolean)
     .slice(0, 6)
     .map((word) =>
+      SYNONYMS[word] ??
       [...word]
         .map((c) => {
           const base = BASE[c];

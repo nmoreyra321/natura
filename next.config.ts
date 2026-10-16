@@ -25,6 +25,10 @@ const securityHeaders = [
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   { key: "X-Frame-Options", value: "DENY" },
   { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+  // Siempre conexión segura (https), también en las próximas visitas.
+  { key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains" },
+  // Nadie puede meter la tienda dentro de otra página (complementa X-Frame-Options).
+  { key: "Content-Security-Policy", value: "frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'" },
 ];
 
 const nextConfig: NextConfig = {

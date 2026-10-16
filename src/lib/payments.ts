@@ -23,10 +23,15 @@ export async function syncMercadoPagoPayment(
   }
   const { data: order } = await admin
     .from("orders")
-    .select("id, total, payment_method")
+    .select("id, total, payment_method, payment_status")
     .eq("id", payment.orderId)
     .maybeSingle();
   if (!order || order.payment_method !== "mercadopago") return null;
+
+  // Si ya estaba aprobado, solo una devolución o un contracargo lo cambian (no un aviso viejo).
+  if (order.payment_status === "approved" && !["approved", "refunded", "charged_back"].includes(payment.status)) {
+    return { orderId: order.id, status: "approved" };
+  }
 
   if (payment.status === "approved" && payment.amount + 0.01 < Number(order.total)) {
     console.error(`[pagos] Pago ${payment.id} por ${payment.amount} no cubre el pedido ${order.id} (${order.total}).`);

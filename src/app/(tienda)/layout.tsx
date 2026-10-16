@@ -1,11 +1,14 @@
 import { BackButton } from "@/components/store/back-button";
 import { Footer } from "@/components/store/footer";
 import { Header } from "@/components/store/header";
+import { WhatsAppFab } from "@/components/store/whatsapp-fab";
 import { getActiveCategories } from "@/lib/catalog";
+import { buildWhatsAppUrl, getWhatsAppNumber } from "@/lib/whatsapp";
 
 export default async function StoreLayout({ children }: { children: React.ReactNode }) {
   const categories = await getActiveCategories();
   const nav = categories.map((c) => ({ name: c.name, slug: c.slug }));
+  const whatsapp = getWhatsAppNumber();
   return (
     <>
       <a
@@ -20,6 +23,7 @@ export default async function StoreLayout({ children }: { children: React.ReactN
         {children}
       </main>
       <Footer categories={nav} />
+      {whatsapp ? <WhatsAppFab url={buildWhatsAppUrl(whatsapp, "¡Hola Mariel! Quería hacerte una consulta 😊")} /> : null}
     </>
   );
 }

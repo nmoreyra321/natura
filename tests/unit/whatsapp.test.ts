@@ -28,10 +28,10 @@ describe("mensaje de pedido", () => {
   it("incluye productos, cantidades, subtotales, total y aclara que es pendiente", () => {
     const msg = buildOrderMessage(lines);
     expect(msg).toContain("1. Perfume & Co #1 (100 ml)");
-    expect(msg).toContain("2 x $ 20.000,00 = $ 40.000,00");
-    expect(msg).toContain("1 x $ 3.000,00 = $ 3.000,00");
-    expect(msg).toContain("*Total: $ 43.000,00*");
-    expect(msg).toContain("Ahorro respecto del precio de revista: $ 10.000,00");
+    expect(msg).toContain("2 x $ 20.000 = $ 40.000");
+    expect(msg).toContain("1 x $ 3.000 = $ 3.000");
+    expect(msg).toContain("*Total: $ 43.000*");
+    expect(msg).toContain("Ahorro respecto del precio de revista: $ 10.000");
     expect(msg).toMatch(/espera de la confirmación de disponibilidad/);
   });
 

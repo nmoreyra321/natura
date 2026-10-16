@@ -21,6 +21,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { isValidPrice, planMagazinePriceUpdate, salePriceFromDiscount, toCents } from "@/lib/pricing";
 import { aliasKey, cleanInvoiceNumber, codeKey, mergeReceiptItems, parseArDate, skuFromCode } from "@/lib/receipt";
 import { nameSearchPatterns } from "@/lib/search";
+import { allowRequest } from "@/lib/rate-limit";
 import { slugify } from "@/lib/slug";
 import { createSessionClient, CATALOG_TAG } from "@/lib/supabase/server";
 import {
@@ -69,6 +70,10 @@ export async function signIn(_: unknown, formData: FormData): Promise<ActionResu
 
   const supabase = await createSessionClient();
   if (!supabase) return { ok: false, error: "Falta configurar Supabase en el servidor." };
+  // Freno contra quien prueba contraseñas: 10 intentos cada 15 minutos por conexión.
+  if (!(await allowRequest("login", 10, 900))) {
+    return { ok: false, error: "Probaste muchas veces. Esperá 15 minutos y volvé a intentar." };
+  }
 
   const { error } = await supabase.auth.signInWithPassword(parsed.data);
   if (error) {
