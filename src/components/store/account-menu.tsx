@@ -4,6 +4,7 @@ import { CircleUser, Gift, LogOut, Package, ShoppingBag } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 
 import { getLoginProviders } from "@/lib/config";
 import { getBrowserClient } from "@/lib/supabase/browser";
@@ -93,7 +94,8 @@ export function AccountMenu() {
                   onClick={async () => {
                     await getBrowserClient()?.auth.signOut();
                     setOpen(false);
-                    // Al salir, vuelve al inicio de la tienda.
+                    // Al salir, vuelve al inicio de la tienda con un cartelito.
+                    toast.success("Saliste de tu cuenta. ¡Hasta pronto! 👋", { position: "bottom-center", duration: 2500 });
                     router.push("/");
                     router.refresh();
                   }}

@@ -77,6 +77,7 @@ export function SignOutButton() {
       onClick={async () => {
         setPending(true);
         await getBrowserClient()?.auth.signOut();
+        toast.success("Saliste de tu cuenta. ¡Hasta pronto! 👋", { position: "bottom-center", duration: 2500 });
         router.push("/");
         router.refresh();
       }}
