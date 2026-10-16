@@ -7,7 +7,6 @@ import { AccountLogin } from "@/components/store/account-login";
 import { AccountProfile, SignOutButton } from "@/components/store/account-profile";
 import { getLoginProviders } from "@/lib/config";
 import { accountClub, getCustomer } from "@/lib/customer";
-import { formatARS } from "@/lib/format";
 import { GIFT_EVERY } from "@/lib/loyalty";
 
 export const metadata: Metadata = {
@@ -73,30 +72,24 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
         </Link>
       ) : null}
 
-      <section className="mt-6 rounded-3xl bg-gradient-to-br from-blush to-sun/40 p-5">
-        <h2 className="flex items-center gap-2 font-display text-lg font-bold">
-          <Gift className="size-5 text-coral-deep" aria-hidden="true" /> Club Natu Mariel
-        </h2>
-        {!club ? (
-          <p className="mt-1 text-sm">Cargá tu WhatsApp abajo para empezar a sumar compras.</p>
-        ) : club.pending > 0 ? (
-          <p className="mt-1 font-semibold">¡Te ganaste un regalo! 🎉 Natu Mariel te lo entrega con tu próximo pedido.</p>
-        ) : (
-          <>
-            <p className="mt-1 text-sm">
-              Cada {GIFT_EVERY} compras{club.minCents > 0 ? ` de ${formatARS(club.minCents)} o más` : ""} te ganás un regalo. Llevás{" "}
-              <b>{club.progress}</b> de {GIFT_EVERY}
-              {club.left === 1 ? ": ¡te falta solo 1!" : `: te faltan ${club.left}.`}
-            </p>
-            <span className="mt-2 flex gap-1.5" aria-hidden="true">
-              {Array.from({ length: GIFT_EVERY }, (_, i) => (
-                <span key={i} className={`size-3.5 rounded-full ${i < club.progress ? "bg-coral-deep" : "bg-white"}`} />
-              ))}
-            </span>
-            <p className="mt-2 text-xs text-muted">Suman los pedidos hechos con tu cuenta, pagados y confirmados.</p>
-          </>
-        )}
-      </section>
+      <Link
+        href="/club"
+        className="mt-6 flex items-center justify-between gap-3 rounded-2xl bg-gradient-to-br from-blush to-sun/40 p-4 transition hover:-translate-y-0.5"
+      >
+        <span>
+          <span className="flex items-center gap-2 font-display text-lg font-bold">
+            <Gift className="size-5 text-coral-deep" aria-hidden="true" /> Club Natu Mariel
+          </span>
+          <span className="block text-sm">
+            {!club
+              ? "Cargá tu WhatsApp abajo para empezar a sumar."
+              : club.pending > 0
+                ? "¡Te ganaste un regalo! 🎉"
+                : `Llevás ${club.progress} de ${GIFT_EVERY}. Ver mi Club`}
+          </span>
+        </span>
+        <ChevronRight className="size-5 shrink-0 text-coral-deep" aria-hidden="true" />
+      </Link>
 
       <section id="pedidos" className="mt-6 scroll-mt-28">
         <h2 className="font-display text-xl font-bold">Mis pedidos</h2>

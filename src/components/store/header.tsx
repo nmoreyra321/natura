@@ -293,7 +293,8 @@ export function Header({ categories }: { categories: NavCategory[] }) {
                   items: [
                     { href: "/carrito", label: "Mi carrito" },
                     { href: "/mi-pedido", label: "Seguir mi pedido" },
-                    { href: "/cuenta", label: "Mi cuenta y Club" },
+                    { href: "/cuenta", label: "Mi cuenta" },
+                    { href: "/club", label: "Club Natu Mariel 🎁" },
                   ],
                 },
                 {

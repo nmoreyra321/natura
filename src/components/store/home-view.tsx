@@ -310,7 +310,7 @@ export function HomeView({ d }: { d: HomeData }) {
                     </li>
                   ))}
                 </ol>
-                <Link href="/cuenta" className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-full bg-coral-deep px-5 text-sm font-bold text-white shadow-lift transition hover:-translate-y-0.5 sm:mt-5 sm:min-h-11 sm:px-6 sm:text-base">
+                <Link href="/club" className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-full bg-coral-deep px-5 text-sm font-bold text-white shadow-lift transition hover:-translate-y-0.5 sm:mt-5 sm:min-h-11 sm:px-6 sm:text-base">
                   Empezar a sumar <ArrowRight className="size-4" aria-hidden="true" />
                 </Link>
               </div>

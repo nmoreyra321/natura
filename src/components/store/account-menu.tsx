@@ -93,7 +93,10 @@ export function AccountMenu() {
               </div>
               <nav className="flex flex-col border-t border-line/70 pt-1.5">
                 <Link href="/cuenta" className={item} onClick={() => setOpen(false)}>
-                  <Gift className="size-5 text-coral-deep" aria-hidden="true" /> Mi cuenta y Club
+                  <CircleUser className="size-5 text-coral-deep" aria-hidden="true" /> Mi cuenta
+                </Link>
+                <Link href="/club" className={item} onClick={() => setOpen(false)}>
+                  <Gift className="size-5 text-coral-deep" aria-hidden="true" /> Club Natu Mariel
                 </Link>
                 <Link href="/cuenta#pedidos" className={item} onClick={() => setOpen(false)}>
                   <ShoppingBag className="size-5 text-coral-deep" aria-hidden="true" /> Mis pedidos
@@ -128,7 +131,10 @@ export function AccountMenu() {
               ) : (
                 <p className="rounded-2xl bg-cream p-3 text-sm font-semibold">Muy pronto vas a poder entrar con tu cuenta. 💖</p>
               )}
-              <Link href="/mi-pedido" onClick={() => setOpen(false)} className="mt-3 flex items-center gap-2 px-1 text-sm font-semibold text-coral-deep underline">
+              <Link href="/club" onClick={() => setOpen(false)} className="mt-3 flex items-center gap-2 px-1 text-sm font-semibold text-coral-deep underline">
+                <Gift className="size-4" aria-hidden="true" /> Cómo funciona el Club
+              </Link>
+              <Link href="/mi-pedido" onClick={() => setOpen(false)} className="mt-2 flex items-center gap-2 px-1 text-sm font-semibold text-coral-deep underline">
                 <Package className="size-4" aria-hidden="true" /> Seguir un pedido sin cuenta
               </Link>
             </div>
