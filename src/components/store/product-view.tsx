@@ -62,7 +62,9 @@ export function ProductView({
 
       {/* minmax(0,1fr): la fila de miniaturas (que se desliza) no puede ensanchar la página en el celular. */}
       <div className="grid grid-cols-[minmax(0,1fr)] gap-6 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] md:gap-10 lg:gap-14">
-        <div className="relative min-w-0 md:sticky md:top-24 md:self-start">
+        {/* En la compu la foto queda a la vista al bajar, pero nunca más alta que la pantalla
+            (si no, en una notebook queda trabada y cortada). */}
+        <div className="relative min-w-0 md:sticky md:top-28 md:mx-auto md:w-full md:max-w-[calc(100dvh-13rem)] md:self-start">
           <Gallery images={images} name={product.name} />
           {getPriceInfo(product.magazine_price, product.sale_price).hasDiscount ? (
             <span className="absolute top-3 left-3 z-10 rounded-full bg-coral-deep px-3.5 py-1.5 font-display text-lg leading-none font-bold text-white shadow-lift tabular">
