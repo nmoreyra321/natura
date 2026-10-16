@@ -40,14 +40,14 @@ export type Database = {
                   ]
                 },"categories": {
                   Row: {
-                    "created_at": string,"description": string | null,"id": string,"is_visible": boolean,"name": string,"position": number,"slug": string,"updated_at": string
+                    "created_at": string,"description": string | null,"discount_offer": boolean,"discount_percent": number,"id": string,"is_visible": boolean,"name": string,"position": number,"slug": string,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"description"?: string | null,"id"?: string,"is_visible"?: boolean,"name": string,"position"?: number,"slug": string,"updated_at"?: string
+                    "created_at"?: string,"description"?: string | null,"discount_offer"?: boolean,"discount_percent"?: number,"id"?: string,"is_visible"?: boolean,"name": string,"position"?: number,"slug": string,"updated_at"?: string
                   }
                   Update: {
-                    "created_at"?: string,"description"?: string | null,"id"?: string,"is_visible"?: boolean,"name"?: string,"position"?: number,"slug"?: string,"updated_at"?: string
+                    "created_at"?: string,"description"?: string | null,"discount_offer"?: boolean,"discount_percent"?: number,"id"?: string,"is_visible"?: boolean,"name"?: string,"position"?: number,"slug"?: string,"updated_at"?: string
                   }
                   Relationships: [
                     

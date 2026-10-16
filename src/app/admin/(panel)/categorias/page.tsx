@@ -8,7 +8,7 @@ export const metadata = { title: "Categorías" };
 export default async function CategoriesPage() {
   const { supabase } = await requireAdmin();
   const [{ data: categories }, { data: products }] = await Promise.all([
-    supabase.from("categories").select("id, name, slug, description, position, is_visible").order("position"),
+    supabase.from("categories").select("id, name, slug, description, position, is_visible, discount_percent, discount_offer").order("position"),
     supabase.from("products").select("category_id, status"),
   ]);
   const counts = new Map<string, { total: number; published: number }>();
@@ -25,7 +25,13 @@ export default async function CategoriesPage() {
       <ProductsHeader active="categorias" />
       <div className="mx-auto mt-5 max-w-3xl">
       <CategoryDiscount
-        categories={(categories ?? []).map((c) => ({ id: c.id, name: c.name, total: counts.get(c.id)?.total ?? 0 }))}
+        categories={(categories ?? []).map((c) => ({
+          id: c.id,
+          name: c.name,
+          total: counts.get(c.id)?.total ?? 0,
+          percent: Number(c.discount_percent),
+          offer: c.discount_offer,
+        }))}
       />
       <p className="mt-6 text-muted">
         Una categoría aparece en la tienda solo si está visible y tiene al menos un producto publicado.

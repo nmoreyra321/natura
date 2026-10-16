@@ -250,7 +250,7 @@ export function QuickSale() {
           className="mt-1 h-11 w-full rounded-full border border-line bg-white px-4 text-base"
         />
         <label htmlFor="vr-tel" className="mt-3 block text-sm font-semibold">
-          WhatsApp de la clienta <span className="font-normal text-muted">(opcional, para recordarle si queda debiendo)</span>
+          WhatsApp de la clienta <span className="font-normal text-muted">(opcional: para recordarle si queda debiendo, y si tiene cuenta suma al Club)</span>
         </label>
         <input
           id="vr-tel"

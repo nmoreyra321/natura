@@ -85,6 +85,8 @@ export function CartView({
   const requestId = useRef(0);
   /** Se suma al tocar «Reintentar» para volver a verificar el carrito. */
   const [retry, setRetry] = useState(0);
+  const summaryRef = useRef<HTMLElement>(null);
+  const [summaryVisible, setSummaryVisible] = useState(true);
   const [customerName, setCustomerName] = useState(() => readSaved(NAME_KEY) || account?.name || "");
   // Con cuenta y WhatsApp cargado, se usa el de la cuenta (con ese número suma al Club).
   const [customerPhone, setCustomerPhone] = useState(() => (account?.phone ? formatPhone(account.phone) : readSaved(PHONE_KEY)));
@@ -227,6 +229,15 @@ export function CartView({
     [items],
   );
   const totals = getOrderTotals(lines);
+  const hasItems = items.length > 0;
+  useEffect(() => {
+    const el = summaryRef.current;
+    if (!el || !hydrated || !hasItems) return;
+    // En el celu, la barra de abajo solo se muestra mientras el resumen no está a la vista.
+    const observer = new IntersectionObserver(([entry]) => setSummaryVisible(entry.isIntersecting), { threshold: 0.05 });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [hydrated, hasItems]);
   /** Lo que paga en total: productos más el envío (si eligió envío a domicilio). */
   const grandCents = totals.totalCents + shippingCents;
   /** Aclaración junto al monto a pagar: que se vea que el envío está incluido (o que falta elegirlo). */
@@ -345,7 +356,7 @@ export function CartView({
         </ul>
       </section>
 
-      <aside aria-labelledby="summary-title" className="h-fit rounded-3xl bg-warm-white p-5 shadow-lift lg:sticky lg:top-24">
+      <aside ref={summaryRef} id="resumen" aria-labelledby="summary-title" className="h-fit rounded-3xl bg-warm-white p-5 shadow-lift lg:sticky lg:top-24">
         <h2 id="summary-title" className="font-display text-2xl font-bold">Resumen</h2>
         <dl className="mt-4 flex flex-col gap-2 tabular">
           <div className="flex justify-between">
@@ -808,6 +819,22 @@ export function CartView({
           </Link>
         </div>
       </aside>
+      {!summaryVisible ? (
+        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-warm-white/95 px-4 py-3 shadow-lift backdrop-blur lg:hidden">
+          <div className="mx-auto flex max-w-xl items-center justify-between gap-3">
+            <div className="tabular">
+              <p className="text-xs text-muted">Total{deliveryMethod === "envio" && !zone ? " (sin envío)" : ""}</p>
+              <p className="text-xl font-extrabold text-coral-deep">{formatARS(grandCents)}</p>
+            </div>
+            <Button
+              size="lg"
+              onClick={() => summaryRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
+            >
+              Finalizar compra
+            </Button>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -37,7 +37,7 @@ export default async function SettingsPage() {
     .select("transfer_alias, transfer_cbu, transfer_holder, transfer_bank, mp_link, mp_surcharge_percent, facebook_url, instagram_url, shipping_min_total")
     .eq("id", 1)
     .maybeSingle();
-  const { data: zones } = await supabase.from("shipping_zones").select("id, name, percent").order("position").order("name");
+  const { data: zones } = await supabase.from("shipping_zones").select("id, name, percent, is_active").order("position").order("name");
   const whatsapp = getWhatsAppNumber();
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ? getSiteUrl() : null;
   return (
@@ -73,7 +73,7 @@ export default async function SettingsPage() {
           El envío es un % de la compra, según la localidad, y se suma solo al total del pedido. Si no llega a la compra mínima, no se ofrece el envío.
         </p>
         <ShippingPricesForm
-          zones={(zones ?? []).map((z) => ({ id: z.id, name: z.name, percent: Number(z.percent) }))}
+          zones={(zones ?? []).map((z) => ({ id: z.id, name: z.name, percent: Number(z.percent), is_active: z.is_active }))}
           minTotal={Number(settings?.shipping_min_total ?? 35000)}
         />
       </section>

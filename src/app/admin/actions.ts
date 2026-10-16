@@ -1148,11 +1148,17 @@ export async function registerManualSale(input: ManualSaleInput): Promise<Action
 
     const paidCents = Math.min(Math.max(toCents(input.amountPaid) || 0, 0), totalCents);
     const complete = paidCents >= totalCents;
+    const salePhone = toWhatsAppPhone(input.customerPhone);
+    // Si el WhatsApp es de una clienta con cuenta, la venta queda a su nombre y suma al Club.
+    const { data: account } = salePhone
+      ? await admin.from("customers").select("user_id").eq("phone", salePhone).limit(1).maybeSingle()
+      : { data: null };
     const { data: order, error: insertError } = await admin
       .from("orders")
       .insert({
         customer_name: input.customerName?.trim().slice(0, 80) || null,
-        customer_phone: toWhatsAppPhone(input.customerPhone),
+        customer_phone: salePhone,
+        customer_user_id: account?.user_id ?? null,
         total: totalCents / 100,
         savings: savingsCents / 100,
         channel,
@@ -1179,7 +1185,7 @@ export async function registerManualSale(input: ManualSaleInput): Promise<Action
     refreshCatalog();
     revalidatePath("/admin/pedidos");
     revalidatePath("/admin/ventas");
-    return { ok: true, data: { code: order.code }, message: `Venta ${order.code} registrada. Ya descontamos el stock.` };
+    return { ok: true, data: { code: order.code }, message: `Venta ${order.code} registrada. Ya descontamos el stock.${account ? " Es clienta con cuenta: suma al Club." : ""}` };
   } catch (e) {
     return fail(e, "No pudimos registrar la venta.");
   }
@@ -2000,6 +2006,62 @@ export async function saveShippingSettings(input: unknown): Promise<ActionResult
   }
 }
 
+/** Agrega una localidad a la que se hace envío a domicilio. */
+export async function addShippingZone(name: string, percent: number): Promise<ActionResult> {
+  try {
+    const { supabase } = await assertAdmin();
+    const clean = String(name ?? "").trim().replace(/\s+/g, " ").slice(0, 60);
+    if (clean.length < 2) return { ok: false, error: "Escribí el nombre de la localidad." };
+    if (!Number.isFinite(percent) || percent < 0 || percent > 100) return { ok: false, error: "El % va de 0 a 100." };
+    const { data: last } = await supabase.from("shipping_zones").select("position").order("position", { ascending: false }).limit(1);
+    const { error } = await supabase
+      .from("shipping_zones")
+      .insert({ name: clean, percent: Math.round(percent * 100) / 100, position: (last?.[0]?.position ?? 0) + 10 });
+    if (error) {
+      if (error.code === "23505") return { ok: false, error: "Esa localidad ya está en la lista." };
+      return fail(error, "No pudimos agregar la localidad.");
+    }
+    refreshCatalog();
+    revalidatePath("/carrito");
+    revalidatePath("/admin/configuracion");
+    return { ok: true, message: `Agregaste ${clean}.` };
+  } catch (e) {
+    return fail(e, "No pudimos agregar la localidad.");
+  }
+}
+
+/** Apaga o vuelve a prender una localidad (apagada no se ofrece en el carrito, pero no se pierde). */
+export async function setShippingZoneActive(id: string, active: boolean): Promise<ActionResult> {
+  try {
+    const { supabase } = await assertAdmin();
+    if (!UUID_RE.test(id)) return { ok: false, error: "Datos inválidos." };
+    const { error } = await supabase.from("shipping_zones").update({ is_active: active }).eq("id", id);
+    if (error) return fail(error, "No pudimos cambiar la localidad.");
+    refreshCatalog();
+    revalidatePath("/carrito");
+    revalidatePath("/admin/configuracion");
+    return { ok: true, message: active ? "Localidad activada." : "Localidad apagada: ya no se ofrece en el carrito." };
+  } catch (e) {
+    return fail(e, "No pudimos cambiar la localidad.");
+  }
+}
+
+/** Borra una localidad. Los pedidos viejos conservan el nombre que tenían. */
+export async function deleteShippingZone(id: string): Promise<ActionResult> {
+  try {
+    const { supabase } = await assertAdmin();
+    if (!UUID_RE.test(id)) return { ok: false, error: "Datos inválidos." };
+    const { error } = await supabase.from("shipping_zones").delete().eq("id", id);
+    if (error) return fail(error, "No pudimos borrar la localidad.");
+    refreshCatalog();
+    revalidatePath("/carrito");
+    revalidatePath("/admin/configuracion");
+    return { ok: true, message: "Localidad borrada." };
+  } catch (e) {
+    return fail(e, "No pudimos borrar la localidad.");
+  }
+}
+
 /**
  * Descuento por categoría: el precio especial de TODOS los productos de la categoría pasa a ser
  * la revista menos el %. Con «mostrar en Ofertas», además aparecen en la página de Ofertas.
@@ -2018,10 +2080,9 @@ export async function applyCategoryDiscount(input: unknown): Promise<ActionResul
       .eq("category_id", categoryId)
       .limit(5000);
     if (readError) return fail(readError, "No pudimos leer los productos de la categoría.");
-    if (!rows?.length) return { ok: false, error: "Esa categoría no tiene productos." };
 
     const results = await Promise.all(
-      rows.map((p) => {
+      (rows ?? []).map((p) => {
         const sale_price = salePriceFromDiscount(p.magazine_price, percent);
         if (!Number.isFinite(sale_price)) return Promise.resolve({ error: null, skipped: true });
         const discounted = sale_price < Number(p.magazine_price);
@@ -2036,14 +2097,25 @@ export async function applyCategoryDiscount(input: unknown): Promise<ActionResul
     );
     const failed = results.find((r) => r.error);
     if (failed?.error) return fail(failed.error, "No pudimos actualizar algunos precios.");
+    // Queda guardado: los productos nuevos (o con precio de revista nuevo) de la categoría lo toman solos.
+    const { error: saveError } = await supabase
+      .from("categories")
+      .update({ discount_percent: percent, discount_offer: markOffer })
+      .eq("id", categoryId);
+    if (saveError) return fail(saveError, "Se cambiaron los precios, pero no pudimos guardar el descuento de la categoría.");
     refreshCatalog();
     revalidatePath("/admin/productos");
+    revalidatePath("/admin/categorias");
     const updated = results.filter((r) => !r.skipped).length;
     return {
       ok: true,
       data: { updated },
       message:
-        percent === 0
+        updated === 0
+          ? percent === 0
+            ? "Listo: la categoría ya no tiene descuento."
+            : `Listo: ${percent}% guardado. Se aplica solo a los productos que cargues en esta categoría.`
+          : percent === 0
           ? `Listo: ${updated} ${updated === 1 ? "producto quedó" : "productos quedaron"} al precio de revista.`
           : `Listo: ${updated} ${updated === 1 ? "producto" : "productos"} con ${percent}% de descuento.`,
     };

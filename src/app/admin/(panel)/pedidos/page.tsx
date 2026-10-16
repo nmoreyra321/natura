@@ -246,7 +246,10 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
                       code={o.code}
                       name={o.customer_name}
                       phone={o.customer_phone}
-                      pending={status === "pending"}
+                      status={status}
+                      delivery={o.delivery_method}
+                      zone={o.shipping_zone}
+                      trackUrl={`${siteUrl}/pedido/${o.id}`}
                     />
                     <p className="text-sm text-muted">
                       {dateFormatter.format(new Date(o.created_at))} · {units} {units === 1 ? "unidad" : "unidades"}

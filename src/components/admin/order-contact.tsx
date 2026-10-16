@@ -16,14 +16,21 @@ export function OrderContact({
   code,
   name,
   phone,
-  pending,
+  status,
+  delivery,
+  zone,
+  trackUrl,
 }: {
   orderId: string;
   code: string;
   name: string | null;
   phone: string | null;
-  /** Pedido sin confirmar: el mensaje ofrece ayuda para terminarlo. */
-  pending: boolean;
+  /** Estado del pedido: el mensaje cambia según esté pendiente, confirmado, entregado o cancelado. */
+  status: "pending" | "confirmed" | "delivered" | "cancelled";
+  /** "envio" si se lleva a la casa de la clienta. */
+  delivery: string | null;
+  zone: string | null;
+  trackUrl: string;
 }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
@@ -32,9 +39,17 @@ export function OrderContact({
   const [saving, start] = useTransition();
   const wa = toWhatsAppPhone(phone);
   const firstName = (name ?? "").trim().split(/\s+/)[0];
-  const message = pending
-    ? `¡Hola${firstName ? ` ${firstName}` : ""}! Soy Mariel de Natu Mariel 🌸 Vi tu pedido ${code}. ¿Te ayudo a terminarlo?`
-    : `¡Hola${firstName ? ` ${firstName}` : ""}! Soy Mariel de Natu Mariel 🌸 Te escribo por tu pedido ${code}.`;
+  const hello = `¡Hola${firstName ? ` ${firstName}` : ""}! Soy Mariel de Natu Mariel 🌸`;
+  const message = {
+    pending: `${hello} Vi tu pedido ${code}. ¿Te ayudo a terminarlo?\n${trackUrl}`,
+    confirmed:
+      delivery === "envio"
+        ? `${hello} Tu pedido ${code} está confirmado y listo. Te lo llevo a ${zone ?? "tu casa"}: ¿qué día y horario te queda bien?\n${trackUrl}`
+        : `${hello} Tu pedido ${code} está confirmado y listo. ¿Cuándo y dónde nos encontramos para entregártelo?\n${trackUrl}`,
+    delivered: `${hello} Gracias por tu compra (pedido ${code}). ¡Cualquier cosa me escribís! 💖`,
+    cancelled: `${hello} Tu pedido ${code} quedó cancelado. Si querés, lo armamos de nuevo. 💖`,
+  }[status];
+  const label = { pending: "Avisarle por WhatsApp", confirmed: "Avisar: pedido listo", delivered: "Agradecerle", cancelled: "Escribirle" }[status];
 
   if (editing) {
     return (
@@ -93,7 +108,7 @@ export function OrderContact({
           rel="noopener noreferrer"
           className="inline-flex items-center gap-1 rounded-full bg-sage px-3 py-1 text-xs font-bold text-botanical-deep hover:bg-botanical-deep hover:text-white"
         >
-          <MessageCircle className="size-3.5" aria-hidden="true" /> Escribirle
+          <MessageCircle className="size-3.5" aria-hidden="true" /> {label}
         </a>
       ) : null}
       <button

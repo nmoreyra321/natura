@@ -10,7 +10,7 @@ import { buttonClasses } from "@/components/ui/button";
 import { ConfirmDialog } from "./confirm-dialog";
 
 /** Descuento para toda una categoría (ej.: 20 % a todos los perfumes). */
-export function CategoryDiscount({ categories }: { categories: { id: string; name: string; total: number }[] }) {
+export function CategoryDiscount({ categories }: { categories: { id: string; name: string; total: number; percent: number; offer: boolean }[] }) {
   const router = useRouter();
   const [categoryId, setCategoryId] = useState("");
   const [percent, setPercent] = useState("");
@@ -31,7 +31,8 @@ export function CategoryDiscount({ categories }: { categories: { id: string; nam
         Perfumería. Para volver al precio de revista, poné 0.
       </p>
       <p className="mt-1 text-xs text-muted">
-        Cuando actualices los precios con la revista nueva, volvé a aplicarlo para que el % quede justo.
+        Queda guardado: los productos nuevos de esa categoría, o los que cambien de precio con la revista, toman el
+        descuento solos.
       </p>
       <form
         className="mt-4 flex flex-wrap items-end gap-3"
@@ -45,13 +46,21 @@ export function CategoryDiscount({ categories }: { categories: { id: string; nam
           Categoría
           <select
             value={categoryId}
-            onChange={(e) => setCategoryId(e.target.value)}
+            onChange={(e) => {
+              setCategoryId(e.target.value);
+              const chosen = categories.find((c) => c.id === e.target.value);
+              if (chosen) {
+                setPercent(chosen.percent > 0 ? String(chosen.percent).replace(".", ",") : "");
+                setMarkOffer(chosen.percent > 0 ? chosen.offer : true);
+              }
+            }}
             className="mt-1 h-11 rounded-2xl border border-line bg-white px-3 text-base font-normal"
           >
             <option value="">Elegí una…</option>
             {categories.map((c) => (
-              <option key={c.id} value={c.id} disabled={c.total === 0}>
+              <option key={c.id} value={c.id}>
                 {c.name} ({c.total} {c.total === 1 ? "producto" : "productos"})
+                {c.percent > 0 ? ` · ${String(c.percent).replace(".", ",")} % guardado` : ""}
               </option>
             ))}
           </select>
