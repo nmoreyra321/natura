@@ -116,7 +116,16 @@ function Section({ children, className = "" }: { children: React.ReactNode; clas
 }
 
 /** Tarjetita de producto flotando en la portada. */
-function HeroProduct({ product, className }: { product: PublicProduct; className: string }) {
+function HeroProduct({
+  product,
+  className,
+  badgeLeft = false,
+}: {
+  product: PublicProduct;
+  className: string;
+  /** Etiqueta de descuento a la izquierda (si a la derecha la tapa otra tarjeta). */
+  badgeLeft?: boolean;
+}) {
   const img = product.images[0];
   const src = img ? productImageUrl(img.storage_path) : null;
   const info = getPriceInfo(product.magazine_price, product.sale_price);
@@ -132,7 +141,7 @@ function HeroProduct({ product, className }: { product: PublicProduct; className
         {formatARS(info.saleCents)}
       </span>
       {info.hasDiscount && info.discountPercent >= 1 ? (
-        <span className="absolute -top-2 -right-2 flex size-12 items-center justify-center rounded-full border-[3px] border-white bg-coral-deep font-display text-sm font-bold text-white shadow-soft tabular">
+        <span className={`absolute -top-2 ${badgeLeft ? "-left-2" : "-right-2"} flex size-12 items-center justify-center rounded-full border-[3px] border-white bg-coral-deep font-display text-sm font-bold text-white shadow-soft tabular`}>
           −{info.discountPercent}%
         </span>
       ) : null}
@@ -213,7 +222,7 @@ export function HomeView({ d }: { d: HomeData }) {
             {a ? (
               <div className="relative mx-auto aspect-[1.1] w-full max-w-[250px] sm:max-w-md md:max-w-none" aria-label="Algunos de nuestros productos">
                 <HeroProduct product={a} className="top-[4%] left-[20%] z-10 w-[56%] -rotate-3" />
-                {b ? <HeroProduct product={b} className="top-[40%] left-0 w-[40%] rotate-[-8deg]" /> : null}
+                {b ? <HeroProduct product={b} badgeLeft className="top-[40%] left-0 w-[40%] rotate-[-8deg]" /> : null}
                 {c ? <HeroProduct product={c} className="top-[46%] right-0 w-[40%] rotate-[7deg]" /> : null}
               </div>
             ) : (
