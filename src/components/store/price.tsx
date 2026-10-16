@@ -54,16 +54,16 @@ export function Price({
   if (size === "lg") {
     return (
       <div className="flex w-full max-w-md flex-col gap-2">
-        <div className="grid grid-cols-2 overflow-hidden rounded-3xl border-2 border-coral-deep/25 bg-white">
+        <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] overflow-hidden rounded-3xl border-2 border-coral-deep/25 bg-white">
           <div className="flex flex-col justify-center gap-0.5 bg-cream/70 p-3 sm:p-4">
-            <span className="text-xs font-extrabold tracking-wide text-muted uppercase">Precio en revista</span>
-            <span className="tabular text-xl font-bold text-muted line-through decoration-coral-deep decoration-2 sm:text-2xl">
+            <span className="text-[0.7rem] font-extrabold tracking-wide text-muted uppercase sm:text-xs">Precio en revista</span>
+            <span className="tabular text-lg font-bold break-words text-muted line-through decoration-coral-deep decoration-2 sm:text-2xl">
               {formatARS(info.magazineCents)}
             </span>
           </div>
           <div className="flex flex-col justify-center gap-0.5 bg-coral-soft/60 p-3 sm:p-4">
-            <span className="text-xs font-extrabold tracking-wide text-coral-deep uppercase">Precio Natu Mariel</span>
-            <span className="tabular font-display text-3xl leading-none font-bold tracking-tight text-coral-deep sm:text-4xl">
+            <span className="text-[0.7rem] font-extrabold tracking-wide text-coral-deep uppercase sm:text-xs">Precio Natu Mariel</span>
+            <span className="tabular font-display text-2xl leading-none font-bold tracking-tight break-words text-coral-deep sm:text-4xl">
               {formatARS(info.saleCents)}
             </span>
           </div>
