@@ -154,7 +154,7 @@ export function DashboardView({ d, imageUrl }: { d: DashboardData; imageUrl: (pa
       {/* Números del mes */}
       <section aria-label="Números del mes" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Kpi icon={ShoppingBag} label="Ventas del mes" value={String(d.month.orders)} hint={`${d.month.units} unidades`} tone="bg-sage text-botanical-deep" />
-        <Kpi icon={Receipt} label="Ticket promedio" value={formatARS(d.month.averageCents)} hint="por venta" tone="bg-coral-soft text-coral-deep" />
+        <Kpi icon={Receipt} label="Venta promedio" value={formatARS(d.month.averageCents)} hint="por venta" tone="bg-coral-soft text-coral-deep" />
         <Kpi icon={Wallet} label="Por cobrar" value={formatARS(d.owed.cents)} hint={d.owed.people ? `${d.owed.people} ${d.owed.people === 1 ? "clienta" : "clientas"}` : "nadie te debe"} tone="bg-lilac text-grape" />
         <Kpi icon={Trophy} label="Últimos 14 días" value={formatARS(d.last14Cents)} hint="vendido" tone="bg-sun text-forest" />
       </section>

@@ -29,7 +29,7 @@ export function LoyaltyMinForm({ current }: { current: number }) {
       }}
     >
       <label className="flex flex-col text-sm font-semibold">
-        Suman los pedidos desde
+        Suman los pedidos desde (0 = suman todos)
         <span className="mt-1 flex items-center gap-1">
           <span>$</span>
           <input

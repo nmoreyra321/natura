@@ -1,30 +1,6 @@
 import { formatARS } from "@/lib/format";
 import { getPriceInfo } from "@/lib/pricing";
 
-/** Sticker de descuento: solo aparece si hay un descuento real. */
-export function DiscountBadge({
-  magazinePrice,
-  salePrice,
-  className = "",
-  size = "md",
-}: {
-  magazinePrice: number;
-  salePrice: number;
-  className?: string;
-  size?: "md" | "lg";
-}) {
-  const info = getPriceInfo(magazinePrice, salePrice);
-  if (!info.hasDiscount || info.discountPercent < 1) return null;
-  const big = size === "lg";
-  return (
-    <span
-      className={`sticker inline-flex flex-col items-center justify-center rounded-full border-[3px] border-white bg-coral-deep leading-none font-display font-bold text-white shadow-lift tabular ${big ? "size-20 text-2xl" : "size-14 text-lg"} ${className}`}
-    >
-      −{info.discountPercent}%
-    </span>
-  );
-}
-
 /**
  * Precio: cuando hay descuento se muestra bien claro la comparación «Precio en revista» (tachado)
  * contra «Precio en Natu Mariel», y cuánto se ahorra. Sin descuento, solo el precio.

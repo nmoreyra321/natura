@@ -25,7 +25,7 @@ export default function PrivacyPage() {
         <section>
           <h2 className="font-display text-xl font-bold">Con quién los compartimos</h2>
           <p className="mt-1">
-            Con nadie. Si pagás con Mercado Pago, el pago lo procesa Mercado Pago con sus propias reglas.
+            Con nadie, salvo Mercado Pago si pagás con esa opción: ahí el pago lo procesa Mercado Pago con sus propias reglas.
           </p>
         </section>
         <section>

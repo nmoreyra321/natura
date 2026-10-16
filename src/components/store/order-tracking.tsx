@@ -78,8 +78,6 @@ export function ReportPayment({
   proofOptional = false,
 }: {
   orderId: string;
-  /** Ya no se usa acá (WhatsApp queda como botón aparte en la página del pedido). */
-  whatsappUrl?: string | null;
   /** Pago con link de Mercado Pago: el comprobante es opcional y se muestra chiquito. */
   proofOptional?: boolean;
 }) {
@@ -174,7 +172,7 @@ export function ReportPayment({
       ) : null}
       <p className="text-xs text-muted">
         {file
-          ? "Al tocar el botón se guarda el comprobante y se abre WhatsApp para avisarle a Natu Mariel."
+          ? "Al tocar el botón se guarda el comprobante y Natu Mariel recibe el aviso."
           : proofOptional
             ? "Cuando termines de pagar en Mercado Pago, tocá este botón para avisarle a Natu Mariel."
             : "Si no tenés la captura, igual podés avisar: Natu Mariel lo controla en su cuenta."}
@@ -199,13 +197,11 @@ export function MpPayFlow({
   orderId,
   link,
   totalCents,
-  whatsappUrl,
   again,
 }: {
   orderId: string;
   link: string;
   totalCents: number;
-  whatsappUrl: string | null;
   again: boolean;
 }) {
   const opened = useSyncExternalStore(
@@ -243,7 +239,7 @@ export function MpPayFlow({
       {showReport ? (
         <div className="mt-5 border-t border-botanical/30 pt-4">
           <p className="mb-2 font-bold">¿Ya pagaste?</p>
-          <ReportPayment orderId={orderId} whatsappUrl={whatsappUrl} proofOptional />
+          <ReportPayment orderId={orderId} proofOptional />
         </div>
       ) : (
         <button

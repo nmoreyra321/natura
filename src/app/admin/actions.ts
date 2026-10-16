@@ -52,8 +52,8 @@ function fail(error: unknown, fallback: string): ActionResult<never> {
   if (code === "23505" && String((error as { message?: string }).message).includes("natura_sku")) {
     return { ok: false, error: "Ese código de Natura ya está cargado en otro producto.", fields: { natura_sku: "Código repetido." } };
   }
-  if (code === "23505") return { ok: false, error: "Ya existe otro registro con esa URL (slug).", fields: { slug: "Esta URL ya está en uso." } };
-  if (code === "23514") return { ok: false, error: "Algún dato no cumple las reglas (precios, stock u oferta)." };
+  if (code === "23505") return { ok: false, error: "Ya hay otro producto o categoría con ese nombre de dirección.", fields: { slug: "Esta URL ya está en uso." } };
+  if (code === "23514") return { ok: false, error: "Revisá los precios, el stock y la oferta: algún número no es válido." };
   if (code === "42501") return { ok: false, error: "No tenés permisos para esta acción." };
   console.error("[admin]", fallback, (error as Error)?.message ?? error);
   return { ok: false, error: fallback };
@@ -69,7 +69,7 @@ export async function signIn(_: unknown, formData: FormData): Promise<ActionResu
   if (!parsed.success) return { ok: false, error: "Revisá los datos.", fields: fieldErrors(parsed.error) };
 
   const supabase = await createSessionClient();
-  if (!supabase) return { ok: false, error: "Falta configurar Supabase en el servidor." };
+  if (!supabase) return { ok: false, error: "El panel todavía no está conectado. Avisale a quien armó la página." };
   // Freno contra quien prueba contraseñas: 10 intentos cada 15 minutos por conexión.
   if (!(await allowRequest("login", 10, 900))) {
     return { ok: false, error: "Probaste muchas veces. Esperá 15 minutos y volvé a intentar." };
@@ -108,7 +108,7 @@ export async function saveProduct(
     }
     const data = parsed.data;
     const slug = data.slug || slugify(data.name);
-    if (!slug) return { ok: false, error: "No pudimos generar la URL.", fields: { slug: "Escribí una URL válida." } };
+    if (!slug) return { ok: false, error: "No pudimos generar la dirección.", fields: { slug: "Escribí una dirección válida." } };
 
     const row = { ...data, slug };
     const query = productId
@@ -185,7 +185,7 @@ export async function updateProductQuick(
       clean.stock = patch.stock;
     }
     if (typeof patch.is_featured === "boolean") clean.is_featured = patch.is_featured;
-    if (Object.keys(clean).length === 0) return { ok: false, error: "Nada para actualizar." };
+    if (Object.keys(clean).length === 0) return { ok: false, error: "No hay cambios para guardar." };
 
     const { error } = await supabase.from("products").update(clean).eq("id", productId);
     if (error) return fail(error, "No pudimos actualizar el producto.");
@@ -491,7 +491,7 @@ export async function rejectTransferPayment(orderId: string, reason: string): Pr
     revalidatePath("/admin/pedidos");
     revalidatePath("/admin");
     revalidatePath(`/pedido/${orderId}`);
-    return { ok: true, message: "Listo: la clienta va a ver que el pago no se confirmó." };
+    return { ok: true, message: "Listo: la clienta va a ver en su pedido que el pago no llegó." };
   } catch (e) {
     return fail(e, "No pudimos guardar.");
   }
@@ -717,7 +717,7 @@ export async function bulkUpdateProducts(
     if (patch.category_id === null || (typeof patch.category_id === "string" && UUID_RE.test(patch.category_id))) {
       clean.category_id = patch.category_id;
     }
-    if (Object.keys(clean).length === 0) return { ok: false, error: "Nada para actualizar." };
+    if (Object.keys(clean).length === 0) return { ok: false, error: "No hay cambios para guardar." };
 
     const { data, error } = await supabase.from("products").update(clean).in("id", ids).select("id");
     if (error) return fail(error, "No pudimos actualizar los productos.");
@@ -900,27 +900,6 @@ export async function addProductLot(productId: string, expiry: string, quantity:
   }
 }
 
-/** Resta (o suma) unidades de un lote; si llega a 0 se borra. */
-export async function changeLotQuantity(lotId: string, delta: number): Promise<ActionResult> {
-  try {
-    const { supabase } = await assertAdmin();
-    if (!UUID_RE.test(lotId) || !Number.isInteger(delta) || delta === 0) return { ok: false, error: "Datos inválidos." };
-    const { data: lot } = await supabase.from("product_lots").select("quantity").eq("id", lotId).maybeSingle();
-    if (!lot) return { ok: false, error: "Ese lote ya no existe." };
-    const next = lot.quantity + delta;
-    const { error } =
-      next <= 0
-        ? await supabase.from("product_lots").delete().eq("id", lotId)
-        : await supabase.from("product_lots").update({ quantity: Math.min(next, 10000) }).eq("id", lotId);
-    if (error) return fail(error, "No pudimos actualizar el lote.");
-    revalidatePath("/admin/vencimientos");
-    revalidatePath("/admin");
-    return { ok: true };
-  } catch (e) {
-    return fail(e, "No pudimos actualizar el lote.");
-  }
-}
-
 /**
  * «Vendido» en Próximos a vencer: resta 1 de la lista y 1 del stock del producto.
  * Si era la última unidad anotada, sale de la lista.
@@ -965,34 +944,6 @@ export async function deleteLot(lotId: string): Promise<ActionResult> {
     return { ok: true };
   } catch (e) {
     return fail(e, "No pudimos borrar el lote.");
-  }
-}
-
-/* ----------------------------- Inventario ----------------------------- */
-
-/**
- * Guarda el stock desde la pantalla de Inventario. Si `publishIfStock` está activo y el
- * producto queda con stock, se publica (los que quedan en 0 no cambian de estado).
- */
-export async function setInventoryStock(
-  productId: string,
-  stock: number,
-  publishIfStock: boolean,
-): Promise<ActionResult<{ status: "draft" | "published" }>> {
-  try {
-    const { supabase } = await assertAdmin();
-    if (!UUID_RE.test(productId)) return { ok: false, error: "Datos inválidos." };
-    if (!Number.isInteger(stock) || stock < 0 || stock > 100_000) {
-      return { ok: false, error: "La cantidad tiene que ser un número entero, 0 o más." };
-    }
-    const patch: { stock: number; status?: "published" } = { stock };
-    if (publishIfStock && stock > 0) patch.status = "published";
-    const { data, error } = await supabase.from("products").update(patch).eq("id", productId).select("status").single();
-    if (error) return fail(error, "No pudimos guardar la cantidad.");
-    refreshCatalog();
-    return { ok: true, data: { status: data.status === "published" ? "published" : "draft" } };
-  } catch (e) {
-    return fail(e, "No pudimos guardar la cantidad.");
   }
 }
 
@@ -1154,7 +1105,7 @@ export async function registerManualSale(input: ManualSaleInput): Promise<Action
   try {
     const { supabase } = await assertAdmin();
     const admin = createAdminClient();
-    if (!admin) return { ok: false, error: "Falta configurar la clave secreta de la base (SUPABASE_SECRET_KEY)." };
+    if (!admin) return { ok: false, error: "Falta un dato de configuración del sitio. Avisale a quien armó la página." };
 
     const lines = new Map<string, { quantity: number; unitCents: number }>();
     for (const it of Array.isArray(input?.items) ? input.items.slice(0, 50) : []) {
@@ -1418,7 +1369,7 @@ export async function readReceipt(formData: FormData): Promise<ActionResult<Rece
     const { supabase } = await assertAdmin();
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      return { ok: false, error: "Falta activar la lectura de boletas (clave de Google). Pedile a quien te armó la página que la configure." };
+      return { ok: false, error: "El lector de facturas no está activado. Pedile a quien armó la página que lo configure. Pedile a quien te armó la página que la configure." };
     }
     const files = formData.getAll("foto").filter((f): f is File => f instanceof File && f.size > 0);
     if (files.length === 0) return { ok: false, error: "Subí el PDF de la factura o una foto de la boleta." };
@@ -1536,10 +1487,10 @@ export async function readReceipt(formData: FormData): Promise<ActionResult<Rece
     if (e instanceof ApiError) {
       console.error("[admin] readReceipt:", e.status, e.message);
       if (e.status === 401 || e.status === 403 || (e.status === 400 && /api key/i.test(e.message))) {
-        return { ok: false, error: "La clave de Google no es válida. Hay que revisarla en la configuración de Vercel." };
+        return { ok: false, error: "El lector de facturas no está funcionando. Avisale a quien armó la página." };
       }
       if (e.status === 429) {
-        return { ok: false, error: "Se usó mucho el lector gratis en poco tiempo. Probá de nuevo en un rato." };
+        return { ok: false, error: "Se usó mucho el lector en poco tiempo. Probá de nuevo en un rato. Probá de nuevo en un rato." };
       }
       return { ok: false, error: "El lector de boletas no respondió. Probá de nuevo en un minuto." };
     }
@@ -1817,7 +1768,7 @@ export async function giveLoyaltyGift(phone: unknown): Promise<ActionResult> {
         .not("customer_user_id", "is", null)
         .in("status", [...PURCHASE_STATUSES])
         .eq("payment_status", "approved")
-        .gte("total", await getLoyaltyMinTotal()),
+        .gte("products_total", await getLoyaltyMinTotal()),
       supabase.from("loyalty_gifts").select("id", { count: "exact", head: true }).eq("phone", key),
     ]);
     if (e1 || e2) return fail(e1 ?? e2, "No pudimos anotar el regalo.");
@@ -2040,6 +1991,7 @@ export async function saveShippingSettings(input: unknown): Promise<ActionResult
     ]);
     const failed = results.find((r) => r.error);
     if (failed?.error) return fail(failed.error, "No pudimos guardar los envíos.");
+    refreshCatalog();
     revalidatePath("/carrito");
     revalidatePath("/admin/configuracion");
     return { ok: true, message: "Envíos guardados." };

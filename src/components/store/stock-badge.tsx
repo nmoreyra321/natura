@@ -5,7 +5,7 @@ export function StockBadge({ stock, className = "" }: { stock: number; className
     return (
       <span className={`inline-flex items-center gap-1.5 text-sm font-semibold text-muted ${className}`}>
         <span className="size-2 rounded-full bg-muted/60" aria-hidden="true" />
-        Sin stock
+        Agotado
       </span>
     );
   }

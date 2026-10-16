@@ -32,7 +32,7 @@ export default async function ClubPage() {
   const [{ data: orders, error }, { data: gifts }] = await Promise.all([
     supabase
       .from("orders")
-      .select("customer_name, customer_phone, status, created_at, total, payment_status")
+      .select("customer_name, customer_phone, status, created_at, products_total, payment_status")
       .in("status", [...PURCHASE_STATUSES])
       .not("customer_phone", "is", null)
       // El Club cuenta solo los pedidos hechos con cuenta de clienta.
@@ -40,7 +40,7 @@ export default async function ClubPage() {
       .limit(20000),
     supabase.from("loyalty_gifts").select("phone").limit(20000),
   ]);
-  const club = summarizeClub(orders ?? [], gifts ?? [], minTotal);
+  const club = summarizeClub((orders ?? []).map((o) => ({ ...o, total: o.products_total })), gifts ?? [], minTotal);
   const winners = club.filter((m) => m.pending > 0);
   const onTheWay = club.filter((m) => m.pending === 0);
 
@@ -67,7 +67,7 @@ export default async function ClubPage() {
         <div className="mt-6 rounded-3xl border border-dashed border-line bg-warm-white p-10 text-center">
           <Users className="mx-auto size-10 text-muted" aria-hidden="true" />
           <p className="mt-3 font-display text-xl font-bold">Todavía no hay compras hechas con cuenta.</p>
-          <p className="mt-1 text-muted">Cuando confirmes pedidos, acá vas a ver cuánto le falta a cada clienta para su regalo.</p>
+          <p className="mt-1 text-muted">Cuando una clienta con cuenta tenga pedidos confirmados y pagados, vas a ver acá cuánto le falta para su regalo.</p>
         </div>
       ) : (
         <>

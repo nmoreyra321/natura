@@ -46,7 +46,7 @@ export async function accountClub(phone: string) {
       .not("customer_user_id", "is", null)
       .in("status", [...PURCHASE_STATUSES])
       .eq("payment_status", "approved")
-      .gte("total", min),
+      .gte("products_total", min),
     admin.from("loyalty_gifts").select("id", { count: "exact", head: true }).eq("phone", phone),
   ]);
   return { ...loyaltyStatus(purchases ?? 0, given ?? 0), minCents: Math.round(min * 100) };

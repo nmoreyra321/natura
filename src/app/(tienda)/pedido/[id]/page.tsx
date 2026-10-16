@@ -20,7 +20,7 @@ import { toCents } from "@/lib/pricing";
 import { getLoyaltyMinTotal, getTransferDetails } from "@/lib/store-settings";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { DELIVERY_TEXT } from "@/lib/delivery";
-import { buildOrderMessage, buildWhatsAppUrl, getWhatsAppNumber } from "@/lib/whatsapp";
+import { buildWhatsAppUrl, getWhatsAppNumber } from "@/lib/whatsapp";
 
 export const metadata: Metadata = {
   title: "Tu pedido",
@@ -63,7 +63,7 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
   const { data: order } = await admin
     .from("orders")
     .select(
-      "id, code, created_at, status, total, savings, customer_name, customer_phone, customer_cancelled_at, customer_user_id, is_gift, gift_note, delivery_method, shipping_zone, shipping_address, shipping_cost, payment_method, payment_status, amount_paid, payment_reported_at, payment_rejection, payment_proof_path, items:order_items(product_id, name, size, quantity, unit_price, magazine_price)",
+      "id, code, created_at, status, total, savings, customer_name, customer_phone, customer_cancelled_at, customer_user_id, delivery_method, shipping_zone, shipping_address, shipping_cost, payment_method, payment_status, amount_paid, payment_reported_at, payment_rejection, payment_proof_path, items:order_items(product_id, name, size, quantity, unit_price, magazine_price)",
     )
     .eq("id", id)
     .maybeSingle();
@@ -93,7 +93,7 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
       : { method: "retiro" as const };
   if (clubKey) {
     const [{ count: purchases }, { count: given }] = await Promise.all([
-      admin.from("orders").select("id", { count: "exact", head: true }).eq("customer_phone", clubKey).not("customer_user_id", "is", null).in("status", [...PURCHASE_STATUSES]).eq("payment_status", "approved").gte("total", clubMin),
+      admin.from("orders").select("id", { count: "exact", head: true }).eq("customer_phone", clubKey).not("customer_user_id", "is", null).in("status", [...PURCHASE_STATUSES]).eq("payment_status", "approved").gte("products_total", clubMin),
       admin.from("loyalty_gifts").select("id", { count: "exact", head: true }).eq("phone", clubKey),
     ]);
     club = loyaltyStatus(purchases ?? 0, given ?? 0);
@@ -106,24 +106,12 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
   const trackUrl = `${siteUrl}/pedido/${order.id}`;
 
   const whatsapp = getWhatsAppNumber();
-  const lines = order.items.map((i) => ({
-    name: i.name,
-    size: i.size,
-    quantity: i.quantity,
-    unitCents: toCents(i.unit_price),
-    magazineUnitCents: toCents(i.magazine_price),
-  }));
   const helpUrl = whatsapp
     ? buildWhatsAppUrl(
         whatsapp,
-        `Hola Natu Mariel 👋 Tengo una consulta sobre mi pedido ${order.code}${cancelled ? " (figura como cancelado)" : ""}. ${trackUrl}`,
+        `¡Hola Mariel! 👋 Tengo una consulta sobre mi pedido ${order.code}${cancelled ? " (figura como cancelado)" : ""}. ${trackUrl}`,
       )
     : null;
-  const message = (extra: Parameters<typeof buildOrderMessage>[2]) =>
-    whatsapp
-      ? buildWhatsAppUrl(whatsapp, buildOrderMessage(lines, siteUrl, { orderCode: order.code, customerName: order.customer_name, trackUrl, delivery, ...extra }))
-      : null;
-
   // Qué se le muestra arriba de todo.
   let tone: Tone;
   let Icon = CheckCircle2;
@@ -137,14 +125,14 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
   } else if (isMp) {
     if (state === "paid") {
       [tone, Icon, title] = ["good", CheckCircle2, "¡Pago aprobado!"];
-      text = "¡Gracias por tu compra! Avisá a Natu Mariel por WhatsApp para coordinar la entrega.";
+      text = "¡Gracias por tu compra! Natu Mariel te escribe por WhatsApp para coordinar la entrega.";
     } else if (state === "failed") {
       [tone, Icon, title] = ["bad", XCircle, "El pago no se completó"];
       text = "No se hizo ningún cobro. Podés volver al carrito y probar de nuevo, o elegir otra forma de pago.";
     } else {
       [tone, Icon, title] = ["wait", Clock, "Tu pago está en proceso"];
       text =
-        "Mercado Pago todavía está procesando el pago (por ejemplo, si elegiste pagar en efectivo en un punto de pago). Cuando se acredite, lo vas a ver acá.";
+        "Mercado Pago todavía está procesando el pago (por ejemplo, si elegiste pagar en un punto de pago, como Rapipago). Cuando se acredite, lo vas a ver acá.";
     }
   } else if (order.status === "delivered") {
     [tone, Icon, title] = ["good", PackageCheck, "¡Pedido entregado!"];
@@ -251,7 +239,6 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
                 link={transfer.mpLink}
                 totalCents={owed}
                 again={state === "rejected"}
-                whatsappUrl={message({ paymentMethod: "transferencia", transferReported: true })}
               />
             ) : (
               <>
@@ -264,22 +251,10 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
                 <p className="mt-5 mb-2 font-bold">{transfer ? "2. " : ""}Avisá que ya pagaste</p>
                 <ReportPayment
                   orderId={order.id}
-                  whatsappUrl={message({ paymentMethod: "transferencia", transferReported: true })}
-                />
+                  />
               </>
             )}
           </div>
-        ) : null}
-
-        {state === "review" && !cancelled && whatsapp ? (
-          <a
-            href={message({ paymentMethod: "transferencia", transferReported: true }) ?? "#"}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={buttonClasses("outline", "md", "mt-5 w-full")}
-          >
-            <MessageCircle className="size-4" aria-hidden="true" /> Avisarle a Natu Mariel por WhatsApp
-          </a>
         ) : null}
 
         <ul className="mt-6 divide-y divide-line/70 rounded-2xl border border-line/70 bg-white/60 text-left text-sm">
@@ -337,10 +312,10 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
             )}
             {!counts ? (
               <p className="mt-2 text-xs text-muted">
-                Este pedido no suma porque es de menos de {formatARS(Math.round(clubMin * 100))}. Suman las compras desde ese monto.
+                Este pedido no suma al Club: suman las compras desde {formatARS(Math.round(clubMin * 100))}.
               </p>
             ) : order.payment_status !== "approved" || order.status === "pending" ? (
-              <p className="mt-2 text-xs text-muted">Este pedido se suma cuando esté pagado completo y confirmado.</p>
+              <p className="mt-2 text-xs text-muted">Este pedido suma cuando esté pagado completo y confirmado.</p>
             ) : null}
           </section>
         ) : !cancelled && !order.customer_user_id && getLoginProviders().length > 0 ? (
@@ -363,7 +338,7 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
             <AddReview
               orderId={order.id}
               defaultName={order.customer_name?.trim() ?? ""}
-              label="Contar"
+              label="Contanos"
               className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-white px-3.5 py-1.5 text-sm font-bold text-coral-deep ring-1 ring-line transition hover:bg-blush"
             />
           </div>
@@ -375,7 +350,7 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
               <MessageCircle className="size-5" aria-hidden="true" /> Pedir ayuda por WhatsApp
             </a>
           ) : null}
-          {isMp && state === "paid" ? <PaidOrderActions whatsappUrl={message({ paid: true })} /> : null}
+          {isMp && state === "paid" ? <PaidOrderActions /> : null}
           {isMp && state === "failed" ? (
             <Link href="/carrito" className={buttonClasses("primary", "lg")}>
               Volver al carrito
@@ -414,7 +389,7 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
             </div>
           ) : order.status === "pending" ? (
             <p className="mt-2 border-t border-line pt-4 text-xs text-muted">
-              ¿Querés cancelar este pedido? Como ya hay un pago de por medio, escribile a Natu Mariel y lo resuelven juntas.
+              ¿Querés cancelar este pedido? Como ya hay un pago de por medio, escribile a Natu Mariel por WhatsApp y lo resuelven juntas.
             </p>
           ) : null}
         </div>

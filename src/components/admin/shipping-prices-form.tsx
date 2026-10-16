@@ -45,7 +45,7 @@ export function ShippingPricesForm({
       }}
     >
       <label className="flex flex-wrap items-center gap-2 text-sm font-semibold">
-        Envío solo para compras desde
+        Compra mínima para pedir envío a domicilio
         <span className="flex items-center gap-1">
           $
           <input

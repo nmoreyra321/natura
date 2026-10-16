@@ -1,4 +1,3 @@
-import { formatARS } from "./format";
 
 /**
  * Integración de WhatsApp preparada.
@@ -45,87 +44,6 @@ export function getOrderTotals(lines: OrderLine[]) {
     units += line.quantity;
   }
   return { totalCents, savingsCents, units };
-}
-
-/**
- * Arma el mensaje de pedido, en tono formal. Usa el código del pedido (al azar), nunca el número
- * correlativo, para no mostrar cuántas ventas hay. Deja claro que queda pendiente de confirmación.
- */
-export function buildOrderMessage(
-  lines: OrderLine[],
-  siteUrl?: string,
-  extra: {
-    orderCode?: string | null;
-    customerName?: string | null;
-    paymentMethod?: "efectivo" | "transferencia" | "mercadopago";
-    /** true si ya se pagó online (mensaje desde la página del pedido). */
-    paid?: boolean;
-    /** true si la clienta ya transfirió y subió el comprobante en la tienda. */
-    transferReported?: boolean;
-    /** Página donde la clienta sigue su pedido. */
-    trackUrl?: string | null;
-    /** La clienta marcó «Es para regalo» (con la nota, si escribió una). */
-    gift?: { note?: string | null } | null;
-    /** Cómo lo recibe: envío a domicilio (localidad, dirección y costo) o punto de encuentro. */
-    delivery?: { method: "retiro" } | { method: "envio"; zone: string; address: string; costCents: number } | null;
-  } = {},
-): string {
-  const { totalCents, savingsCents } = getOrderTotals(lines);
-  const rows = lines.map((line, i) => {
-    const name = line.size ? `${line.name} (${line.size})` : line.name;
-    const subtotal = formatARS(line.unitCents * line.quantity);
-    return `${i + 1}. ${name}\n   ${line.quantity} x ${formatARS(line.unitCents)} = ${subtotal}`;
-  });
-
-  const name = extra.customerName?.trim();
-  const parts = [
-    "Hola, Natu Mariel.",
-    name
-      ? `Mi nombre es ${name} y quisiera realizar el siguiente pedido:`
-      : "Quisiera realizar el siguiente pedido:",
-    ...(extra.orderCode ? [`*Código de pedido: ${extra.orderCode}*`] : []),
-    "",
-    ...rows,
-    "",
-    ...(extra.delivery?.method === "envio"
-      ? [`Envío a ${extra.delivery.zone}: ${formatARS(extra.delivery.costCents)}`]
-      : []),
-    `*Total: ${formatARS(totalCents + (extra.delivery?.method === "envio" ? extra.delivery.costCents : 0))}*`,
-  ];
-  if (savingsCents > 0) {
-    parts.push(`Ahorro respecto del precio de revista: ${formatARS(savingsCents)}`);
-  }
-  if (extra.delivery?.method === "envio") {
-    parts.push("", `🚚 *Envío a domicilio:* ${extra.delivery.address} (${extra.delivery.zone})`);
-  } else if (extra.delivery?.method === "retiro") {
-    parts.push("", "📍 *Entrega:* en punto de encuentro");
-  }
-  if (extra.gift) {
-    const note = extra.gift.note?.trim();
-    parts.push("", `🎁 *Es para regalo*${note ? `: ${note}` : ""}`);
-  }
-  if (extra.paid) {
-    parts.push(
-      "",
-      "El pago ya fue realizado mediante Mercado Pago.",
-      "Quedo a la espera para coordinar la entrega. Muchas gracias.",
-    );
-  } else {
-    if (extra.paymentMethod) {
-      const label = {
-        efectivo: "Efectivo",
-        transferencia: extra.transferReported
-          ? "Transferencia o Mercado Pago. Ya hice el pago y lo avisé en la tienda."
-          : "Transferencia",
-        mercadopago: "Mercado Pago",
-      };
-      parts.push("", `Forma de pago: ${label[extra.paymentMethod]}`);
-    }
-    parts.push("", "Quedo a la espera de la confirmación de disponibilidad y de la coordinación de la entrega. Muchas gracias.");
-  }
-  if (extra.trackUrl) parts.push("", `Estado del pedido: ${extra.trackUrl}`);
-  else if (siteUrl) parts.push("", `Pedido realizado en ${siteUrl.replace(/^https?:\/\//, "")}`);
-  return parts.join("\n");
 }
 
 export function buildProductInquiryMessage(name: string, url: string): string {

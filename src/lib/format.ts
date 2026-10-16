@@ -33,7 +33,3 @@ export function formatDate(iso: string): string {
   const d = new Date(iso);
   return Number.isNaN(d.getTime()) ? "" : dateFormatter.format(d);
 }
-
-export function pluralize(count: number, singular: string, plural: string): string {
-  return `${count} ${count === 1 ? singular : plural}`;
-}

@@ -38,11 +38,11 @@ export function BuyAgain({ items }: { items: { productId: string; quantity: numb
           added++;
         }
         if (added === 0) {
-          toast.error("Por ahora no hay stock de estos productos. Podés pedir que te avisen cuando vuelvan.");
+          toast.error("Por ahora no quedan de estos productos. Podés pedir que te avisen cuando vuelvan.");
           return;
         }
         if (missing.length > 0 || res.missing.length > 0) {
-          toast.warning(`Agregamos lo que hay. Sin stock por ahora: ${missing.join(", ") || "algunos productos"}.`);
+          toast.warning(`Agregamos lo que hay. Agotados por ahora: ${missing.join(", ") || "algunos productos"}.`);
         } else {
           toast.success("¡Listo! Pusimos lo mismo en tu carrito.");
         }

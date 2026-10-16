@@ -30,11 +30,11 @@ const STATUS_LABELS: Record<OrderStatus, { label: string; tone: string }> = {
 const PAYMENT_LABELS: Record<string, { label: string; tone: string }> = {
   approved: { label: "Mercado Pago · Pagado", tone: "bg-[#009ee3] text-white" },
   pending: { label: "Mercado Pago · Esperando pago", tone: "bg-[#e6f6fd] text-[#00649a]" },
-  in_process: { label: "Mercado Pago · En proceso", tone: "bg-[#e6f6fd] text-[#00649a]" },
+  in_process: { label: "Mercado Pago · Pago en revisión", tone: "bg-[#e6f6fd] text-[#00649a]" },
   rejected: { label: "Mercado Pago · Rechazado", tone: "bg-coral-soft text-coral-deep" },
   cancelled: { label: "Mercado Pago · No pagó", tone: "bg-cream text-muted" },
   refunded: { label: "Mercado Pago · Devuelto", tone: "bg-cream text-muted" },
-  charged_back: { label: "Mercado Pago · Contracargo", tone: "bg-coral-soft text-coral-deep" },
+  charged_back: { label: "Mercado Pago · Pago reclamado", tone: "bg-coral-soft text-coral-deep" },
 };
 
 function paymentBadge(method: string, status: string | null, paidCents = 0, totalCents = 0, review = false) {
@@ -92,7 +92,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
   let query = supabase
     .from("orders")
     .select(
-      "id, number, code, channel, status, customer_cancelled_at, customer_user_id, is_gift, gift_note, delivery_method, shipping_zone, shipping_address, shipping_cost, customer_name, customer_phone, total, savings, created_at, payment_method, payment_status, paid_at, amount_paid, payment_note, payment_reported_at, payment_rejection, payment_proof_path, items:order_items(id, product_id, name, size, quantity, unit_price), lots:order_lot_allocations(product_id, expires_on, quantity)",
+      "id, number, code, channel, status, customer_cancelled_at, customer_user_id, delivery_method, shipping_zone, shipping_address, shipping_cost, customer_name, customer_phone, total, savings, created_at, payment_method, payment_status, paid_at, amount_paid, payment_note, payment_reported_at, payment_rejection, payment_proof_path, items:order_items(id, product_id, name, size, quantity, unit_price), lots:order_lot_allocations(product_id, expires_on, quantity)",
       { count: "exact" },
     )
     .order("created_at", { ascending: false })
@@ -134,7 +134,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
         </Link>
       </div>
       <p className="text-muted">
-        Cada pedido que una clienta envía por WhatsApp queda acá. Al confirmarlo se descuenta el stock.
+        Acá llegan los pedidos de la tienda y las ventas rápidas. Al confirmar un pedido se descuenta el stock.
       </p>
 
       <nav aria-label="Filtrar por estado" className="mt-6 flex flex-wrap gap-2">
@@ -183,7 +183,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
             {q
               ? `No hay pedidos con “${q}”.`
               : estado === "atender"
-                ? "No hay nada para atender. ¡Todo al día! 🎉"
+                ? "No hay nada por atender. ¡Todo al día! 🎉"
                 : estado === "todos"
                   ? "Todavía no hay pedidos."
                   : "No hay pedidos con este estado."}
@@ -221,16 +221,11 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
                     <p className="flex flex-wrap items-center gap-2">
                       <SelectBox id={o.id} label={`el pedido ${o.code}`} />
                       <span className="font-display text-xl font-bold">Pedido {o.code}</span>
-                      <span className="text-sm text-muted tabular">N.º interno {o.number}</span>
+                      <span className="text-sm text-muted tabular">Pedido n.º {o.number}</span>
                       <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${STATUS_LABELS[status].tone}`}>
                         {status === "cancelled" && o.customer_cancelled_at ? "Cancelado por la clienta" : STATUS_LABELS[status].label}
                       </span>
                       <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${badge.tone}`}>{badge.label}</span>
-                      {o.is_gift ? (
-                        <span className="rounded-full bg-blush px-2.5 py-0.5 text-xs font-bold text-coral-deep" title={o.gift_note ?? undefined}>
-                          🎁 Para regalo{o.gift_note ? `: ${o.gift_note}` : ""}
-                        </span>
-                      ) : null}
                       <span className="rounded-full border border-line px-2.5 py-0.5 text-xs font-bold text-muted">
                         {originLabel(o.channel)}
                       </span>

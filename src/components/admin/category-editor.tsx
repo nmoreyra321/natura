@@ -47,7 +47,7 @@ export function CategoryEditor({ category, counts }: { category: Category | null
       <Field label="Nombre" htmlFor={`n-${p}`} error={fields?.name}>
         <Input id={`n-${p}`} name="name" defaultValue={category?.name} required />
       </Field>
-      <Field label="URL" htmlFor={`s-${p}`} error={fields?.slug} hint={category ? undefined : "Opcional"}>
+      <Field label="Dirección en la web (opcional)" htmlFor={`s-${p}`} error={fields?.slug} hint={category ? undefined : "Opcional"}>
         <Input id={`s-${p}`} name="slug" defaultValue={category?.slug} />
       </Field>
       <Field label="Orden" htmlFor={`o-${p}`} error={fields?.position}>

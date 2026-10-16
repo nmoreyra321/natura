@@ -1,6 +1,6 @@
 "use client";
 
-import { CircleUser, Gift, LogOut, Package, ShoppingBag } from "lucide-react";
+import { CircleUser, Gift, LogOut, Package } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -98,11 +98,8 @@ export function AccountMenu() {
                 <Link href="/club" className={item} onClick={() => setOpen(false)}>
                   <Gift className="size-5 text-coral-deep" aria-hidden="true" /> Club Natu Mariel
                 </Link>
-                <Link href="/cuenta#pedidos" className={item} onClick={() => setOpen(false)}>
-                  <ShoppingBag className="size-5 text-coral-deep" aria-hidden="true" /> Mis pedidos
-                </Link>
                 <Link href="/mi-pedido" className={item} onClick={() => setOpen(false)}>
-                  <Package className="size-5 text-coral-deep" aria-hidden="true" /> Seguir un pedido
+                  <Package className="size-5 text-coral-deep" aria-hidden="true" /> Mis pedidos
                 </Link>
                 <button
                   type="button"

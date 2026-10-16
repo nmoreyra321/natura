@@ -113,7 +113,7 @@ export function ProductForm({
           />
         </Field>
         <Field
-          label="URL del producto"
+          label="Dirección del producto en la web"
           htmlFor="slug"
           error={err("slug")}
           hint={`Se verá como /productos/${slug || slugify(name || "") || "nombre-del-producto"}. Si la dejás vacía se genera sola.`}

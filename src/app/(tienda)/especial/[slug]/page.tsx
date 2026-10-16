@@ -44,9 +44,6 @@ export default async function CampaignPage({ params }: PageProps<"/especial/[slu
           </p>
         )}
       </div>
-      <p className="mt-8 text-sm text-muted">
-        🎁 ¿Es para regalo? Marcá «Es para regalo» en el carrito y Natu Mariel lo prepara.
-      </p>
     </div>
   );
 }

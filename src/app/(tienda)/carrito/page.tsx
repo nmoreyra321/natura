@@ -1,12 +1,11 @@
 import type { Metadata } from "next";
 
 import { CartView } from "@/components/store/cart-view";
-import { getLoginProviders, getSiteUrl } from "@/lib/config";
+import { getLoginProviders } from "@/lib/config";
 import { isMercadoPagoEnabled } from "@/lib/mercadopago";
 import { getLoyaltyMinTotal, getMercadoPagoSurcharge, getTransferDetails } from "@/lib/store-settings";
 import { getCustomer } from "@/lib/customer";
 import { getShippingMinTotal, getShippingZones } from "@/lib/shipping";
-import { getWhatsAppNumber } from "@/lib/whatsapp";
 
 // Depende de la sesión de la clienta: nunca se prerenderiza.
 export const dynamic = "force-dynamic";
@@ -31,8 +30,6 @@ export default async function CartPage() {
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-12">
       <h1 className="mb-6 font-display text-3xl font-bold sm:text-4xl">Mi carrito</h1>
       <CartView
-        whatsappNumber={getWhatsAppNumber()}
-        siteUrl={getSiteUrl()}
         mercadoPago={mercadoPago}
         mpSurcharge={mpSurcharge}
         transfer={transfer}

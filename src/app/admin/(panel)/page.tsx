@@ -167,7 +167,7 @@ export default async function DashboardPage() {
           <div>
             <p className="font-semibold">Falta configurar el número de WhatsApp.</p>
             <p className="text-sm">
-              Mientras tanto, los clientes pueden armar el carrito pero no enviar pedidos.{" "}
+              Mientras tanto, las clientas pueden armar el carrito pero no hacer pedidos.{" "}
               <Link href="/admin/configuracion" className="font-semibold underline">
                 Ver cómo configurarlo
               </Link>

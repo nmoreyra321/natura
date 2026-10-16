@@ -139,7 +139,7 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
 
   const tiles = [
     { label: "Pedidos vendidos", value: String(s.orders), cur: s.orders, prev: p.orders },
-    { label: "Ticket promedio", value: formatARS(s.averageCents), cur: s.averageCents, prev: p.averageCents },
+    { label: "Venta promedio", value: formatARS(s.averageCents), cur: s.averageCents, prev: p.averageCents },
     { label: "Unidades", value: String(s.units), cur: s.units, prev: p.units },
   ];
 

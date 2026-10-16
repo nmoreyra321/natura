@@ -43,7 +43,7 @@ export default async function SettingsPage() {
   return (
     <div className="mx-auto max-w-3xl">
       <h1 className="font-display text-3xl font-bold">Configuración</h1>
-      <p className="text-muted">Estado de las integraciones de la tienda.</p>
+      <p className="text-muted">Cosas que tienen que estar listas para que la tienda funcione.</p>
 
       <div className="mt-6">
         <PushToggle />
@@ -70,8 +70,7 @@ export default async function SettingsPage() {
       <section className="mt-4 rounded-3xl bg-warm-white p-5 shadow-soft">
         <h2 className="font-display text-xl font-bold">Envíos a domicilio</h2>
         <p className="mt-1 mb-4 text-sm text-muted">
-          La clienta paga un % de su compra según la localidad, y se suma solo al total del pedido. Como es un %, si
-          suben los precios, el envío sube solo.
+          El envío es un % de la compra, según la localidad, y se suma solo al total del pedido. Si no llega a la compra mínima, no se ofrece el envío.
         </p>
         <ShippingPricesForm
           zones={(zones ?? []).map((z) => ({ id: z.id, name: z.name, percent: Number(z.percent) }))}
@@ -125,8 +124,8 @@ export default async function SettingsPage() {
             </p>
           )}
         </Status>
-        <Status ok label="Base de datos y fotos">
-          <p>Conectado a Supabase. Los productos que publiques aparecen en la tienda al instante.</p>
+        <Status ok label="Productos y fotos">
+          <p>Conectado. Los productos que publiques aparecen en la tienda al instante.</p>
         </Status>
       </ul>
     </div>

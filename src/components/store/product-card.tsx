@@ -53,7 +53,7 @@ export function ProductCard({ product }: { product: PublicProduct }) {
             <span />
           )}
           {soldOut ? (
-            <span className="rounded-full bg-white/90 px-2.5 py-1 text-xs font-bold text-muted shadow-soft backdrop-blur">Sin stock</span>
+            <span className="rounded-full bg-white/90 px-2.5 py-1 text-xs font-bold text-muted shadow-soft backdrop-blur">Agotado</span>
           ) : null}
         </div>
       </div>

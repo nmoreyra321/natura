@@ -397,7 +397,7 @@ export function ReceiptImport() {
     return (
       <div className="rounded-3xl bg-warm-white p-6 text-center shadow-soft">
         <CheckCircle2 className="mx-auto size-12 text-botanical-deep" aria-hidden="true" />
-        <h2 className="mt-3 font-display text-2xl font-bold">¡Listo! Se cargó la boleta</h2>
+        <h2 className="mt-3 font-display text-2xl font-bold">¡Listo! Se cargó la factura</h2>
         <p className="mt-2 text-muted">
           Se sumaron <strong className="text-forest">{done.units}</strong> unidades
           {done.updated > 0 ? ` a ${done.updated} ${done.updated === 1 ? "producto" : "productos"}` : ""}.

@@ -58,7 +58,7 @@ export function RestockForm({ productId }: { productId: string }) {
         />
       </label>
       <label className="text-sm font-semibold">
-        Celular con código de área
+        Tu WhatsApp (con código de área)
         <Required />
         <input
           type="tel"

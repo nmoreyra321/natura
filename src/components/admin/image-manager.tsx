@@ -68,7 +68,7 @@ export async function uploadProductPhoto(productId: string, original: File): Pro
   if (!(await isDecodable(original))) throw new Error("El archivo no es una imagen válida o está dañado.");
   const file = await optimize(original);
   const supabase = getBrowserClient();
-  if (!supabase) throw new Error("Falta configurar Supabase.");
+  if (!supabase) throw new Error("El panel no está conectado a las fotos. Avisale a quien armó la página.");
   const ext = ALLOWED_IMAGE_TYPES[file.type as AllowedImageType];
   const path = `products/${productId}/${crypto.randomUUID()}.${ext}`;
   const { error } = await supabase.storage
@@ -234,7 +234,7 @@ export function ImageManager({ productId, images, productName }: { productId: st
       <ConfirmDialog
         open={Boolean(toDelete)}
         title="¿Eliminar esta foto?"
-        description="La foto se borra de la tienda y del almacenamiento."
+        description="La foto se borra para siempre."
         pending={pending}
         onCancel={() => setToDelete(null)}
         onConfirm={() =>

@@ -63,7 +63,7 @@ export function ShareButton({ title, text, url }: { title: string; text: string;
             className="flex flex-col items-center gap-1 rounded-2xl bg-warm-white p-3 text-xs font-bold shadow-soft hover:bg-sun/50"
           >
             {copied ? <Check className="size-5 text-botanical-deep" aria-hidden="true" /> : <Link2 className="size-5" aria-hidden="true" />}
-            {copied ? "¡Copiado!" : "Copiar link"}
+            {copied ? "¡Copiado!" : "Copiar enlace"}
           </button>
         </div>
       ) : null}

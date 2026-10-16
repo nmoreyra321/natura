@@ -290,26 +290,9 @@ export function HomeView({ d }: { d: HomeData }) {
                 <h2 id="club" className="mt-2 font-display text-2xl leading-tight font-bold sm:mt-3 sm:text-4xl">
                   Cada {GIFT_EVERY} compras, <span className="text-coral-deep">¡un regalo!</span>
                 </h2>
-                {d.clubMinCents > 0 ? (
-                  <p className="mt-1 text-xs font-bold text-forest/70 sm:text-sm">Suman las compras de {formatARS(d.clubMinCents)} o más.</p>
-                ) : null}
                 <p className="mt-2 max-w-lg text-sm font-semibold text-forest/80 sm:text-base">
-                  Suman las compras que hacés en la tienda con tu cuenta. Entrás con Google en un toque, sin contraseña.
+                  Suman las compras que hacés en la tienda con tu cuenta{d.clubMinCents > 0 ? `, de ${formatARS(d.clubMinCents)} o más` : ""}. Entrás con Google en un toque, sin contraseña.
                 </p>
-                <ol className="mt-4 hidden flex-col gap-2 text-base font-bold sm:flex">
-                  {[
-                    "Entrá con tu cuenta (la personita de arriba) y cargá tu WhatsApp.",
-                    d.clubMinCents > 0
-                      ? `Comprá en la tienda con la sesión iniciada: cada pedido de ${formatARS(d.clubMinCents)} o más, pagado completo, suma una compra.`
-                      : "Comprá en la tienda con la sesión iniciada: cada pedido pagado completo suma una compra.",
-                    `En tu compra número ${GIFT_EVERY}, Mariel te regala algo especial 💝`,
-                  ].map((t, i) => (
-                    <li key={t} className="flex items-start gap-2.5">
-                      <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-forest text-xs text-white">{i + 1}</span>
-                      <span>{t}</span>
-                    </li>
-                  ))}
-                </ol>
                 <Link href="/club" className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-full bg-coral-deep px-5 text-sm font-bold text-white shadow-lift transition hover:-translate-y-0.5 sm:mt-5 sm:min-h-11 sm:px-6 sm:text-base">
                   Empezar a sumar <ArrowRight className="size-4" aria-hidden="true" />
                 </Link>

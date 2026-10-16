@@ -115,13 +115,8 @@ export function AddToCart({ product }: { product: Omit<CartItem, "quantity"> }) 
   const shownQty = product.stock <= 0 ? 1 : Math.min(qty, Math.max(available, 1));
   useEffect(() => setSelectedQty(product.productId, shownQty), [product.productId, shownQty]);
 
-  if (product.stock <= 0) {
-    return (
-      <p className="rounded-2xl bg-cream px-4 py-3 font-semibold text-muted">
-        Este producto no tiene stock por ahora. Podés consultar por WhatsApp cuándo vuelve.
-      </p>
-    );
-  }
+  // Agotado: la ficha ya muestra la insignia «Agotado» y el formulario «Avisame cuando vuelva».
+  if (product.stock <= 0) return null;
 
   const quantity = Math.min(qty, Math.max(available, 1));
   const saleCents = toCents(product.salePrice);
@@ -151,7 +146,7 @@ export function AddToCart({ product }: { product: Omit<CartItem, "quantity"> }) 
           Agregar al carrito
         </Button>
       </div>
-      {quantity >= 1 ? (
+      {quantity > 1 ? (
         <p className="rounded-2xl bg-cream px-4 py-2.5 text-sm tabular" aria-live="polite">
           Llevando <strong>{quantity}</strong>: pagás <strong className="whitespace-nowrap text-coral-deep">{formatARS(saleCents * quantity)}</strong>
           {unitSavings > 0 ? (
@@ -167,7 +162,7 @@ export function AddToCart({ product }: { product: Omit<CartItem, "quantity"> }) 
       {inCart > 0 ? (
         <p className="text-sm text-muted">
           Ya tenés {inCart} en tu <Link href="/carrito" className="font-semibold text-coral-deep underline">carrito</Link>.
-          {available <= 0 ? " Alcanzaste el stock disponible." : ""}
+          {available <= 0 ? " Alcanzaste el máximo disponible." : ""}
         </p>
       ) : null}
     </div>

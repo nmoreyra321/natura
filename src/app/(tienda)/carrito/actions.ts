@@ -44,7 +44,7 @@ export async function validateCart(input: unknown): Promise<CartValidationResult
   const ids = [...new Set(parsed.data.map((i) => i.productId))];
   const rows = await getProductsForCart(ids);
   if (!rows) {
-    return { ok: false, error: "No pudimos verificar precios y stock. Probá de nuevo en un rato." };
+    return { ok: false, error: "No pudimos verificar precios y disponibilidad. Probá de nuevo en un rato." };
   }
 
   const found = new Set(rows.map((r) => r.id));
@@ -67,15 +67,10 @@ export async function validateCart(input: unknown): Promise<CartValidationResult
 /** Mensaje claro para la clienta cuando el pedido no se pudo crear. */
 function orderError(message: string | undefined): string {
   const short = message?.match(/sin stock suficiente: (.+)$/)?.[1];
-  if (short) return `Ya no queda stock suficiente de «${short}». Revisá el carrito.`;
+  if (short) return `Ya no quedan unidades suficientes de «${short}». Revisá el carrito.`;
   if (message?.includes("demasiados pedidos")) return "Hay muchos pedidos en este momento. Probá de nuevo en un minuto.";
   if (message?.includes("ya no están disponibles")) return "Algún producto del carrito ya no está disponible. Revisá el carrito.";
   return "No pudimos registrar el pedido. Probá de nuevo.";
-}
-
-/** «Es para regalo» con su nota (si no es regalo, no se guarda nota). */
-function giftFields(d: { isGift?: boolean; giftNote?: string }) {
-  return d.isGift ? { is_gift: true, gift_note: d.giftNote?.trim() || null } : {};
 }
 
 type Admin = NonNullable<ReturnType<typeof createAdminClient>>;
@@ -198,27 +193,28 @@ export async function registerOrder(input: unknown): Promise<RegisterOrderResult
   }
   const delivery = deliveryFields(resolved.delivery, row.total);
   // El código (al azar) y la forma de pago los maneja el servidor: la clienta no puede leer ni editar pedidos.
-  let code: string | null = null;
-  {
-    const { data: saved, error: saveError } = await admin
-      .from("orders")
-      .update({
-        payment_method: parsed.data.paymentMethod === "transferencia" ? "transferencia" : "efectivo",
-        customer_phone: phone,
-        ...giftFields(parsed.data),
-        ...delivery.fields,
-        ...account.fields,
-      })
-      .eq("id", row.id)
-      .select("code")
-      .maybeSingle();
-    if (saveError) console.error("[pedido] No se pudo guardar la forma de pago o el teléfono:", saveError.message);
-    code = saved?.code ?? null;
+  const { data: saved, error: saveError } = await admin
+    .from("orders")
+    .update({
+      payment_method: parsed.data.paymentMethod === "transferencia" ? "transferencia" : "efectivo",
+      customer_phone: phone,
+      ...delivery.fields,
+      ...account.fields,
+    })
+    .eq("id", row.id)
+    .select("code")
+    .maybeSingle();
+  if (saveError || !saved) {
+    // Sin esos datos el pedido quedaría a medias (sin teléfono ni envío): se cancela y se le avisa.
+    console.error("[pedido] No se pudo guardar el pedido completo:", saveError?.message);
+    await admin.from("orders").update({ status: "cancelled" }).eq("id", row.id);
+    return { ok: false, error: "No pudimos registrar el pedido. Probá de nuevo." };
   }
+  const code: string | null = saved.code ?? null;
   // Aviso al celular de Natu Mariel (después de responder, para no demorar a la clienta).
   after(() =>
     notifyAdmins({
-      title: `🛍 Pedido nuevo${parsed.data.isGift ? " 🎁" : ""}`,
+      title: "🛍 Pedido nuevo",
       body: `${parsed.data.customerName} · ${formatARS(toCents(row.total) + delivery.costCents)}${parsed.data.paymentMethod === "transferencia" ? " · paga con Mercado Pago (link)" : " · efectivo"}${zoneName ? ` · envío a ${zoneName}` : ""}`,
       url: code ? `/admin/pedidos?estado=todos&q=${code}` : "/admin/pedidos",
       tag: `pedido-${row.id}`,
@@ -243,7 +239,7 @@ export async function payWithMercadoPago(input: unknown): Promise<MercadoPagoChe
   const phone = account.phone;
 
   const admin = createAdminClient();
-  if (!admin) return { ok: false, error: "La tienda no está configurada para cobrar online." };
+  if (!admin) return { ok: false, error: "La tienda no está configurada para cobrar por internet." };
   if (!(await allowRequest("pedido", 8, 600))) {
     return { ok: false, error: "Hiciste muchos pedidos seguidos. Esperá unos minutos o escribile a Natu Mariel por WhatsApp." };
   }
@@ -270,7 +266,6 @@ export async function payWithMercadoPago(input: unknown): Promise<MercadoPagoChe
         payment_method: "mercadopago",
         payment_status: "pending",
         customer_phone: phone,
-        ...giftFields(parsed.data),
         ...delivery.fields,
         ...account.fields,
       })
@@ -279,6 +274,7 @@ export async function payWithMercadoPago(input: unknown): Promise<MercadoPagoChe
   ]);
   if (markError || !items || items.length === 0) {
     console.error("[pedido] No se pudo preparar el pago:", markError?.message);
+    await admin.from("orders").update({ status: "cancelled", payment_status: "cancelled" }).eq("id", order.id);
     return { ok: false, error: "No pudimos preparar el pago. Probá de nuevo." };
   }
 
@@ -310,7 +306,7 @@ export async function payWithMercadoPago(input: unknown): Promise<MercadoPagoChe
   }
   after(() =>
     notifyAdmins({
-      title: `🛍 Pedido nuevo${parsed.data.isGift ? " 🎁" : ""}`,
+      title: "🛍 Pedido nuevo",
       body: `${parsed.data.customerName} · ${formatARS(toCents(order.total) + delivery.costCents)} · paga con Mercado Pago${zoneName ? ` · envío a ${zoneName}` : ""}`,
       url: "/admin/pedidos",
       tag: `pedido-${order.id}`,

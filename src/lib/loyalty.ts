@@ -40,7 +40,7 @@ export type ClubOrder = {
 
 /**
  * ¿Este pedido suma al Club? Tiene que estar confirmado o entregado, PAGADO COMPLETO (nada de pagos
- * parciales) y ser de al menos el monto mínimo (en pesos).
+ * parciales) y ser de al menos el monto mínimo (en pesos). `total` es el de los productos, sin el envío.
  */
 export function countsForClub(o: { status: string; total: number | string; payment_status: string | null }, minTotal: number): boolean {
   return (

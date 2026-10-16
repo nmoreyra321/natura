@@ -17,7 +17,7 @@ export function SetupPending() {
           <li>NEXT_PUBLIC_SUPABASE_URL</li>
           <li>NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY (o NEXT_PUBLIC_SUPABASE_ANON_KEY)</li>
         </ul>
-        <p className="mt-4 text-sm text-muted">Los pasos completos están en el archivo README.md del repositorio.</p>
+        <p className="mt-4 text-sm text-muted">Los pasos completos están en el archivo la guía de instalación.</p>
       </div>
     </main>
   );

@@ -76,14 +76,6 @@ export function ProductView({
         <div className="flex flex-col gap-5">
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              {product.category ? (
-                <Link
-                  href={`/categorias/${product.category.slug}`}
-                  className="rounded-full bg-lilac px-3 py-1 text-xs font-extrabold tracking-[0.1em] text-grape uppercase hover:bg-pink"
-                >
-                  {product.category.name}
-                </Link>
-              ) : null}
               {product.line ? (
                 <Link
                   href={`/productos?linea=${slugify(product.line)}`}
@@ -146,7 +138,7 @@ export function ProductView({
           </div>
 
           <ul className="grid gap-x-5 gap-y-1.5 px-1 text-sm font-semibold text-forest sm:grid-cols-2" aria-label="Por qué comprar acá">
-            {["Producto 100% original", "Pagás con Mercado Pago o efectivo", "Coordinamos la entrega con vos", "Sumá compras y ganá regalos"].map((t) => (
+            {["Producto 100% original", "Coordinamos la entrega con vos", "Sumá compras y ganá regalos"].map((t) => (
               <li key={t} className="flex items-center gap-2">
                 <CircleCheck className="size-4 shrink-0 text-botanical-deep" aria-hidden="true" />
                 {t}

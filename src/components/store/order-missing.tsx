@@ -16,8 +16,8 @@ export function OrderMissing({ id, whatsapp }: { id: string; whatsapp: string | 
   const saved = useSavedOrders().find((o) => o.id === id);
   const code = saved?.code ?? null;
   const text = code
-    ? `Hola Natu Mariel 👋 Quise ver mi pedido ${code} en la página y no aparece. ¿Me ayudás?`
-    : "Hola Natu Mariel 👋 Quise ver mi pedido en la página y no aparece. ¿Me ayudás?";
+    ? `¡Hola Mariel! 👋 Quise ver mi pedido ${code} en la página y no aparece. ¿Me ayudás?`
+    : "¡Hola Mariel! 👋 Quise ver mi pedido en la página y no aparece. ¿Me ayudás?";
 
   return (
     <div className="mx-auto max-w-xl px-4 py-10 text-center sm:py-16">

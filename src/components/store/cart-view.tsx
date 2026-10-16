@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertCircle, ArrowLeftRight, Banknote, CircleUser, CreditCard, Info, Loader2, MapPin, MessageCircle, ShoppingBag, Trash2, Truck } from "lucide-react";
+import { AlertCircle, ArrowLeftRight, Banknote, CircleUser, CreditCard, Info, Loader2, MapPin, ShoppingBag, Trash2, Truck } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -16,7 +16,7 @@ import { formatARS } from "@/lib/format";
 import { GIFT_EVERY } from "@/lib/loyalty";
 import { productImageUrl } from "@/lib/images";
 import { surchargeCents, toCents } from "@/lib/pricing";
-import { buildOrderMessage, buildWhatsAppUrl, getOrderTotals, type OrderLine } from "@/lib/whatsapp";
+import { getOrderTotals, type OrderLine } from "@/lib/whatsapp";
 import type { TransferDetails } from "@/lib/store-settings";
 import { QuantityInput } from "./add-to-cart";
 import { SavingsCelebration } from "./savings-celebration";
@@ -50,8 +50,6 @@ function saveContact(name: string, phone: string) {
 
 
 export function CartView({
-  whatsappNumber,
-  siteUrl,
   mercadoPago = false,
   transfer = null,
   mpSurcharge = 0,
@@ -71,8 +69,6 @@ export function CartView({
   shippingZones?: ShippingZoneOption[];
   /** Club de clientas: monto mínimo del pedido para que sume una compra. */
   clubMinCents?: number;
-  whatsappNumber: string | null;
-  siteUrl: string;
   /** true si la tienda tiene Mercado Pago configurado. */
   mercadoPago?: boolean;
   /** Datos de la cuenta para transferir (null si no hay alias cargado). */
@@ -268,8 +264,7 @@ export function CartView({
     );
   }
 
-  const ready = status === "ok" && Boolean(whatsappNumber);
-  const whatsappUrl = ready && whatsappNumber ? buildWhatsAppUrl(whatsappNumber, buildOrderMessage(lines, siteUrl)) : null;
+  const ready = status === "ok";
 
   return (
     <div className="grid gap-8 lg:grid-cols-[1fr_380px]">
@@ -388,19 +383,7 @@ export function CartView({
         </dl>
 
         <div className="mt-5 flex flex-col gap-3">
-          {!whatsappNumber ? (
-            <>
-              <Button variant="whatsapp" size="lg" disabled aria-describedby="wa-off">
-                <MessageCircle className="size-5" aria-hidden="true" />
-                Hacer pedido por WhatsApp
-              </Button>
-              <p id="wa-off" className="flex gap-2 rounded-2xl bg-cream p-3 text-sm text-muted">
-                <Info className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-                Estamos terminando de configurar los pedidos por WhatsApp. Tu carrito queda guardado en este
-                dispositivo para cuando esté listo.
-              </p>
-            </>
-          ) : whatsappUrl ? (
+          {ready ? (
             <>
               <div>
                 {account ? (
@@ -481,7 +464,6 @@ export function CartView({
               <fieldset>
                 <legend className="text-sm font-semibold">
                   ¿Cómo lo recibís?
-                  <Required />
                 </legend>
                 <div className="mt-1.5 grid grid-cols-2 gap-2">
                   {[
@@ -601,7 +583,7 @@ export function CartView({
                 ) : (
                   <span>
                     Te faltan <strong>{formatARS(clubMinCents - totals.totalCents)}</strong> para que este pedido sume al Club
-                    Natu Mariel (cada {GIFT_EVERY} compras de {formatARS(clubMinCents)} o más, un regalo).
+                    (cada {GIFT_EVERY} compras de {formatARS(clubMinCents)} o más, un regalo).
                   </span>
                 )}
               </p>
@@ -609,7 +591,6 @@ export function CartView({
                 <fieldset>
                   <legend className="text-sm font-semibold">
                     ¿Cómo querés pagar?
-                    <Required />
                   </legend>
                   <div className={`mt-1.5 grid gap-2 ${paymentOptions.length === 3 ? "grid-cols-3" : "grid-cols-2"}`}>
                     {paymentOptions.map(({ value, label, Icon }) => (
@@ -637,8 +618,7 @@ export function CartView({
                   Pagando con Mercado Pago se suma un recargo de {mpSurcharge}% (
                   {formatARS(surchargeCents(grandCents, mpSurcharge))}). Total a pagar:{" "}
                   <strong>{formatARS(grandCents + surchargeCents(grandCents, mpSurcharge))}</strong>
-                  {shippingNote}. En
-                  efectivo o transferencia no hay recargo.
+                  {shippingNote}. En efectivo no hay recargo.
                 </p>
               ) : null}
               {payment === "transferencia" && transfer ? (
@@ -733,18 +713,14 @@ export function CartView({
                   {sending ? "Registrando tu pedido…" : "Hacer pedido"}
                 </button>
               ) : (
-              <a
-                href={whatsappUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-disabled={sending}
-                className={buttonClasses("primary", "lg", sending ? "pointer-events-none opacity-70" : "")}
-                onClick={async (e) => {
-                  if (!whatsappNumber || sending) return;
-                  e.preventDefault();
-                  if (blockIfMissingContact()) return;
+              <button
+                type="button"
+                disabled={sending}
+                className={buttonClasses("primary", "lg", sending ? "opacity-70" : "")}
+                onClick={async () => {
+                  if (sending || blockIfMissingContact()) return;
                   setSending(true);
-                    setPendingLimit(false);
+                  setPendingLimit(false);
                   const name = customerName.trim();
                   const phone = customerPhone.trim();
                   saveContact(name, phone);
@@ -773,7 +749,7 @@ export function CartView({
                   <ShoppingBag className="size-5" aria-hidden="true" />
                 )}
                 {sending ? "Registrando tu pedido…" : "Hacer pedido"}
-              </a>
+              </button>
               )}
             </>
           ) : (
@@ -783,9 +759,9 @@ export function CartView({
                 Reintentar
               </Button>
             ) : (
-              <Button variant="whatsapp" size="lg" disabled>
+              <Button variant="primary" size="lg" disabled>
                 <Loader2 className="size-5 animate-spin" aria-hidden="true" />
-                Verificando precios y stock…
+                Verificando precios y disponibilidad…
               </Button>
             )
           )}
@@ -820,17 +796,13 @@ export function CartView({
               </p>
             </div>
           ) : null}
-          <p className="text-sm font-semibold text-forest/80">
-            📍 Punto de encuentro en las estaciones de {DELIVERY_TEXT}
-            {shippingZones.length > 0 ? " o envío a domicilio" : ""}.
-          </p>
-          <p className="text-sm leading-relaxed text-muted">
-            {payment === "mercadopago" && mercadoPago
-              ? "Te llevamos a la página segura de Mercado Pago para pagar con tarjeta, dinero en cuenta o efectivo en puntos de pago. Cuando termines, volvés a la tienda y Natu Mariel coordina la entrega con vos."
-              : payment === "transferencia"
-                ? "Al tocar el botón se guarda tu pedido y pasás a su página: ahí pagás y ves cuándo se aprueba el pago."
-                : "Tu pedido le llega a Natu Mariel al instante y te escribe por WhatsApp para confirmar disponibilidad y entrega. El pedido queda confirmado y el stock reservado recién con esa confirmación."}
-          </p>
+          {payment === "transferencia" ? null : (
+            <p className="text-sm leading-relaxed text-muted">
+              {payment === "mercadopago" && mercadoPago
+                ? "Te llevamos a la página segura de Mercado Pago para pagar con tarjeta, dinero en cuenta o efectivo en puntos de pago. Cuando termines, volvés a la tienda y Natu Mariel coordina la entrega con vos."
+                : "Tu pedido le llega a Natu Mariel al instante y te escribe por WhatsApp para confirmar la disponibilidad y la entrega. Tus productos quedan reservados cuando te confirma."}
+            </p>
+          )}
           <Link href="/productos" className="text-center text-sm font-semibold text-coral-deep hover:underline">
             Seguir comprando
           </Link>

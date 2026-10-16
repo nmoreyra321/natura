@@ -6,9 +6,7 @@ import { after } from "next/server";
 import { toWhatsAppPhone } from "@/lib/debts";
 import { canCustomerCancel, canReportPayment, normalizeOrderCode, paymentState } from "@/lib/order-tracking";
 import { toCents } from "@/lib/pricing";
-import { loyaltyKey, loyaltyStatus, PURCHASE_STATUSES } from "@/lib/loyalty";
 import { notifyAdmins } from "@/lib/push";
-import { getLoyaltyMinTotal } from "@/lib/store-settings";
 import { allowRequest } from "@/lib/rate-limit";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -61,7 +59,7 @@ export async function reportTransferPayment(formData: FormData): Promise<ReportP
     .maybeSingle();
   if (!order) return { ok: false, error: "No encontramos tu pedido." };
   if (!canReportPayment(order)) {
-    return { ok: false, error: order.payment_reported_at ? "Ya nos avisaste: estamos revisando tu pago." : "Este pedido no espera una transferencia." };
+    return { ok: false, error: order.payment_reported_at ? "Ya nos avisaste: estamos revisando tu pago." : "Este pedido no espera un pago." };
   }
 
   let proofPath: string | null = null;
@@ -230,36 +228,6 @@ export async function myOrdersStatus(ids: string[]): Promise<MyOrderStatus[]> {
   });
 }
 
-export type ClubProgress = { progress: number; left: number; pending: number; minCents: number };
-
-/**
- * Avance en el Club de la clienta que usa este celular, a partir de sus pedidos guardados
- * (quien tiene el enlace del pedido es quien lo hizo). null si no hay pedidos con WhatsApp.
- */
-export async function clubProgress(orderIds: string[]): Promise<ClubProgress | null> {
-  const ids = orderIds.filter((id) => UUID_RE.test(id)).slice(0, 10);
-  if (ids.length === 0) return null;
-  const admin = createAdminClient();
-  if (!admin) return null;
-  const { data: own } = await admin.from("orders").select("customer_phone, created_at").in("id", ids).order("created_at", { ascending: false });
-  const key = (own ?? []).map((o) => loyaltyKey(o.customer_phone)).find(Boolean);
-  if (!key) return null;
-  const min = await getLoyaltyMinTotal();
-  const [{ count: purchases }, { count: given }] = await Promise.all([
-    admin
-      .from("orders")
-      .select("id", { count: "exact", head: true })
-      .eq("customer_phone", key)
-      .not("customer_user_id", "is", null)
-      .in("status", [...PURCHASE_STATUSES])
-      .eq("payment_status", "approved")
-      .gte("total", min),
-    admin.from("loyalty_gifts").select("id", { count: "exact", head: true }).eq("phone", key),
-  ]);
-  const s = loyaltyStatus(purchases ?? 0, given ?? 0);
-  return { progress: s.progress, left: s.left, pending: s.pending, minCents: Math.round(min * 100) };
-}
-
 export type ReviewResult = { ok: true } | { ok: false; error: string };
 
 /**
@@ -275,7 +243,7 @@ export async function submitReview(input: { orderId?: string | null; name: strin
   if (name.length > 60 || name.split(" ").filter((w) => w.length >= 2).length < 2) return { ok: false, error: "Escribí tu nombre y apellido." };
   if (!(rating >= 1 && rating <= 5)) return { ok: false, error: "Elegí cuántas estrellas le das." };
   if (comment.length < 3) return { ok: false, error: "Escribí tu reseña." };
-  if (comment.length > 500) return { ok: false, error: "La reseña es muy larga (hasta 500 letras)." };
+  if (comment.length > 500) return { ok: false, error: "La reseña es muy larga (hasta 500 caracteres)." };
   const admin = createAdminClient();
   if (!admin) return { ok: false, error: "La tienda no está configurada." };
   if (!(await allowRequest("resena", 5, 3600))) {

@@ -10,7 +10,7 @@ export type RestockResult = { ok: true; message: string } | { ok: false; error: 
 export async function requestRestock(productId: string, name: string, phone: string): Promise<RestockResult> {
   if (!/^[0-9a-f-]{36}$/.test(String(productId))) return { ok: false, error: "Producto inválido." };
   const normalized = toWhatsAppPhone(String(phone));
-  if (!normalized) return { ok: false, error: "Escribí tu celular con código de área, por ejemplo 11 2345-6789." };
+  if (!normalized) return { ok: false, error: "Revisá tu WhatsApp: con código de área, por ejemplo 11 2345-6789." };
   // Se anota desde el servidor (no directo desde el navegador) y con freno de intentos.
   const supabase = createAdminClient();
   if (!supabase) return { ok: false, error: "La tienda no está disponible ahora." };
@@ -30,5 +30,5 @@ export async function requestRestock(productId: string, name: string, phone: str
     console.error("[aviso] No se pudo anotar:", error.message);
     return { ok: false, error: "No pudimos anotarte. Probá de nuevo en un rato." };
   }
-  return { ok: true, message: "¡Listo! Te avisamos por WhatsApp cuando vuelva a haber stock." };
+  return { ok: true, message: "¡Listo! Te avisamos por WhatsApp cuando vuelva a haber." };
 }

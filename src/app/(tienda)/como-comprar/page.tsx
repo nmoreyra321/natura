@@ -1,6 +1,7 @@
 import { ChevronDown, Handshake, MessageCircle, PackageCheck, ShoppingBag } from "lucide-react";
 import { DELIVERY_TEXT } from "@/lib/delivery";
 import { formatARS } from "@/lib/format";
+import { GIFT_EVERY } from "@/lib/loyalty";
 import { getLoyaltyMinTotal } from "@/lib/store-settings";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -11,7 +12,7 @@ import { buildWhatsAppUrl, getWhatsAppNumber } from "@/lib/whatsapp";
 export const metadata: Metadata = {
   title: "Cómo comprar",
   description:
-    "Cómo hacer tu pedido de productos Natura en Natu Mariel: armá tu carrito, envialo por WhatsApp y coordiná pago y entrega.",
+    "Cómo hacer tu pedido de productos Natura en Natu Mariel: armá tu carrito, hacé el pedido en la tienda y coordiná la entrega con Mariel por WhatsApp.",
   alternates: { canonical: "/como-comprar" },
 };
 
@@ -26,12 +27,12 @@ const steps = [
   {
     icon: MessageCircle,
     title: "Hacé el pedido",
-    text: "Elegí cómo pagar. En efectivo, tocá «Hacer pedido por WhatsApp». Con Mercado Pago, tocá «Hacer pedido» y pagás ahí mismo.",
+    text: "Elegí cómo recibirlo y cómo pagar, y tocá «Hacer pedido». Si elegiste Mercado Pago, en el paso siguiente pagás ahí mismo.",
   },
   {
     icon: PackageCheck,
     title: "Mariel te confirma",
-    text: "Te responde con la disponibilidad y te cuenta las formas de pago y de entrega.",
+    text: "Te escribe por WhatsApp para confirmar la disponibilidad y coordinar la entrega.",
   },
   {
     icon: Handshake,
@@ -43,11 +44,11 @@ const steps = [
 const faqsFor = (clubMin: string | null) => [
   {
     q: "¿Tengo que crear una cuenta?",
-    a: "No. Armás el carrito y hacés el pedido acá mismo, sin registrarte: solo te pedimos tu nombre y tu WhatsApp para coordinar la entrega. Si querés sumar compras en el Club Natu Mariel, entrá con tu cuenta de Google antes de pedir (un toque, sin contraseña).",
+    a: "No. Armás el carrito y hacés el pedido acá mismo, sin registrarte: solo te pedimos tu nombre y tu WhatsApp para coordinar la entrega. Si querés sumar compras al Club Natu Mariel, entrá con tu cuenta antes de pedir (un toque, sin contraseña).",
   },
   {
     q: "¿El pedido queda confirmado al enviarlo?",
-    a: "Todavía no. El pedido queda pendiente hasta que Mariel te confirme por WhatsApp. Hasta ese momento no se reserva stock.",
+    a: "Todavía no. El pedido queda pendiente hasta que Mariel te confirme por WhatsApp. Hasta ese momento no se reservan los productos.",
   },
   {
     q: "¿Cómo pago y cómo recibo el pedido?",
@@ -55,7 +56,7 @@ const faqsFor = (clubMin: string | null) => [
   },
   {
     q: "¿Dónde entregan?",
-    a: `De dos formas: gratis en punto de encuentro en las estaciones del Roca de ${DELIVERY_TEXT} (más que nada los sábados), o con envío a domicilio en zona sur (Lanús, Lomas, Temperley, Adrogué, Burzaco, Glew, Guernica, Alejandro Korn, Monte Grande y alrededores), para compras desde un monto mínimo: el costo es un porcentaje de la compra según tu localidad y lo ves en el carrito antes de pedir. Si estás en otra zona, escribinos y lo vemos.`,
+    a: `De dos formas: gratis en punto de encuentro en las estaciones del Roca de ${DELIVERY_TEXT} (más que nada los sábados), o con envío a domicilio en zona sur, para compras desde un monto mínimo. En el carrito ves si llega tu localidad y cuánto cuesta (es un porcentaje de la compra) antes de pedir. Si estás en otra zona, escribinos y lo vemos.`,
   },
   {
     q: "¿Cómo sé en qué está mi pedido?",
@@ -63,7 +64,7 @@ const faqsFor = (clubMin: string | null) => [
   },
   {
     q: "¿Cómo funciona el Club Natu Mariel?",
-    a: `Cada 5 compras${clubMin ? ` de ${clubMin} o más` : ""} te ganás un regalo. Se cuentan solas con tu número de WhatsApp, sin anotarte en ningún lado: cada pedido${clubMin ? ` de ${clubMin} o más` : ""}, pagado completo, suma una compra (también las que hacés en los vivos o por WhatsApp). En la página de tu pedido ves cuánto te falta.`,
+    a: `Cada ${GIFT_EVERY} compras${clubMin ? ` de ${clubMin} o más` : ""} te ganás un regalo. Suman las compras que hacés en la tienda con tu cuenta (entrás con Google en un toque): cada pedido${clubMin ? ` de ${clubMin} o más` : ""}, pagado completo, suma una compra. En la página del Club ves cuánto te falta.`,
   },
   {
     q: "¿Qué es el precio de revista?",
@@ -71,7 +72,7 @@ const faqsFor = (clubMin: string | null) => [
   },
   {
     q: "¿Los precios del carrito pueden cambiar?",
-    a: "Antes de enviar el pedido, el carrito vuelve a consultar los precios y el stock vigentes. Si algo cambió, te avisamos en pantalla.",
+    a: "Antes de enviar el pedido, el carrito vuelve a consultar los precios y la disponibilidad. Si algo cambió, te avisamos en pantalla.",
   },
   {
     q: "¿Puedo pedir un producto que no está en la tienda?",
@@ -105,7 +106,7 @@ export default async function HowToBuyPage() {
       />
       <h1 className="font-display text-4xl font-bold text-balance sm:text-5xl">Cómo comprar</h1>
       <p className="mt-3 max-w-2xl text-lg text-muted">
-        Comprar en Natu Mariel es simple: elegís, enviás el pedido por WhatsApp y Mariel te atiende personalmente.
+        Comprar en Natu Mariel es simple: elegís, hacés el pedido acá y Mariel te atiende personalmente por WhatsApp.
       </p>
 
       <ol className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

@@ -157,7 +157,7 @@ export function CartDrawer() {
               >
                 Seguir comprando
               </button>
-              <p className="text-center text-xs text-muted">Antes de enviar el pedido verificamos precios y stock.</p>
+              <p className="text-center text-xs text-muted">Antes de enviar el pedido verificamos precios y disponibilidad.</p>
             </div>
           </>
         )}
