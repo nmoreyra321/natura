@@ -105,7 +105,7 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
 
       <section className="mt-6 rounded-3xl bg-warm-white p-5 shadow-soft ring-1 ring-line/70">
         <h2 className="mb-3 font-display text-xl font-bold">Mis datos</h2>
-        <AccountProfile name={customer.name ?? ""} phone={customer.phone ?? ""} />
+        <AccountProfile name={customer.name ?? ""} phone={customer.phone ?? ""} saved={Boolean(customer.phone && customer.name)} />
       </section>
 
       <div className="mt-6 text-center">
