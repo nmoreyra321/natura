@@ -355,16 +355,6 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
               Volver al carrito
             </Link>
           ) : null}
-          {order.payment_method === "efectivo" && order.status === "pending" && whatsapp && !sendOnWhatsApp ? (
-            <a
-              href={orderWhatsAppUrl ?? "#"}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={buttonClasses("outline", "md")}
-            >
-              <MessageCircle className="size-4" aria-hidden="true" /> ¿No se envió? Mandar el pedido por WhatsApp
-            </a>
-          ) : null}
           <p className="text-xs text-muted">
             Guardá esta página para ver cómo sigue tu pedido. También la encontrás en{" "}
             <Link href="/mi-pedido" className="font-semibold text-coral-deep hover:underline">
