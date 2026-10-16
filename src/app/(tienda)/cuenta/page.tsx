@@ -53,6 +53,12 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
         <p className="mt-4 text-center text-sm text-muted">
           ¿No querés cuenta? Podés comprar igual, solo que esas compras no suman al Club.
         </p>
+        <p className="mt-2 text-center text-sm">
+          ¿Hiciste un pedido sin cuenta?{" "}
+          <Link href="/mi-pedido" className="font-semibold text-coral-deep underline">
+            Seguir mi pedido
+          </Link>
+        </p>
       </div>
     );
   }

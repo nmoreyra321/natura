@@ -82,7 +82,8 @@ function OrdersLink() {
   return (
     <Link
       href="/mi-pedido"
-      className="relative inline-flex size-11 items-center justify-center rounded-full text-forest transition-colors hover:bg-forest/5"
+      // En el celular no entra: «Seguir mi pedido» está en el menú y en «Mi cuenta».
+      className="relative hidden size-11 sm:inline-flex items-center justify-center rounded-full text-forest transition-colors hover:bg-forest/5"
       aria-label={saved.length > 0 ? "Mis pedidos (tenés pedidos hechos)" : "Seguir mi pedido"}
       title="Mis pedidos"
     >
@@ -234,7 +235,7 @@ export function Header({ categories }: { categories: NavCategory[] }) {
           </Link>
           <Link
             href="/cuenta"
-            className="hidden size-11 items-center justify-center rounded-full text-forest transition-colors hover:bg-forest/5 sm:inline-flex"
+            className="inline-flex size-11 items-center justify-center rounded-full text-forest transition-colors hover:bg-forest/5"
             aria-label="Mi cuenta"
             title="Mi cuenta"
           >
