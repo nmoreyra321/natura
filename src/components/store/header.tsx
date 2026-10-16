@@ -273,89 +273,73 @@ export function Header({ categories }: { categories: NavCategory[] }) {
               </button>
             </div>
             <InstallAppButton className="flex min-h-12 items-center gap-3 rounded-2xl bg-sun/60 px-4 text-lg font-semibold hover:bg-sun" />
-            <nav aria-label="Menú móvil">
-              <ul className="flex flex-col gap-1">
-                {[
-                  { href: "/", label: "Inicio" },
-                  ...links,
-                  { href: "/mi-pedido", label: "Seguir mi pedido" },
-                  { href: "/carrito", label: "Mi carrito" },
-                ].map(
-                  (l) => {
-                    // El menú solo existe en el navegador (se abre con un toque), así que se puede leer la dirección.
-                    const current = isCurrent(l.href, pathname, window.location.search);
-                    return (
-                    <li key={l.href}>
-                      <Link
-                        href={l.href}
-                        onClick={() => setOpen(false)}
-                        aria-current={current ? "page" : undefined}
-                        className={`flex min-h-12 items-center rounded-2xl px-4 text-lg hover:bg-sun ${current ? CURRENT : "font-semibold"}`}
-                      >
-                        {l.label}
-                      </Link>
-                    </li>
-                    );
-                  },
-                )}
-              </ul>
-            </nav>
-            {categories.length > 4 ? (
-              <div className={GROUP}>
-                <p className={GROUP_TITLE}>
-                  <LayoutGrid className="size-4" aria-hidden="true" /> Más categorías
-                </p>
-                <ul className="flex flex-col gap-0.5">
-                  {categories.slice(4).flatMap((c) => {
+            <nav aria-label="Menú móvil" className="flex flex-col gap-4">
+              {[
+                {
+                  title: "Comprar",
+                  Icon: ShoppingBag,
+                  items: [
+                    { href: "/", label: "Inicio" },
+                    { href: "/productos", label: "Todos los productos" },
+                    { href: "/productos?ofertas=1", label: "Ofertas" },
+                  ],
+                },
+                {
+                  title: "Mi compra",
+                  Icon: Package,
+                  items: [
+                    { href: "/carrito", label: "Mi carrito" },
+                    { href: "/mi-pedido", label: "Seguir mi pedido" },
+                  ],
+                },
+                {
+                  title: "Categorías",
+                  Icon: LayoutGrid,
+                  items: categories.flatMap((c) => {
                     const items = [{ href: `/categorias/${c.slug}`, label: c.name }];
                     // No hay categoría «Mujer»: va el filtro «para mujer», al lado de «Hombre».
                     if (c.slug === "hombre") items.unshift({ href: "/productos?para=mujer", label: "Mujer" });
                     return items;
-                  }).map((l) => {
-                    const current = isCurrent(l.href, pathname, window.location.search);
-                    return (
-                      <li key={l.href}>
-                        <Link
-                          href={l.href}
-                          onClick={() => setOpen(false)}
-                          aria-current={current ? "page" : undefined}
-                          className={`flex min-h-11 items-center rounded-2xl px-4 hover:bg-sun ${current ? CURRENT : ""}`}
-                        >
-                          {l.label}
-                        </Link>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
-            ) : null}
-            <div className={GROUP}>
-              <p className={GROUP_TITLE}>
-                <Heart className="size-4" aria-hidden="true" /> Conocenos
-              </p>
-              <ul className="flex flex-col gap-0.5">
-                {[
-                  { href: "/quienes-somos", label: "Quiénes somos" },
-                  { href: "/como-comprar", label: "Cómo comprar" },
-                  { href: "/#calificaciones", label: "Reseñas" },
-                  { href: "/contacto", label: "Contacto" },
-                ].map((l) => {
-                  const current = isCurrent(l.href, pathname, window.location.search);
-                  return (
-                    <li key={l.href}>
-                      <Link
-                        href={l.href}
-                        onClick={() => setOpen(false)}
-                        aria-current={current ? "page" : undefined}
-                        className={`flex min-h-11 items-center rounded-2xl px-4 hover:bg-sun ${current ? CURRENT : ""}`}
-                      >
-                        {l.label}
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
+                  }),
+                },
+                {
+                  title: "Conocenos",
+                  Icon: Heart,
+                  items: [
+                    { href: "/quienes-somos", label: "Quiénes somos" },
+                    { href: "/como-comprar", label: "Cómo comprar" },
+                    { href: "/#calificaciones", label: "Reseñas" },
+                    { href: "/contacto", label: "Contacto" },
+                  ],
+                },
+              ]
+                .filter((g) => g.items.length > 0)
+                .map(({ title, Icon, items }) => (
+                  <div key={title} className={GROUP}>
+                    <p className={GROUP_TITLE}>
+                      <Icon className="size-4" aria-hidden="true" /> {title}
+                    </p>
+                    <ul className="flex flex-col gap-0.5">
+                      {items.map((l) => {
+                        // El menú solo existe en el navegador (se abre con un toque), así que se puede leer la dirección.
+                        const current = isCurrent(l.href, pathname, window.location.search);
+                        return (
+                          <li key={l.href}>
+                            <Link
+                              href={l.href}
+                              onClick={() => setOpen(false)}
+                              aria-current={current ? "page" : undefined}
+                              className={`flex min-h-11 items-center rounded-2xl px-4 text-[1.05rem] hover:bg-sun ${current ? CURRENT : "font-semibold"}`}
+                            >
+                              {l.label}
+                            </Link>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                ))}
+            </nav>
           </div>
         </div>,
             document.body,
