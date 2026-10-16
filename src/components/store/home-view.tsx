@@ -383,7 +383,7 @@ export function HomeView({ d }: { d: HomeData }) {
               <ProductRail products={d.more} />
               <div className="mt-6 flex justify-center">
                 <LinkButton href="/productos" size="lg" className="w-full shadow-lift sm:w-auto">
-                  {d.totalProducts > 0 ? `Ver los ${d.totalProducts} productos` : "Ver todos los productos"} <ArrowRight className="size-5" aria-hidden="true" />
+                  Ver todos los productos <ArrowRight className="size-5" aria-hidden="true" />
                 </LinkButton>
               </div>
             </Section>
