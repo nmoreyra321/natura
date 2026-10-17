@@ -72,12 +72,14 @@ export const productSchema = z
       (v) => v === null || v.length >= 2,
       "La línea tiene que tener al menos 2 letras.",
     ),
+    // El formulario ya manda estos datos validados (con null donde está vacío): el servidor los vuelve
+    // a revisar, así que tienen que aceptar null.
     natura_sku: z
       .string()
       .trim()
       .toUpperCase()
-      .refine((v) => v === "" || /^NATARG-\d{1,12}$/.test(v), "Usá el código de Natura, por ejemplo NATARG-2821.")
-      .optional()
+      .nullish()
+      .refine((v) => !v || /^NATARG-\d{1,12}$/.test(v), "Usá el código de Natura, por ejemplo NATARG-2821.")
       .transform((v) => (v ? v : null)),
     magazine_price: money("precio de revista"),
     sale_price: money("precio especial"),
@@ -92,7 +94,7 @@ export const productSchema = z
     /** Para quién es: "" = para todos. */
     gender: z
       .enum(["", "femenino", "masculino"])
-      .optional()
+      .nullish()
       .transform((v) => (v ? v : null)),
   })
   .superRefine((data, ctx) => {

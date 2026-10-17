@@ -80,7 +80,9 @@ export function ProductForm({
   const onSubmit = async (data: ProductData) => {
     const res = await saveProduct(productId, data);
     if (!res.ok) {
-      toast.error(res.error);
+      // Dice cuál es el problema (no solo "revisá los campos"), por si el campo no se ve en pantalla.
+      const details = Object.values(res.fields ?? {}).slice(0, 2).join(" ");
+      toast.error(details ? `${res.error} ${details}` : res.error);
       for (const [field, message] of Object.entries(res.fields ?? {})) {
         setError(field as keyof ProductInput, { message });
       }
@@ -273,13 +275,13 @@ export function ProductForm({
 
       <section className="grid gap-3 rounded-3xl bg-warm-white p-5 shadow-soft sm:grid-cols-2">
         <h2 className="font-display text-xl font-bold sm:col-span-2">Visibilidad</h2>
-        <Field label="Estado" htmlFor="status" className="sm:col-span-2">
+        <Field label="Estado" htmlFor="status" error={err("status")} className="sm:col-span-2">
           <Select id="status" {...register("status")}>
             <option value="draft">Borrador (no se ve en la tienda)</option>
             <option value="published">Publicado (visible en la tienda)</option>
           </Select>
         </Field>
-        <Field label="Género (filtro «Género» de la tienda)" htmlFor="gender" className="sm:col-span-2">
+        <Field label="Género (filtro «Género» de la tienda)" htmlFor="gender" error={err("gender")} className="sm:col-span-2">
           <Select id="gender" {...register("gender")}>
             <option value="">Para todos (aparece en Mujer y en Hombre)</option>
             <option value="femenino">Mujer</option>
