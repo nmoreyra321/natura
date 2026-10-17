@@ -45,6 +45,8 @@ export async function createPreference(input: {
       metadata: { order_number: input.orderNumber },
       back_urls: { success: back, pending: back, failure: back },
       auto_return: "approved",
+      // Pago en una sola cuota: así la comisión es siempre la misma y el recargo la cubre justo.
+      payment_methods: { installments: 1 },
       // Mercado Pago solo acepta avisos a direcciones públicas con https.
       ...(input.siteUrl.startsWith("https://") ? { notification_url: `${input.siteUrl}/api/mercadopago` } : {}),
     }),
@@ -64,6 +66,8 @@ export type MercadoPagoPayment = {
   status: string;
   orderId: string | null;
   amount: number;
+  /** Lo que le llega a la vendedora después de la comisión (null si Mercado Pago todavía no lo informa). */
+  netReceived: number | null;
 };
 
 /** Consulta un pago directamente a Mercado Pago (así nadie puede inventar un pago aprobado). */
@@ -81,12 +85,17 @@ export async function getPayment(paymentId: string): Promise<MercadoPagoPayment 
     status: string;
     external_reference?: string | null;
     transaction_amount?: number;
+    transaction_details?: { net_received_amount?: number | null };
   };
   return {
     id: String(data.id),
     status: data.status,
     orderId: data.external_reference ?? null,
     amount: Number(data.transaction_amount ?? 0),
+    netReceived: Number.isFinite(Number(data.transaction_details?.net_received_amount))
+      && Number(data.transaction_details?.net_received_amount) > 0
+      ? Number(data.transaction_details?.net_received_amount)
+      : null,
   };
 }
 

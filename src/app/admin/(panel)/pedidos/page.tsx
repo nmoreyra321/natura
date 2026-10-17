@@ -92,7 +92,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
   let query = supabase
     .from("orders")
     .select(
-      "id, number, code, channel, status, customer_cancelled_at, customer_user_id, delivery_method, shipping_zone, shipping_address, shipping_cost, customer_name, customer_phone, total, savings, created_at, payment_method, payment_status, paid_at, amount_paid, payment_note, payment_reported_at, payment_rejection, payment_proof_path, items:order_items(id, product_id, name, size, quantity, unit_price), lots:order_lot_allocations(product_id, expires_on, quantity)",
+      "id, number, code, channel, status, customer_cancelled_at, customer_user_id, delivery_method, shipping_zone, shipping_address, shipping_cost, customer_name, customer_phone, total, savings, created_at, payment_method, payment_status, mp_net_received, paid_at, amount_paid, payment_note, payment_reported_at, payment_rejection, payment_proof_path, items:order_items(id, product_id, name, size, quantity, unit_price), lots:order_lot_allocations(product_id, expires_on, quantity)",
       { count: "exact" },
     )
     .order("created_at", { ascending: false })
@@ -251,6 +251,12 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
                       zone={o.shipping_zone}
                       trackUrl={`${siteUrl}/pedido/${o.id}`}
                     />
+                    {o.payment_method === "mercadopago" && o.mp_net_received !== null ? (
+                      <p className="mt-1 text-sm">
+                        💳 Mercado Pago: te llegaron <b>{formatARS(toCents(o.mp_net_received))}</b> (el pedido era de {formatARS(toCents(o.total))}
+                        {toCents(o.mp_net_received) + 50 < toCents(o.total) ? <span className="font-semibold text-coral-deep"> · quedó por debajo, subí el recargo</span> : null}).
+                      </p>
+                    ) : null}
                     <p className="text-sm text-muted">
                       {dateFormatter.format(new Date(o.created_at))} · {units} {units === 1 ? "unidad" : "unidades"}
                       {o.paid_at ? ` · Cobrado el ${dateFormatter.format(new Date(o.paid_at))}` : ""}
