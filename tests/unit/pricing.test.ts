@@ -98,6 +98,10 @@ describe("descuento sin errores de coma flotante", () => {
 });
 
 describe("surchargeCents", () => {
+  it("redondea hacia arriba al peso (nunca queda en cero ni de menos)", () => {
+    expect(surchargeCents(500, 8.3)).toBe(100);
+    expect(surchargeCents(1_117_500, 8.3)).toBe(92_800);
+  });
   it("calcula el recargo redondeado al peso", () => {
     expect(surchargeCents(2_000_000, 8)).toBe(160_000);
     expect(surchargeCents(1_999_900, 7.5)).toBe(150_000);

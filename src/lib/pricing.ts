@@ -106,8 +106,9 @@ export function salePriceFromDiscount(magazinePrice: number | string, percent: n
   return Math.max(pesos, 1);
 }
 
-/** Recargo en centavos por pagar con Mercado Pago (redondeado al peso). */
+/** Recargo en centavos por pagar con Mercado Pago (redondeado al peso, hacia arriba). */
 export function surchargeCents(totalCents: number, percent: number): number {
   if (!Number.isFinite(totalCents) || totalCents <= 0 || !Number.isFinite(percent) || percent <= 0) return 0;
-  return Math.round((totalCents * percent) / 100 / 100) * 100;
+  // Siempre hacia arriba: así la comisión de Mercado Pago nunca se come parte del precio (el 1e-9 evita errores de decimales).
+  return Math.ceil((totalCents * percent) / 100 / 100 - 1e-9) * 100;
 }
