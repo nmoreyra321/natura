@@ -369,6 +369,9 @@ isOneToOne: false
             "create_order":
 { Args: { "customer_name"?: string; "items": Json }; Returns: { "id": string; "number": number; "total": number }[]
                            },
+            "apply_order_status":
+{ Args: { "new_status": string; "order_id": string }; Returns: undefined
+                           },
             "is_admin":
 { Args: Record<PropertyKey, never>; Returns: boolean
                            },

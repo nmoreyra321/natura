@@ -28,6 +28,7 @@ export async function GET(request: NextRequest) {
     .eq("stock_applied", false)
     .eq("amount_paid", 0)
     .is("payment_reported_at", null)
+    .is("mp_payment_id", null)
     .or("payment_status.is.null,payment_status.eq.pending")
     .lt("created_at", limit)
     .select("id");
