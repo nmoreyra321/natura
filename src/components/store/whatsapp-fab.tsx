@@ -16,7 +16,7 @@ export function WhatsAppFab({ url }: { url: string }) {
       target="_blank"
       rel="noopener noreferrer"
       aria-label="Escribile a Natu Mariel por WhatsApp"
-      className="fixed right-4 bottom-5 z-30 inline-flex size-14 items-center justify-center rounded-full bg-[#25D366] text-white shadow-lift transition hover:scale-105 md:hidden"
+      className="fixed right-4 bottom-28 z-30 inline-flex size-14 items-center justify-center rounded-full bg-[#25D366] text-white shadow-lift transition hover:scale-105 md:hidden"
     >
       <MessageCircle className="size-7" aria-hidden="true" />
     </a>

@@ -7,7 +7,7 @@
 ---------------------------------------------------------------- */
 
 :root {
-  --cream: #fff7ef;
+  --cream: #f8f3fb;
   --warm-white: #ffffff;
   --forest: #3b1e4a; /* texto principal (ciruela): 13.5:1 sobre crema */
   --muted: #6b5577; /* texto secundario: 6.2:1 sobre crema */
@@ -179,6 +179,56 @@ h3,
 
 .animate-plus-one {
   animation: plus-one 0.9s ease-out forwards;
+}
+
+/* Barra de abajo: la rayita del lugar activo cae y rebota. */
+@keyframes nav-dot {
+  0% {
+    transform: translateY(-8px) scaleX(0.4);
+    opacity: 0;
+  }
+  60% {
+    transform: translateY(2px) scaleX(1.1);
+    opacity: 1;
+  }
+  100% {
+    transform: none;
+  }
+}
+
+.animate-nav-dot {
+  animation: nav-dot 0.5s ease-out both;
+}
+
+/* Círculos de categorías: aro de colores que gira despacio. */
+@keyframes ring-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.story-ring {
+  background: conic-gradient(from 0deg, #d1166b, #ffb02e, #7b3fa0, #d1166b);
+  animation: ring-spin 9s linear infinite;
+}
+
+.story-ring-inner {
+  animation: ring-spin 9s linear infinite reverse;
+}
+
+@keyframes ping-soft {
+  0% {
+    transform: scale(0.8);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1.7);
+    opacity: 0;
+  }
+}
+
+.animate-ping-soft {
+  animation: ping-soft 2.2s ease-out infinite;
 }
 
 @keyframes slide-in-right {

@@ -31,7 +31,7 @@ export function ProductCard({ product }: { product: PublicProduct }) {
   const info = getPriceInfo(product.magazine_price, product.sale_price);
   const soldOut = product.stock <= 0;
   return (
-    <article className="group relative flex h-full flex-col overflow-hidden rounded-3xl bg-warm-white shadow-soft ring-1 ring-line/80 transition duration-300 hover:-translate-y-1 hover:shadow-lift">
+    <article className="group relative flex h-full flex-col overflow-hidden rounded-3xl bg-warm-white shadow-soft ring-1 ring-line/80 transition duration-300 hover:-translate-y-1 hover:shadow-lift active:scale-[0.97]">
       <div className={`relative aspect-square overflow-hidden ${tintFor(product.id)}`}>
         {src ? (
           <Image

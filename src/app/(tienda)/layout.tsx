@@ -1,4 +1,5 @@
 import { BackButton } from "@/components/store/back-button";
+import { BottomNav } from "@/components/store/bottom-nav";
 import { Footer } from "@/components/store/footer";
 import { Header } from "@/components/store/header";
 import { WhatsAppFab } from "@/components/store/whatsapp-fab";
@@ -23,6 +24,7 @@ export default async function StoreLayout({ children }: { children: React.ReactN
         {children}
       </main>
       <Footer categories={nav} />
+      <BottomNav />
       {whatsapp ? <WhatsAppFab url={buildWhatsAppUrl(whatsapp, "¡Hola Mariel! Quería hacerte una consulta 😊")} /> : null}
     </>
   );
