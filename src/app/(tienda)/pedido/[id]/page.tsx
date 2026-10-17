@@ -63,7 +63,7 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
   const { data: order } = await admin
     .from("orders")
     .select(
-      "id, code, created_at, status, total, savings, customer_name, customer_phone, customer_cancelled_at, customer_user_id, delivery_method, shipping_zone, shipping_address, shipping_cost, payment_method, payment_status, amount_paid, payment_reported_at, payment_rejection, payment_proof_path, items:order_items(product_id, name, size, quantity, unit_price, magazine_price)",
+      "id, code, created_at, status, total, savings, customer_name, customer_phone, customer_cancelled_at, customer_user_id, delivery_method, shipping_zone, shipping_address, shipping_cost, payment_method, payment_status, mp_payment_id, amount_paid, payment_reported_at, payment_rejection, payment_proof_path, items:order_items(product_id, name, size, quantity, unit_price, magazine_price)",
     )
     .eq("id", id)
     .maybeSingle();
@@ -129,6 +129,18 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
     } else if (state === "failed") {
       [tone, Icon, title] = ["bad", XCircle, "El pago no se completó"];
       text = "No se hizo ningún cobro. Podés volver al carrito y probar de nuevo, o elegir otra forma de pago.";
+    } else if (!order.mp_payment_id) {
+      // Volvió desde Mercado Pago sin pagar (tocó «volver»): todavía no hay ningún pago registrado.
+      [tone, Icon, title] = ["todo", Wallet, "Todavía no pagaste"];
+      text = (
+        <>
+          Tu pedido está guardado, pero no se hizo ningún cobro. Podés volver al{" "}
+          <Link href="/carrito" className="font-semibold underline">
+            carrito
+          </Link>{" "}
+          para pagar de nuevo, o elegir pagar en efectivo.
+        </>
+      );
     } else {
       [tone, Icon, title] = ["wait", Clock, "Tu pago está en proceso"];
       text =
