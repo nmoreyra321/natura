@@ -23,7 +23,8 @@ describe("canCustomerCancel", () => {
   it("no deja si hay plata de por medio (parcial, avisada o en proceso)", () => {
     expect(canCustomerCancel({ ...base, amount_paid: 5000 })).toBe(false);
     expect(canCustomerCancel({ ...base, payment_reported_at: "2026-10-15T10:00:00Z" })).toBe(false);
-    expect(canCustomerCancel({ ...base, payment_method: "mercadopago", payment_status: "pending" })).toBe(false);
+    // En proceso de verdad = Mercado Pago ya registró un pago (tiene número). Sin número, nunca se pagó y sí se puede cancelar.
+    expect(canCustomerCancel({ ...base, payment_method: "mercadopago", payment_status: "pending", mp_payment_id: "123" })).toBe(false);
     expect(canCustomerCancel({ ...base, payment_status: "approved" })).toBe(false);
   });
 });
