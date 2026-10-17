@@ -16,7 +16,6 @@ import { HeroArt } from "./hero-art";
 import { LeafMark } from "./logo";
 import { ProductRail } from "./product-card";
 import { ReviewsStrip } from "./reviews-strip";
-import { SearchBox } from "./search-box";
 import { Stars } from "./stars";
 
 export type HomeData = {
@@ -192,41 +191,8 @@ export function HomeView({ d }: { d: HomeData }) {
         </div>
       ) : null}
 
-      {/* Portada en el celular: saludo, buscador y cartel que se desliza */}
-      <section className="px-4 pt-4 md:hidden" aria-label="Portada">
-        <div className="animate-rise">
-          <p className="text-sm font-semibold text-muted">Hola 👋</p>
-          <h1 className="font-display text-[1.65rem] leading-tight font-bold">¿Qué buscás hoy?</h1>
-        </div>
-        <div className="mt-3">
-          <SearchBox />
-        </div>
-        {d.categories.length > 0 ? (
-          <ul aria-label="Categorías" className="-mx-4 mt-4 flex gap-3.5 overflow-x-auto px-4 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {d.categories.map((cat) => {
-              const src = cat.image ? productImageUrl(cat.image) : null;
-              return (
-                <li key={cat.id} className="w-[4.6rem] shrink-0">
-                  <Link href={`/categorias/${cat.slug}`} className="flex flex-col items-center gap-1.5 text-center active:scale-95">
-                    <span className="story-ring block size-[4.4rem] rounded-full p-[3px]">
-                      <span className="story-ring-inner relative block size-full overflow-hidden rounded-full border-[3px] border-white bg-white">
-                        {src ? <Image src={src} alt="" fill sizes="70px" className="object-cover" /> : <LeafMark className="absolute inset-0 m-auto size-7" />}
-                      </span>
-                    </span>
-                    <span className="line-clamp-2 text-[0.72rem] leading-tight font-extrabold">{cat.name}</span>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        ) : null}
-        <div className="mt-2">
-          <HomeBanner slides={slides} />
-        </div>
-      </section>
-
-      {/* Portada en la computadora y la tablet */}
-      <section className="hidden px-3 pt-3 sm:px-6 sm:pt-5 md:block">
+      {/* Portada */}
+      <section className="px-3 pt-3 sm:px-6 sm:pt-5">
         <div className="relative mx-auto max-w-7xl overflow-hidden rounded-[2rem] bg-gradient-to-br from-blush via-pink/70 to-lilac sm:rounded-[2.5rem]">
           <div aria-hidden="true" className="pointer-events-none absolute inset-0">
             <div className="absolute -top-24 -left-16 size-72 rounded-full bg-white/60 blur-3xl" />
@@ -284,6 +250,13 @@ export function HomeView({ d }: { d: HomeData }) {
         </div>
       </section>
 
+      {/* Cartel que se desliza, en el celular */}
+      {d.hasProducts ? (
+        <section className="px-4 pt-4 md:hidden" aria-label="Novedades">
+          <HomeBanner slides={slides} />
+        </section>
+      ) : null}
+
       {!d.hasProducts ? (
         <EmptyStore />
       ) : (
@@ -300,7 +273,7 @@ export function HomeView({ d }: { d: HomeData }) {
           ) : null}
 
           {d.categories.length > 0 ? (
-            <Section className="hidden md:block">
+            <Section>
               <SectionHeader title="Comprá por categoría" href="/productos" />
               <InfiniteCarousel label="Categorías">
                 {d.categories.map((cat, i) => {
