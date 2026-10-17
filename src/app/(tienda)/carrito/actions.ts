@@ -150,8 +150,23 @@ async function tooManyPending(admin: Admin, phone: string): Promise<boolean> {
     .select("id", { count: "exact", head: true })
     .eq("customer_phone", phone)
     .eq("status", "pending")
+    // Los de Mercado Pago que nunca se pagaron se cierran solos al hacer uno nuevo: no cuentan para el límite.
+    .or("payment_method.neq.mercadopago,mp_payment_id.not.is.null")
     .gte("created_at", since);
   return (count ?? 0) >= MAX_PENDING_PER_PHONE;
+}
+/** Cierra los pedidos de Mercado Pago que esta clienta empezó y nunca pagó (ya armó uno nuevo). */
+async function closeAbandonedMercadoPago(admin: Admin, phone: string, keepOrderId: string) {
+  const { error } = await admin
+    .from("orders")
+    .update({ status: "cancelled", payment_status: "cancelled" })
+    .eq("customer_phone", phone)
+    .eq("status", "pending")
+    .eq("payment_method", "mercadopago")
+    .eq("stock_applied", false)
+    .is("mp_payment_id", null)
+    .neq("id", keepOrderId);
+  if (error) console.error("[pedido] No se pudieron cerrar los pedidos sin pagar:", error.message);
 }
 const PENDING_MESSAGE = `Ya tenés ${MAX_PENDING_PER_PHONE} pedidos esperando confirmación. Podés cancelar alguno y hacer uno completo, o escribirle a Natu Mariel por WhatsApp para sumarle productos. En unas horas vas a poder pedir de nuevo.`;
 
@@ -304,13 +319,7 @@ export async function payWithMercadoPago(input: unknown): Promise<MercadoPagoChe
     await admin.from("orders").update({ status: "cancelled", payment_status: "cancelled" }).eq("id", order.id);
     return { ok: false, error: "Mercado Pago no respondió. Probá de nuevo en un rato o elegí efectivo." };
   }
-  after(() =>
-    notifyAdmins({
-      title: "🛍 Pedido nuevo",
-      body: `${parsed.data.customerName} · ${formatARS(toCents(order.total) + delivery.costCents)} · paga con Mercado Pago${zoneName ? ` · envío a ${zoneName}` : ""}`,
-      url: "/admin/pedidos",
-      tag: `pedido-${order.id}`,
-    }),
-  );
+  // A Mariel le avisamos recién cuando el pago se aprueba (ver lib/payments.ts): un pedido sin pagar todavía no es una venta.
+  await closeAbandonedMercadoPago(admin, phone, order.id);
   return { ok: true, url: preference.url };
 }

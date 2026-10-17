@@ -5,6 +5,8 @@ export type TrackingOrder = {
   status: string;
   payment_method: string;
   payment_status: string | null;
+  /** Número de pago de Mercado Pago: si no hay, la clienta nunca llegó a pagar. */
+  mp_payment_id?: string | null;
   amount_paid: number | string;
   total: number | string;
   payment_reported_at: string | null;
@@ -91,6 +93,20 @@ export function canCustomerCancel(o: TrackingOrder): boolean {
   if (o.status !== "pending") return false;
   if (toCents(o.amount_paid) > 0) return false;
   if (o.payment_reported_at) return false;
-  if (o.payment_status && !["rejected", "cancelled"].includes(o.payment_status)) return false;
+  if (o.payment_status && !["rejected", "cancelled"].includes(o.payment_status)) {
+    // Mercado Pago sin ningún pago registrado: la clienta volvió sin pagar, así que puede cancelar.
+    const neverPaid = o.payment_method === "mercadopago" && o.payment_status === "pending" && !o.mp_payment_id;
+    if (!neverPaid) return false;
+  }
   return true;
+}
+
+/** true si es un pedido de Mercado Pago que la clienta empezó pero nunca pagó (puede pagar de nuevo o cambiar). */
+export function isUnpaidMercadoPago(o: TrackingOrder): boolean {
+  return (
+    o.status === "pending" &&
+    o.payment_method === "mercadopago" &&
+    !o.mp_payment_id &&
+    (o.payment_status === null || o.payment_status === "pending")
+  );
 }

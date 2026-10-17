@@ -10,11 +10,12 @@ import { AutoRefresh, MpPayFlow, OrderPageEffects, ReportPayment } from "@/compo
 import { PaidOrderActions } from "@/components/store/paid-order-actions";
 import { AddReview } from "@/components/store/add-review";
 import { TransferAccount } from "@/components/store/transfer-account";
+import { UnpaidMpActions } from "@/components/store/unpaid-mp-actions";
 import { buttonClasses } from "@/components/ui/button";
 import { getSiteUrl, getLoginProviders } from "@/lib/config";
 import { formatARS } from "@/lib/format";
 import { GIFT_EVERY, loyaltyKey, loyaltyStatus, PURCHASE_STATUSES, type LoyaltyStatus } from "@/lib/loyalty";
-import { canCustomerCancel, canReportPayment, owedOf, paymentState, trackingSteps } from "@/lib/order-tracking";
+import { canCustomerCancel, canReportPayment, isUnpaidMercadoPago, owedOf, paymentState, trackingSteps } from "@/lib/order-tracking";
 import { syncMercadoPagoPayment } from "@/lib/payments";
 import { toCents } from "@/lib/pricing";
 import { getLoyaltyMinTotal, getTransferDetails } from "@/lib/store-settings";
@@ -134,11 +135,7 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
       [tone, Icon, title] = ["todo", Wallet, "Todavía no pagaste"];
       text = (
         <>
-          Tu pedido está guardado, pero no se hizo ningún cobro. Podés volver al{" "}
-          <Link href="/carrito" className="font-semibold underline">
-            carrito
-          </Link>{" "}
-          para pagar de nuevo, o elegir pagar en efectivo.
+          Tu pedido está guardado, pero no se hizo ningún cobro. Podés pagar de nuevo, elegir pagar en efectivo o cancelarlo.
         </>
       );
     } else {
@@ -363,6 +360,7 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
             </a>
           ) : null}
           {isMp && state === "paid" ? <PaidOrderActions /> : null}
+          {isUnpaidMercadoPago(order) ? <UnpaidMpActions orderId={order.id} /> : null}
           {isMp && state === "failed" ? (
             <Link href="/carrito" className={buttonClasses("primary", "lg")}>
               Volver al carrito

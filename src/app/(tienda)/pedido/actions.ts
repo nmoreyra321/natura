@@ -4,10 +4,14 @@ import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 
 import { toWhatsAppPhone } from "@/lib/debts";
-import { canCustomerCancel, canReportPayment, normalizeOrderCode, paymentState } from "@/lib/order-tracking";
-import { toCents } from "@/lib/pricing";
+import { getSiteUrl } from "@/lib/config";
+import { createPreference, isMercadoPagoEnabled } from "@/lib/mercadopago";
+import { canCustomerCancel, canReportPayment, isUnpaidMercadoPago, normalizeOrderCode, paymentState } from "@/lib/order-tracking";
+import { formatARS } from "@/lib/format";
+import { surchargeCents, toCents } from "@/lib/pricing";
 import { notifyAdmins } from "@/lib/push";
 import { allowRequest } from "@/lib/rate-limit";
+import { getMercadoPagoSurcharge } from "@/lib/store-settings";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -161,7 +165,7 @@ export async function cancelMyOrder(orderId: string): Promise<CancelOrderResult>
   }
   const { data: order } = await admin
     .from("orders")
-    .select("id, status, stock_applied, payment_method, payment_status, amount_paid, total, payment_reported_at, payment_rejection")
+    .select("id, status, stock_applied, payment_method, payment_status, mp_payment_id, amount_paid, total, payment_reported_at, payment_rejection")
     .eq("id", orderId)
     .maybeSingle();
   if (!order) return { ok: false, error: "No encontramos tu pedido." };
@@ -171,7 +175,11 @@ export async function cancelMyOrder(orderId: string): Promise<CancelOrderResult>
   // Solo si sigue igual (por si Natu Mariel lo confirmó o llegó un pago en este momento).
   const { data: done, error } = await admin
     .from("orders")
-    .update({ status: "cancelled", customer_cancelled_at: new Date().toISOString() })
+    .update({
+      status: "cancelled",
+      customer_cancelled_at: new Date().toISOString(),
+      ...(order.payment_method === "mercadopago" ? { payment_status: "cancelled" } : {}),
+    })
     .eq("id", orderId)
     .eq("status", "pending")
     .eq("stock_applied", false)
@@ -273,5 +281,72 @@ export async function submitReview(input: { orderId?: string | null; name: strin
   if (orderId) revalidatePath(`/pedido/${orderId}`);
   revalidatePath("/");
   revalidatePath("/admin/resenas");
+  return { ok: true };
+}
+
+export type RetryPaymentResult = { ok: true; url: string } | { ok: false; error: string };
+
+/** La clienta volvió de Mercado Pago sin pagar: arma un link de pago nuevo para el mismo pedido. */
+export async function retryMercadoPago(orderId: string): Promise<RetryPaymentResult> {
+  if (!UUID_RE.test(orderId)) return { ok: false, error: "No encontramos tu pedido." };
+  if (!isMercadoPagoEnabled()) return { ok: false, error: "El pago con Mercado Pago no está disponible." };
+  const admin = createAdminClient();
+  if (!admin) return { ok: false, error: "La tienda no está configurada." };
+  if (!(await allowRequest("reintentar-pago", 10, 3600))) {
+    return { ok: false, error: "Probaste muchas veces. Escribile a Natu Mariel por WhatsApp." };
+  }
+  const { data: order } = await admin
+    .from("orders")
+    .select("id, number, status, stock_applied, payment_method, payment_status, mp_payment_id, total, shipping_cost, shipping_zone, items:order_items(product_id, name, size, quantity, unit_price)")
+    .eq("id", orderId)
+    .maybeSingle();
+  if (!order || order.stock_applied || !isUnpaidMercadoPago({ ...order, amount_paid: 0, payment_reported_at: null, payment_rejection: null })) {
+    return { ok: false, error: "Este pedido ya no se puede pagar desde acá. Escribile a Natu Mariel por WhatsApp." };
+  }
+  const lines = order.items.map((i) => ({
+    id: i.product_id ?? i.name,
+    title: i.size ? `${i.name} (${i.size})` : i.name,
+    quantity: i.quantity,
+    unitPrice: toCents(i.unit_price) / 100,
+  }));
+  const shippingCents = toCents(order.shipping_cost);
+  if (shippingCents > 0) lines.push({ id: "envio", title: `Envío a ${order.shipping_zone ?? "tu casa"}`, quantity: 1, unitPrice: shippingCents / 100 });
+  // El total del pedido ya incluye el envío: el recargo se calcula sobre ese total.
+  const surcharge = surchargeCents(toCents(order.total), await getMercadoPagoSurcharge());
+  if (surcharge > 0) lines.push({ id: "recargo-mp", title: "Recargo por pago con Mercado Pago", quantity: 1, unitPrice: surcharge / 100 });
+  const preference = await createPreference({ orderId: order.id, orderNumber: order.number, siteUrl: getSiteUrl(), items: lines });
+  if (!preference) return { ok: false, error: "Mercado Pago no respondió. Probá de nuevo en un rato o elegí pagar en efectivo." };
+  return { ok: true, url: preference.url };
+}
+
+/** La clienta no quiso pagar con Mercado Pago: el mismo pedido pasa a efectivo (se paga al recibir). */
+export async function switchOrderToCash(orderId: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (!UUID_RE.test(orderId)) return { ok: false, error: "No encontramos tu pedido." };
+  const admin = createAdminClient();
+  if (!admin) return { ok: false, error: "La tienda no está configurada." };
+  if (!(await allowRequest("pedido-a-efectivo", 10, 3600))) {
+    return { ok: false, error: "Probaste muchas veces. Escribile a Natu Mariel por WhatsApp." };
+  }
+  const { data: done, error } = await admin
+    .from("orders")
+    .update({ payment_method: "efectivo", payment_status: null })
+    .eq("id", orderId)
+    .eq("status", "pending")
+    .eq("payment_method", "mercadopago")
+    .eq("stock_applied", false)
+    .is("mp_payment_id", null)
+    .select("id, customer_name, total");
+  if (error || !done?.length) return { ok: false, error: "Este pedido ya no se puede cambiar desde acá. Escribile a Natu Mariel por WhatsApp." };
+  const order = done[0];
+  after(() =>
+    notifyAdmins({
+      title: "🛍 Pedido nuevo",
+      body: `${order.customer_name ?? "Una clienta"} · ${formatARS(toCents(order.total))} · paga en efectivo`,
+      url: "/admin/pedidos",
+      tag: `pedido-${orderId}`,
+    }),
+  );
+  revalidatePath(`/pedido/${orderId}`);
+  revalidatePath("/admin/pedidos");
   return { ok: true };
 }

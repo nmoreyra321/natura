@@ -34,6 +34,18 @@ export async function GET(request: NextRequest) {
     .select("id");
   if (expireError) console.error("[vencer-pedidos]", expireError.message);
 
+  // Los de Mercado Pago que nadie llegó a pagar no esperan 7 días: a las 24 horas ya se dan de baja.
+  const dayAgo = new Date(Date.now() - 86_400_000).toISOString();
+  const { error: abandonedError } = await admin
+    .from("orders")
+    .update({ status: "cancelled", payment_status: "cancelled" })
+    .eq("status", "pending")
+    .eq("payment_method", "mercadopago")
+    .eq("stock_applied", false)
+    .is("mp_payment_id", null)
+    .lt("created_at", dayAgo);
+  if (abandonedError) console.error("[vencer-pedidos-mp]", abandonedError.message);
+
   return Response.json(
     { ok: !error, expired: expired?.length ?? 0 },
     { status: error ? 503 : 200, headers: { "Cache-Control": "no-store" } },
