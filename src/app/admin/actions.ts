@@ -2006,6 +2006,32 @@ export async function saveShippingSettings(input: unknown): Promise<ActionResult
   }
 }
 
+/**
+ * Deja TODO el stock en cero y borra los vencimientos anotados (para empezar de nuevo, por ejemplo al
+ * contar el stock real). No borra productos ni pedidos.
+ */
+export async function clearAllStock(): Promise<ActionResult<{ products: number }>> {
+  try {
+    const { supabase } = await assertAdmin();
+    const { data: changed, error } = await supabase.from("products").update({ stock: 0 }).gt("stock", 0).select("id");
+    if (error) return fail(error, "No pudimos dejar el stock en cero.");
+    const { error: lotsError } = await supabase.from("product_lots").delete().gte("quantity", 0);
+    if (lotsError) return fail(lotsError, "El stock quedó en cero, pero no pudimos borrar los vencimientos anotados.");
+    refreshCatalog();
+    revalidatePath("/admin/productos");
+    revalidatePath("/admin/vencimientos");
+    revalidatePath("/admin");
+    const products = changed?.length ?? 0;
+    return {
+      ok: true,
+      data: { products },
+      message: products === 0 ? "No había stock para borrar." : `Listo: ${products} ${products === 1 ? "producto quedó" : "productos quedaron"} sin stock.`,
+    };
+  } catch (e) {
+    return fail(e, "No pudimos dejar el stock en cero.");
+  }
+}
+
 /** Agrega una localidad a la que se hace envío a domicilio. */
 export async function addShippingZone(name: string, percent: number): Promise<ActionResult> {
   try {

@@ -2,6 +2,7 @@ import { Camera, Keyboard, Plus, Search } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { ClearAllStock } from "@/components/admin/clear-all-stock";
 import { BulkSelectionProvider, SelectAllCheckbox, SelectProductCheckbox } from "@/components/admin/bulk-selection";
 import { InventoryCreate } from "@/components/admin/inventory-create";
 import { LotQuickEntry } from "@/components/admin/lot-quick-entry";
@@ -141,6 +142,8 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
   const error = outOfRange ? null : queryError;
   const products = outOfRange ? [] : data;
   const total = count ?? 0;
+  const { count: withStock } = await supabase.from("products").select("id", { count: "exact", head: true }).gt("stock", 0);
+  const withStockCount = withStock ?? 0;
   const pageCount = Math.ceil(total / PAGE_SIZE);
   const filtered = Boolean(q || estado || stock || oferta || categoria);
 
@@ -166,6 +169,7 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
         </Link>
         , que suma.
       </p>
+      <ClearAllStock withStock={withStockCount} />
 
       <form
         method="get"
