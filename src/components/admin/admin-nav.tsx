@@ -3,6 +3,7 @@
 import { Home, Wallet, BellRing, CalendarClock, CalendarHeart, CirclePlus, Gift, HandCoins, ClipboardList, ExternalLink, LayoutDashboard, LogOut, Menu, MessageSquareHeart, Package, Settings, ShoppingBasket, TrendingUp, Percent } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState } from "react";
 
 import { signOut } from "@/app/admin/actions";
 import { LeafMark } from "@/components/store/logo";
@@ -123,6 +124,13 @@ function Brand() {
 
 export function AdminNav({ email, pedidosCount = 0 }: { email: string | null; pedidosCount?: number }) {
   const pathname = usePathname();
+  // Al tocar un lugar de la barra se marca al instante, sin esperar a que cargue la pantalla.
+  const [tapped, setTapped] = useState<string | null>(null);
+  const [lastPath, setLastPath] = useState(pathname);
+  if (pathname !== lastPath) {
+    setLastPath(pathname);
+    setTapped(null);
+  }
   const current = items.find((item) => isActive(pathname, item));
 
   return (
@@ -137,12 +145,14 @@ export function AdminNav({ email, pedidosCount = 0 }: { email: string | null; pe
         className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-line bg-warm-white px-1 pt-1.5 pb-[max(0.5rem,env(safe-area-inset-bottom))] shadow-[0_-4px_14px_rgba(60,20,80,0.08)] lg:hidden"
       >
         {TABS.map((t) => {
-          const active = isActive(pathname, t);
+          const active = tapped ? tapped === t.href : isActive(pathname, t);
           const count = t.badge === "pedidos" ? pedidosCount : 0;
           return (
             <Link
               key={t.href}
               href={t.href}
+              prefetch
+              onClick={() => setTapped(t.href)}
               aria-current={active ? "page" : undefined}
               className={`relative flex min-h-14 flex-col items-center justify-center gap-0.5 text-[13px] font-extrabold ${active ? "text-coral-deep" : "text-muted"}`}
             >
