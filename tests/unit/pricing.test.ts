@@ -58,16 +58,22 @@ describe("planMagazinePriceUpdate", () => {
     });
   });
 
-  it("mantiene un precio especial propio", () => {
+  it("mantiene el mismo % de descuento sobre el precio nuevo", () => {
+    // 25 % menos que 20.000 (15.000) → 25 % menos que 22.000 = 16.500
     expect(planMagazinePriceUpdate({ magazine_price: 20000, sale_price: 15000, is_offer: true }, 22000)).toEqual({
       magazine_price: 22000,
-      sale_price: 15000,
+      sale_price: 16500,
       is_offer: true,
     });
   });
 
+  it("redondea hacia abajo al peso entero", () => {
+    // 20 % menos que 33.100 (26.480) → 20 % menos que 34.000 = 27.200
+    expect(planMagazinePriceUpdate({ magazine_price: 33100, sale_price: 26480, is_offer: true }, 34050).sale_price).toBe(27240);
+  });
+
   it("deja de ser oferta si el especial ya no es menor que el de revista", () => {
-    expect(planMagazinePriceUpdate({ magazine_price: 20000, sale_price: 15000, is_offer: true }, 14000).is_offer).toBe(false);
+    expect(planMagazinePriceUpdate({ magazine_price: 20000, sale_price: 20000, is_offer: true }, 22000).is_offer).toBe(false);
   });
 });
 

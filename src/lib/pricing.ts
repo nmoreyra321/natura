@@ -74,7 +74,7 @@ export function getPriceInfo(
 /**
  * Cómo queda un producto cuando cambia el precio de revista de Natura:
  * - si el precio especial era igual al de revista, acompaña el cambio;
- * - si era distinto (un precio propio), se mantiene;
+ * - si tenía un descuento (un % menos que la revista), mantiene ese mismo % sobre el precio nuevo;
  * - si estaba en oferta y el especial ya no es menor que el de revista, deja de ser oferta.
  */
 export function planMagazinePriceUpdate(
@@ -84,7 +84,13 @@ export function planMagazinePriceUpdate(
   const oldMagazine = toCents(product.magazine_price);
   const oldSale = toCents(product.sale_price);
   const newMagazine = toCents(newMagazinePrice);
-  const sale = oldSale === oldMagazine ? newMagazine : oldSale;
+  let sale = newMagazine;
+  if (oldMagazine > 0 && oldSale > 0 && oldSale < oldMagazine) {
+    // Mismo descuento sobre el precio nuevo (redondeado hacia abajo al peso: nunca promete de menos descuento).
+    const percent = (1 - oldSale / oldMagazine) * 100;
+    const kept = salePriceFromDiscount(newMagazine / 100, percent);
+    sale = Number.isFinite(kept) ? Math.min(Math.round(kept * 100), newMagazine) : newMagazine;
+  }
   return {
     magazine_price: newMagazine / 100,
     sale_price: sale / 100,
