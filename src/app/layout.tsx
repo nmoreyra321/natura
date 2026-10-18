@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Caveat, Fredoka, Nunito } from "next/font/google";
 import { Toaster } from "sonner";
 
+import { NoPinchZoom } from "@/components/no-pinch-zoom";
 import { SiteAnalytics } from "@/components/site-analytics";
 import { getSiteUrl, SITE_DESCRIPTION, SITE_NAME } from "@/lib/config";
 import "./globals.css";
@@ -70,6 +71,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           closeButton
           toastOptions={{ style: { fontFamily: "var(--font-nunito)" } }}
         />
+        <NoPinchZoom />
         <SiteAnalytics />
       </body>
     </html>

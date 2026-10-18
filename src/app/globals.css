@@ -709,3 +709,15 @@ h3,
     animation: none;
   }
 }
+
+/* Sin zoom accidental en el celular: ni con doble toque, ni con dos dedos, ni al tocar un campo para escribir. */
+html {
+  touch-action: pan-x pan-y;
+}
+@media (pointer: coarse) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
