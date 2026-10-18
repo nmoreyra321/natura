@@ -57,8 +57,9 @@ export function Price({
   return (
     <div className="flex flex-col gap-0.5">
       <span className="text-xs font-semibold text-muted">
-        Revista <span className="tabular font-bold line-through decoration-coral-deep decoration-2">{formatARS(info.magazineCents)}</span>
+        Precio revista <span className="tabular font-bold line-through decoration-coral-deep decoration-2">{formatARS(info.magazineCents)}</span>
       </span>
+      <span className="text-[0.68rem] leading-none font-extrabold tracking-wide text-coral-deep uppercase">Precio en Natu Mariel</span>
       <span className="tabular font-display text-[1.35rem] leading-tight font-bold tracking-tight text-coral-deep">
         <span className="sr-only">Precio en Natu Mariel: </span>
         {formatARS(info.saleCents)}
