@@ -34,7 +34,7 @@ export function BackButton() {
   };
 
   return (
-    <div className="mx-auto max-w-7xl px-4 pt-3 sm:px-6">
+    <div className="mx-auto -mb-5 max-w-7xl px-4 pt-3 sm:mb-0 sm:px-6">
       <button
         type="button"
         onClick={goBack}
