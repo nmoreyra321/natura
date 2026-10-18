@@ -21,8 +21,7 @@ export default async function CampaignsPage() {
     <div className="mx-auto max-w-3xl">
       <h1 className="font-display text-3xl font-bold">Fechas especiales</h1>
       <p className="mt-1 text-muted">
-        Para el Día de la Madre, del Padre, Navidad… Elegís los productos y, entre las fechas que pongas, la tienda muestra un
-        cartel en la portada y una página con esos regalos. Cuando termina, desaparece sola.
+        Elegís productos y fechas: la tienda muestra un cartel con esos regalos y, al terminar, desaparece sola.
       </p>
       {error ? (
         <p className="mt-6 rounded-2xl bg-coral-soft p-4 font-semibold">No pudimos cargar las fechas especiales.</p>

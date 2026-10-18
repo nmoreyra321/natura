@@ -74,32 +74,36 @@ export function CampaignEditor({
         {campaigns.map((c) => {
           const s = statusOf(c, today);
           return (
-            <li key={c.id} className="flex flex-wrap items-center gap-3 rounded-3xl bg-warm-white p-4 shadow-soft">
-              <div className="min-w-0 flex-1">
-                <p className="font-display text-lg font-bold">{c.title}</p>
-                <p className="text-sm text-muted">
-                  Del {fmt(c.starts_on)} al {fmt(c.ends_on)} · {c.product_ids.length}{" "}
-                  {c.product_ids.length === 1 ? "producto" : "productos"}
-                </p>
-                <span className={`mt-1 inline-block rounded-full px-2 py-0.5 text-xs font-bold ${s.tone}`}>{s.label}</span>
+            <li key={c.id} className="rounded-3xl bg-warm-white p-4 shadow-soft">
+              <div className="flex items-start justify-between gap-3">
+                <p className="min-w-0 break-words font-display text-lg font-bold leading-tight">{c.title}</p>
+                <span className={`shrink-0 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-bold ${s.tone}`}>{s.label}</span>
               </div>
-              {isActive(c, today) ? (
-                <a href={`/especial/${c.slug}`} target="_blank" rel="noopener noreferrer" className={buttonClasses("outline", "sm")}>
-                  Ver en la tienda
-                </a>
-              ) : null}
-              <button type="button" onClick={() => setEditing(c)} className={buttonClasses("ghost", "sm")} aria-label={`Editar ${c.title}`}>
-                <Pencil className="size-4" aria-hidden="true" /> Editar
-              </button>
-              <button
-                type="button"
-                onClick={() => setRemoving(c)}
-                disabled={pending}
-                className="inline-flex size-9 items-center justify-center rounded-full text-muted hover:bg-coral-soft hover:text-coral-deep"
-                aria-label={`Borrar ${c.title}`}
-              >
-                <Trash2 className="size-4" aria-hidden="true" />
-              </button>
+              <p className="mt-1 text-sm text-muted">
+                Del {fmt(c.starts_on)} al {fmt(c.ends_on)}
+              </p>
+              <p className="text-sm text-muted">
+                {c.product_ids.length} {c.product_ids.length === 1 ? "producto" : "productos"}
+              </p>
+              <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-line pt-3">
+                {isActive(c, today) ? (
+                  <a href={`/especial/${c.slug}`} target="_blank" rel="noopener noreferrer" className={buttonClasses("outline", "sm")}>
+                    Ver en la tienda
+                  </a>
+                ) : null}
+                <button type="button" onClick={() => setEditing(c)} className={buttonClasses("ghost", "sm")} aria-label={`Editar ${c.title}`}>
+                  <Pencil className="size-4" aria-hidden="true" /> Editar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRemoving(c)}
+                  disabled={pending}
+                  className="ml-auto inline-flex size-9 items-center justify-center rounded-full text-muted hover:bg-coral-soft hover:text-coral-deep"
+                  aria-label={`Borrar ${c.title}`}
+                >
+                  <Trash2 className="size-4" aria-hidden="true" />
+                </button>
+              </div>
             </li>
           );
         })}
