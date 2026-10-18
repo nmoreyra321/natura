@@ -92,7 +92,7 @@ export function ReviewsSection({ r }: { r: ReviewSummary | null }) {
 const untilFmt = new Intl.DateTimeFormat("es-AR", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" });
 
 /** Lo que más le importa a la clienta antes de comprar (se muestra como texto con tildes, no como botones). */
-const PERKS = ["Hace 4 años vendiendo Natura", "Productos 100% originales", "Pagás con Mercado Pago o efectivo", "Sumá compras y ganá regalos"];
+const PERKS = ["Más de 5 años vendiendo Natura", "Productos 100% originales", "Pagás con Mercado Pago o efectivo", "Sumá compras y ganá regalos"];
 
 const CATEGORY_TINTS = ["bg-pink", "bg-sun", "bg-sage", "bg-lilac", "bg-peach"];
 

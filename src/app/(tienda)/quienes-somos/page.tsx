@@ -9,7 +9,7 @@ import { DELIVERY_TEXT } from "@/lib/delivery";
 
 export const metadata: Metadata = {
   title: "Quiénes somos",
-  description: "Soy Mariel: hace más de 4 años que vendo productos Natura y hago vivos en Facebook. Conocé Natu Mariel.",
+  description: "Soy Mariel: hace más de 5 años que vendo productos Natura y hago vivos en Facebook. Conocé Natu Mariel.",
   alternates: { canonical: "/quienes-somos" },
 };
 
@@ -54,7 +54,7 @@ export default async function AboutPage() {
         <h1 className="relative mt-4 font-display text-4xl font-bold sm:text-5xl">Hola, soy Mariel 🌸</h1>
         <div className="relative mt-4 flex max-w-2xl flex-col gap-3 text-lg text-forest/85">
           <p>
-            Hace <strong>más de 4 años</strong> que vendo productos Natura, y lo que más disfruto es acompañar a cada
+            Hace <strong>más de 5 años</strong> que vendo productos Natura, y lo que más disfruto es acompañar a cada
             clienta para que encuentre lo que busca: ese perfume que la representa, la crema justa para su piel o el regalo
             perfecto.
           </p>
@@ -72,7 +72,7 @@ export default async function AboutPage() {
             <CalendarHeart className="size-5" aria-hidden="true" />
           </span>
           <span className="leading-tight">
-            <strong className="block font-display text-xl">+4 años</strong>
+            <strong className="block font-display text-xl">+5 años</strong>
             <span className="text-sm text-muted">vendiendo Natura</span>
           </span>
         </li>
