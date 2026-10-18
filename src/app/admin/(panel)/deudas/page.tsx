@@ -1,4 +1,5 @@
 import { HandCoins } from "lucide-react";
+import { PlataTabs } from "@/components/admin/plata-tabs";
 
 import { DebtCard } from "@/components/admin/debt-card";
 import { requireAdmin } from "@/lib/auth";
@@ -28,6 +29,7 @@ export default async function DebtsPage() {
 
   return (
     <div className="mx-auto max-w-3xl">
+      <PlataTabs current="/admin/deudas" />
       <h1 className="font-display text-3xl font-bold">Quién me debe</h1>
       <p className="text-muted">
         Clientas con pedidos sin cobrar o pagados en parte. Cuando te paguen, tocá «Me pagó todo» o «Me pagó una parte» en

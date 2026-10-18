@@ -42,8 +42,8 @@ function sectionOf(o: Parameters<typeof needsPaymentReview>[0]): (typeof SECTION
 
 // "atender" (lo que hay que hacer) es lo que se ve al entrar.
 const FILTERS: { value: string; label: string }[] = [
-  { value: "atender", label: "Por atender" },
-  { value: "confirmed", label: "Confirmados" },
+  { value: "atender", label: "Para hacer" },
+  { value: "confirmed", label: "Por entregar" },
   { value: "delivered", label: "Entregados" },
   { value: "cancelled", label: "Cancelados" },
   { value: "todos", label: "Todos" },

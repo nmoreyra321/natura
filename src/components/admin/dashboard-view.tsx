@@ -9,7 +9,6 @@ import {
   Plus,
   Receipt,
   ShoppingBag,
-  Sparkles,
   Trophy,
   Wallet,
   type LucideIcon,
@@ -39,27 +38,6 @@ export type DashboardData = {
   warnings: React.ReactNode;
 };
 
-const TASK_TONES: Record<DashboardTask["tone"], string> = {
-  urgent: "bg-sun text-forest",
-  money: "bg-lilac text-grape",
-  good: "bg-sage text-botanical-deep",
-  info: "bg-coral-soft text-coral-deep",
-};
-
-function QuickAction({ href, icon: Icon, label, external }: { href: string; icon: LucideIcon; label: string; external?: boolean }) {
-  return (
-    <Link
-      href={href}
-      target={external ? "_blank" : undefined}
-      className="flex items-center gap-2.5 rounded-2xl bg-white/12 px-3.5 py-3 text-sm font-bold text-white ring-1 ring-white/20 backdrop-blur transition hover:bg-white/22"
-    >
-      <span className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-white text-forest">
-        <Icon className="size-4.5" aria-hidden="true" />
-      </span>
-      {label}
-    </Link>
-  );
-}
 
 function Kpi({ icon: Icon, label, value, hint, tone }: { icon: LucideIcon; label: string; value: string; hint?: string; tone: string }) {
   return (
@@ -83,74 +61,73 @@ export function DashboardView({ d, imageUrl }: { d: DashboardData; imageUrl: (pa
 
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-5">
-      {/* Portada */}
-      <section className="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-forest via-grape to-coral-deep p-5 text-white shadow-lift sm:p-7">
-        <span className="pointer-events-none absolute -top-16 -right-10 size-56 rounded-full bg-coral/40 blur-3xl" aria-hidden="true" />
-        <span className="pointer-events-none absolute -bottom-20 left-1/3 size-64 rounded-full bg-sun/25 blur-3xl" aria-hidden="true" />
-        <div className="relative grid gap-6 lg:grid-cols-[1.4fr_1fr] lg:items-end">
-          <div>
-            <p className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-bold">
-              <Sparkles className="size-3.5" aria-hidden="true" /> {d.dateLabel.charAt(0).toUpperCase() + d.dateLabel.slice(1)}
-            </p>
-            <h1 className="mt-3 font-display text-3xl font-bold sm:text-4xl">¡Hola, Mariel!</h1>
-            <p className="mt-4 text-sm font-semibold text-white/80">Vendiste en {d.monthLabel.toLowerCase()}</p>
-            <p className="font-display text-4xl font-bold tabular sm:text-5xl">{formatARS(d.month.cents)}</p>
-            <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
-              {d.month.change !== null ? (
-                <span
-                  className={`inline-flex items-center gap-0.5 rounded-full px-2.5 py-0.5 font-bold ${up ? "bg-sage text-botanical-deep" : "bg-white text-coral-deep"}`}
-                >
-                  {up ? <ArrowUpRight className="size-4" aria-hidden="true" /> : <ArrowDownRight className="size-4" aria-hidden="true" />}
-                  {up ? "+" : ""}
-                  {d.month.change}% vs. {d.prevMonthLabel}
-                </span>
-              ) : null}
-              <span className="text-white/85">
-                Hoy: <strong className="text-white">{formatARS(d.today.cents)}</strong> en {d.today.orders}{" "}
-                {d.today.orders === 1 ? "venta" : "ventas"}
-              </span>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <QuickAction href="/admin/vender" icon={CirclePlus} label="Venta rápida" />
-            <QuickAction href="/admin/productos?vista=llego" icon={PackagePlus} label="Cargar caja de Natura" />
-            <QuickAction href="/admin/productos/nuevo" icon={Plus} label="Nuevo producto" />
-            <QuickAction href="/" icon={ExternalLink} label="Ver tienda" external />
-          </div>
-        </div>
+      {/* Saludo */}
+      <section>
+        <h1 className="font-display text-3xl font-bold sm:text-4xl">Hola, Mariel 👋</h1>
+        <p className="mt-1 text-lg">
+          Este mes vendiste <strong>{formatARS(d.month.cents)}</strong>
+          {d.month.change !== null ? (
+            <span className={`ml-2 inline-flex items-center gap-0.5 rounded-full px-2.5 py-0.5 text-sm font-bold ${up ? "bg-sage text-botanical-deep" : "bg-coral-soft text-coral-deep"}`}>
+              {up ? <ArrowUpRight className="size-4" aria-hidden="true" /> : <ArrowDownRight className="size-4" aria-hidden="true" />}
+              {up ? "+" : ""}
+              {d.month.change}% vs. {d.prevMonthLabel}
+            </span>
+          ) : null}
+        </p>
       </section>
 
       {d.warnings}
 
       {/* Para hacer */}
       <section aria-labelledby="hacer">
-        <h2 id="hacer" className="mb-2 font-display text-lg font-bold">
-          Para hacer hoy
+        <h2 id="hacer" className="mb-3 font-display text-2xl font-bold">
+          {d.tasks.length > 0 ? `Para hacer hoy (${d.tasks.length})` : "Para hacer hoy"}
         </h2>
         {d.tasks.length > 0 ? (
-          <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            {d.tasks.map((t) => (
+          <ol className="flex flex-col gap-3">
+            {d.tasks.map((t, n) => (
               <li key={t.href + t.text}>
-                <Link
-                  href={t.href}
-                  className="group flex h-full items-center gap-3 rounded-2xl bg-warm-white p-3 shadow-soft transition hover:-translate-y-0.5 hover:shadow-lift"
-                >
-                  <span className={`flex size-10 shrink-0 items-center justify-center rounded-xl ${TASK_TONES[t.tone]}`}>
-                    <t.icon className="size-5" aria-hidden="true" />
-                  </span>
-                  <span className="min-w-0 flex-1 text-sm leading-snug font-semibold">{t.text}</span>
-                  <ArrowRight className="size-4 shrink-0 text-muted transition group-hover:translate-x-0.5 group-hover:text-coral-deep" aria-hidden="true" />
+                <Link href={t.href} className="group flex items-center gap-4 rounded-2xl bg-warm-white p-4 shadow-soft">
+                  <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-coral-deep font-extrabold text-white">{n + 1}</span>
+                  <span className="min-w-0 flex-1 text-lg leading-snug font-extrabold">{t.text}</span>
+                  <ArrowRight className="size-5 shrink-0 text-muted" aria-hidden="true" />
                 </Link>
               </li>
             ))}
-          </ul>
+          </ol>
         ) : (
-          <p className="flex items-center gap-3 rounded-2xl bg-sage p-4 font-semibold text-botanical-deep">
+          <p className="flex items-center gap-3 rounded-2xl bg-sage p-4 text-lg font-bold text-botanical-deep">
             <PackageCheck className="size-6 shrink-0" aria-hidden="true" /> ¡Todo al día! No hay nada pendiente.
           </p>
         )}
       </section>
 
+      {/* Lo que se hace seguido */}
+      <section aria-labelledby="seguido">
+        <h2 id="seguido" className="mb-3 font-display text-2xl font-bold">
+          Cosas que hacés seguido
+        </h2>
+        <div className="grid grid-cols-2 gap-3">
+          <Link href="/admin/vender" className="flex min-h-24 flex-col items-center justify-center gap-1 rounded-2xl bg-warm-white p-3 text-center text-lg font-extrabold shadow-soft">
+            <CirclePlus className="size-7 text-coral-deep" aria-hidden="true" /> Anotar una venta
+          </Link>
+          <Link href="/admin/productos?vista=llego" className="flex min-h-24 flex-col items-center justify-center gap-1 rounded-2xl bg-warm-white p-3 text-center text-lg font-extrabold shadow-soft">
+            <PackagePlus className="size-7 text-coral-deep" aria-hidden="true" /> Cargar una caja de Natura
+          </Link>
+          <Link href="/admin/productos/nuevo" className="flex min-h-16 items-center justify-center gap-2 rounded-2xl bg-warm-white p-3 text-center font-bold shadow-soft">
+            <Plus className="size-5" aria-hidden="true" /> Nuevo producto
+          </Link>
+          <Link href="/" target="_blank" className="flex min-h-16 items-center justify-center gap-2 rounded-2xl bg-warm-white p-3 text-center font-bold shadow-soft">
+            <ExternalLink className="size-5" aria-hidden="true" /> Ver la tienda
+          </Link>
+        </div>
+      </section>
+
+      <details className="group rounded-3xl bg-warm-white p-4 shadow-soft">
+        <summary className="flex min-h-11 cursor-pointer items-center justify-between text-lg font-extrabold">
+          Ver los números del mes y el catálogo <span aria-hidden="true" className="text-2xl text-muted group-open:rotate-90">›</span>
+        </summary>
+        <div className="mt-4 flex flex-col gap-5">
       {/* Números del mes */}
       <section aria-label="Números del mes" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Kpi icon={ShoppingBag} label="Ventas del mes" value={String(d.month.orders)} hint={`${d.month.units} unidades`} tone="bg-sage text-botanical-deep" />
@@ -252,6 +229,8 @@ export function DashboardView({ d, imageUrl }: { d: DashboardData; imageUrl: (pa
           ))}
         </ul>
       </section>
+        </div>
+      </details>
     </div>
   );
 }

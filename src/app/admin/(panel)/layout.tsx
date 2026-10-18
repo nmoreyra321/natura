@@ -18,11 +18,17 @@ export const metadata: Metadata = {
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   if (!isSupabaseConfigured()) return <SetupPending />;
-  const { user } = await requireAdmin();
+  const { user, supabase } = await requireAdmin();
+  // Número rojo de «Pedidos»: nuevos sin confirmar y pagos avisados por revisar.
+  const { count: pedidosCount } = await supabase
+    .from("orders")
+    .select("id", { count: "exact", head: true })
+    .neq("status", "cancelled")
+    .or("status.eq.pending,and(payment_reported_at.not.is.null,payment_status.is.null)");
   return (
     <div className="flex min-h-dvh flex-col bg-cream lg:flex-row">
-      <AdminNav email={user.email} />
-      <main id="contenido" className="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-10 lg:py-10">
+      <AdminNav email={user.email} pedidosCount={pedidosCount ?? 0} />
+      <main id="contenido" className="min-w-0 flex-1 px-4 py-6 pb-28 sm:px-6 lg:px-10 lg:py-10 lg:pb-10">
         {children}
       </main>
     </div>

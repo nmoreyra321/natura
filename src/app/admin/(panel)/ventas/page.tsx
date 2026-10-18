@@ -1,4 +1,5 @@
 import { ArrowDownRight, ArrowUpRight, ChevronLeft, ChevronRight, Clock } from "lucide-react";
+import { PlataTabs } from "@/components/admin/plata-tabs";
 import Link from "next/link";
 
 import { SalesChart, type SalesBar } from "@/components/admin/sales-chart";
@@ -145,6 +146,7 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
 
   return (
     <div className="mx-auto max-w-5xl">
+      <PlataTabs current="/admin/ventas" />
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="font-display text-3xl font-bold">Ventas y estadísticas</h1>

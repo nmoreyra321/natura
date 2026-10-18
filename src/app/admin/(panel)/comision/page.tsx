@@ -1,4 +1,5 @@
 import { ArrowDownRight, ArrowUpRight, ChevronLeft, ChevronRight } from "lucide-react";
+import { PlataTabs } from "@/components/admin/plata-tabs";
 import Link from "next/link";
 
 import { UpdateFeeButton } from "@/components/admin/update-fee-button";
@@ -43,6 +44,7 @@ export default async function CommissionPage({ searchParams }: { searchParams: P
 
   return (
     <div className="mx-auto max-w-2xl">
+      <PlataTabs current="/admin/comision" />
       <h1 className="font-display text-3xl font-bold">Comisión de Mercado Pago</h1>
       <p className="mt-1 text-muted">Para saber si el recargo alcanza o si Mercado Pago te está sacando plata.</p>
 

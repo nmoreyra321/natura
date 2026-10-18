@@ -1,10 +1,8 @@
 "use client";
 
-import { BellRing, CalendarClock, CalendarHeart, CirclePlus, Gift, HandCoins, ClipboardList, ExternalLink, LayoutDashboard, LogOut, Menu, MessageSquareHeart, Package, Settings, ShoppingBasket, TrendingUp, Percent, X } from "lucide-react";
+import { Home, Wallet, BellRing, CalendarClock, CalendarHeart, CirclePlus, Gift, HandCoins, ClipboardList, ExternalLink, LayoutDashboard, LogOut, Menu, MessageSquareHeart, Package, Settings, ShoppingBasket, TrendingUp, Percent } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
-import { createPortal } from "react-dom";
 
 import { signOut } from "@/app/admin/actions";
 import { LeafMark } from "@/components/store/logo";
@@ -40,8 +38,22 @@ const groups: { title: string | null; items: NavItem[] }[] = [
 ];
 const items = groups.flatMap((g) => g.items);
 
+/** Barra de abajo en el celular: cinco lugares fijos. */
+const TABS: (NavItem & { badge?: "pedidos" })[] = [
+  { href: "/admin", label: "Hoy", icon: Home, exact: true, also: ["/admin/vender"] },
+  { href: "/admin/pedidos", label: "Pedidos", icon: ClipboardList, badge: "pedidos" },
+  { href: "/admin/productos", label: "Productos", icon: Package, also: ["/admin/categorias", "/admin/precios", "/admin/inventario"] },
+  { href: "/admin/deudas", label: "Plata", icon: Wallet, also: ["/admin/ventas", "/admin/comision"] },
+  {
+    href: "/admin/mas",
+    label: "Más",
+    icon: Menu,
+    also: ["/admin/club", "/admin/fechas", "/admin/resenas", "/admin/reponer", "/admin/vencimientos", "/admin/avisos", "/admin/configuracion"],
+  },
+];
+
 function isActive(pathname: string, item: NavItem) {
-  if (item.exact) return pathname === item.href;
+  if (item.exact) return pathname === item.href || (item.also ?? []).some((h) => pathname.startsWith(h));
   return [item.href, ...(item.also ?? [])].some((h) => pathname.startsWith(h));
 }
 
@@ -109,73 +121,43 @@ function Brand() {
   );
 }
 
-/** Menú lateral del celular: se abre desde la izquierda con todas las secciones una debajo de la otra. */
-function MobileDrawer({ pathname, email, onClose }: { pathname: string; email: string | null; onClose: () => void }) {
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.body.style.overflow = prev;
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [onClose]);
-
-  return createPortal(
-    <div className="fixed inset-0 z-[100] lg:hidden">
-      <button type="button" aria-label="Cerrar menú" onClick={onClose} className="absolute inset-0 bg-forest/40 backdrop-blur-[2px]" />
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label="Secciones del panel"
-        className="absolute inset-y-0 left-0 flex w-[82%] max-w-xs flex-col overflow-y-auto bg-warm-white shadow-xl"
-      >
-        <div className="flex items-center justify-between gap-2 px-4 py-3">
-          <Brand />
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Cerrar menú"
-            className="inline-flex size-10 items-center justify-center rounded-full hover:bg-forest/5"
-          >
-            <X className="size-5" aria-hidden="true" />
-          </button>
-        </div>
-        <nav aria-label="Panel" className="px-3 pb-4">
-          <NavList pathname={pathname} onNavigate={onClose} />
-        </nav>
-        <div className="mt-auto border-t border-line p-4">
-          <SignOut email={email} />
-        </div>
-      </div>
-    </div>,
-    document.body,
-  );
-}
-
-export function AdminNav({ email }: { email: string | null }) {
+export function AdminNav({ email, pedidosCount = 0 }: { email: string | null; pedidosCount?: number }) {
   const pathname = usePathname();
-  const [open, setOpen] = useState(false);
-  const close = useCallback(() => setOpen(false), []);
   const current = items.find((item) => isActive(pathname, item));
 
   return (
     <>
-      {/* Celular: barra de arriba con el botón Menú. */}
+      {/* Celular: barra de arriba con el nombre y barra de abajo con cinco lugares. */}
       <header className="sticky top-0 z-30 flex items-center justify-between gap-2 border-b border-line bg-warm-white px-4 py-2.5 lg:hidden">
         <Brand />
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          aria-expanded={open}
-          className="inline-flex h-11 items-center gap-2 rounded-full border-2 border-forest bg-white px-4 font-bold"
-        >
-          <Menu className="size-5" aria-hidden="true" />
-          {current?.label ?? "Menú"}
-        </button>
+        <span className="text-lg font-bold">{current?.label ?? ""}</span>
       </header>
-      {open ? <MobileDrawer pathname={pathname} email={email} onClose={close} /> : null}
+      <nav
+        aria-label="Secciones"
+        className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-line bg-warm-white px-1 pt-1.5 pb-[max(0.5rem,env(safe-area-inset-bottom))] shadow-[0_-4px_14px_rgba(60,20,80,0.08)] lg:hidden"
+      >
+        {TABS.map((t) => {
+          const active = isActive(pathname, t);
+          const count = t.badge === "pedidos" ? pedidosCount : 0;
+          return (
+            <Link
+              key={t.href}
+              href={t.href}
+              aria-current={active ? "page" : undefined}
+              className={`relative flex min-h-14 flex-col items-center justify-center gap-0.5 text-[13px] font-extrabold ${active ? "text-coral-deep" : "text-muted"}`}
+            >
+              {active ? <span aria-hidden="true" className="absolute -top-1.5 h-1 w-9 rounded-full bg-coral-deep" /> : null}
+              <t.icon className="size-6" aria-hidden="true" />
+              {t.label}
+              {count > 0 ? (
+                <span className="absolute top-0.5 left-1/2 ml-2 inline-flex min-w-5 items-center justify-center rounded-full bg-coral-deep px-1.5 text-xs font-bold text-white">
+                  {count}
+                </span>
+              ) : null}
+            </Link>
+          );
+        })}
+      </nav>
 
       {/* Computadora: barra lateral fija. */}
       <aside className="sticky top-0 z-30 hidden h-dvh w-64 shrink-0 flex-col border-r border-line bg-warm-white lg:flex">
