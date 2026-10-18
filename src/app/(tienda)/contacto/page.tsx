@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { buttonClasses } from "@/components/ui/button";
+import { getSocialLinks } from "@/lib/store-settings";
 import { buildWhatsAppUrl, getWhatsAppNumber } from "@/lib/whatsapp";
 
 export const metadata: Metadata = {
@@ -11,8 +12,9 @@ export const metadata: Metadata = {
   alternates: { canonical: "/contacto" },
 };
 
-export default function ContactPage() {
+export default async function ContactPage() {
   const number = getWhatsAppNumber();
+  const social = await getSocialLinks();
   return (
     <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6 sm:py-16">
       <p className="inline-flex items-center gap-2 rounded-full bg-blush px-3 py-1 text-sm font-bold text-coral-deep">
@@ -40,6 +42,27 @@ export default function ContactPage() {
           </p>
         )}
       </div>
+
+      {social.facebook || social.instagram ? (
+        <section className="mt-8" aria-labelledby="redes">
+          <h2 id="redes" className="font-display text-2xl font-bold">
+            También en redes
+          </h2>
+          <p className="mt-1 font-semibold text-forest/80">Mirá las novedades y los vivos de Mariel.</p>
+          <div className="mt-3 flex flex-wrap gap-3">
+            {social.facebook ? (
+              <a href={social.facebook} target="_blank" rel="noopener noreferrer" className={buttonClasses("outline", "md")}>
+                Facebook
+              </a>
+            ) : null}
+            {social.instagram ? (
+              <a href={social.instagram} target="_blank" rel="noopener noreferrer" className={buttonClasses("outline", "md")}>
+                Instagram
+              </a>
+            ) : null}
+          </div>
+        </section>
+      ) : null}
 
       <section id="como-comprar" className="mt-14 scroll-mt-24 rounded-3xl bg-sun p-6" aria-labelledby="como">
         <h2 id="como" className="font-display text-2xl font-bold">¿Primera vez que comprás?</h2>

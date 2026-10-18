@@ -59,6 +59,8 @@ export type CatalogFilters = {
   min?: number;
   max?: number;
   offers?: boolean;
+  /** Solo lo que hay en stock. */
+  inStock?: boolean;
   /** "mujer" saca lo masculino, "hombre" saca lo femenino (lo que es para todos aparece en los dos). */
   /** "ninos" = la categoría Infantiles (que no aparece en Mujer ni en Hombre). */
   gender?: "mujer" | "hombre" | "ninos";
@@ -105,6 +107,7 @@ export function parseCatalogFilters(
     min: num("min"),
     max: num("max"),
     offers: first("ofertas") === "1",
+    inStock: first("stock") === "1",
     gender: ["mujer", "hombre", "ninos"].includes(first("para") ?? "") ? (first("para") as "mujer" | "hombre" | "ninos") : undefined,
     sort: sortRaw && sortRaw in SORT_OPTIONS ? (sortRaw as SortOption) : "destacados",
     page: Number.isInteger(pageRaw) && pageRaw > 0 ? Math.min(pageRaw, 1000) : 1,
@@ -142,6 +145,7 @@ export async function getCatalog(filters: CatalogFilters): Promise<CatalogResult
   if (filters.min !== undefined) query = query.gte("sale_price", filters.min);
   if (filters.max !== undefined) query = query.lte("sale_price", filters.max);
   if (filters.offers) query = query.eq("is_offer", true).gt("discount_percent", 0);
+  if (filters.inStock) query = query.eq("in_stock", true);
   if (filters.gender) {
     // Los productos de la categoría Infantiles son «Niños»: no aparecen en Mujer ni en Hombre.
     const kids = await getCategoryBySlug("infantiles");

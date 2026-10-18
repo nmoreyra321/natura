@@ -1,4 +1,4 @@
-import { BadgePercent, CalendarHeart, Heart, MessageCircle, Radio, ShieldCheck, Sparkles, Truck } from "lucide-react";
+import { BadgePercent, Heart, MessageCircle, ShieldCheck, Sparkles, Truck } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
@@ -66,36 +66,6 @@ export default async function AboutPage() {
         <LeafMark className="absolute right-6 bottom-6 hidden size-16 rotate-12 opacity-40 sm:block" />
       </section>
 
-      <ul className="mt-4 grid gap-3 sm:grid-cols-3">
-        <li className="flex items-center gap-3 rounded-3xl bg-warm-white p-4 shadow-soft">
-          <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-sun text-forest">
-            <CalendarHeart className="size-5" aria-hidden="true" />
-          </span>
-          <span className="leading-tight">
-            <strong className="block font-display text-xl">+5 años</strong>
-            <span className="text-sm text-muted">vendiendo Natura</span>
-          </span>
-        </li>
-        <li className="flex items-center gap-3 rounded-3xl bg-warm-white p-4 shadow-soft">
-          <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-pink text-forest">
-            <Radio className="size-5" aria-hidden="true" />
-          </span>
-          <span className="leading-tight">
-            <strong className="block font-display text-xl">Vivos</strong>
-            <span className="text-sm text-muted">en Facebook</span>
-          </span>
-        </li>
-        <li className="flex items-center gap-3 rounded-3xl bg-warm-white p-4 shadow-soft">
-          <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-sage text-forest">
-            <Heart className="size-5" aria-hidden="true" />
-          </span>
-          <span className="leading-tight">
-            <strong className="block font-display text-xl">Atención</strong>
-            <span className="text-sm text-muted">personalizada</span>
-          </span>
-        </li>
-      </ul>
-
       <section aria-labelledby="vivos" className="mt-10 rounded-3xl border-2 border-forest bg-warm-white p-6 shadow-[4px_4px_0_var(--forest)] sm:p-8">
         <h2 id="vivos" className="flex items-center gap-2 font-display text-2xl font-bold sm:text-3xl">
           <span className="relative flex size-3" aria-hidden="true">
@@ -106,7 +76,7 @@ export default async function AboutPage() {
         </h2>
         <p className="mt-3 text-lg text-forest/85">
           En mis vivos te muestro los productos de cerca, te cuento las novedades y las ofertas, y respondo todas tus
-          preguntas en el momento. ¡Sumate, que siempre hay sorpresas!
+          preguntas en el momento. ¡Sumate!
         </p>
         {social.facebook || social.instagram ? (
           <div className="mt-5 flex flex-wrap gap-3">

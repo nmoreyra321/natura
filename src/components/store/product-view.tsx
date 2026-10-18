@@ -97,12 +97,12 @@ export function ProductView({
           <div id="comprar" className="flex scroll-mt-28 flex-col gap-4 rounded-[1.75rem] bg-warm-white p-5 shadow-soft ring-1 ring-line/80">
             <div className="rounded-2xl bg-gradient-to-br from-blush to-lilac/70 p-4">
               <Price magazinePrice={product.magazine_price} salePrice={product.sale_price} size="lg" />
-              <LiveSavings productId={product.id} magazinePrice={product.magazine_price} salePrice={product.sale_price} />
+              {product.stock > 0 ? <LiveSavings productId={product.id} magazinePrice={product.magazine_price} salePrice={product.sale_price} /> : null}
               <StockBadge stock={product.stock} className="mt-3" />
             </div>
             <p className="flex items-start gap-2 text-sm font-semibold text-forest/80">
               <MapPin className="mt-0.5 size-4 shrink-0 text-coral-deep" aria-hidden="true" />
-              Punto de encuentro en las estaciones de {DELIVERY_TEXT} (más que nada los sábados) o envío a domicilio en zona sur.
+              Punto de encuentro gratis en las estaciones de {DELIVERY_TEXT} (más que nada los sábados) o envío a domicilio en zona sur.
             </p>
             <AddToCart
               product={{
@@ -126,7 +126,7 @@ export function ProductView({
                   className={buttonClasses("outline", "lg", "w-full")}
                 >
                   <MessageCircle className="size-5" aria-hidden="true" />
-                  Consultar
+                  Consultar por WhatsApp
                 </a>
               ) : null}
               <ShareButton
@@ -138,7 +138,7 @@ export function ProductView({
           </div>
 
           <ul className="grid gap-x-5 gap-y-1.5 px-1 text-sm font-semibold text-forest sm:grid-cols-2" aria-label="Por qué comprar acá">
-            {["Producto 100% original", "Coordinamos la entrega con vos", "Sumá compras y ganá regalos"].map((t) => (
+            {["Producto 100% original", "Sumá compras y ganá regalos"].map((t) => (
               <li key={t} className="flex items-center gap-2">
                 <CircleCheck className="size-4 shrink-0 text-botanical-deep" aria-hidden="true" />
                 {t}

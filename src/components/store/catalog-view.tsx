@@ -25,6 +25,7 @@ function pageHref(base: string, filters: CatalogFilters, page: number, fixedCate
   if (filters.min !== undefined) p.set("min", String(filters.min));
   if (filters.max !== undefined) p.set("max", String(filters.max));
   if (filters.offers) p.set("ofertas", "1");
+  if (filters.inStock) p.set("stock", "1");
   if (filters.gender) p.set("para", filters.gender);
   if (filters.sort && filters.sort !== "destacados") p.set("orden", filters.sort);
   if (page > 1) p.set("pagina", String(page));
@@ -68,6 +69,7 @@ export async function CatalogView({
       filters.min !== undefined ||
       filters.max !== undefined ||
       filters.offers ||
+      filters.inStock ||
       filters.gender ||
       (!fixedCategory && filters.category),
   );
@@ -78,6 +80,7 @@ export async function CatalogView({
     filters.min !== undefined || filters.max !== undefined,
     // En «Todos los productos», ofertas es la página «Ofertas» en sí (no un filtro elegido).
     fixedCategory && filters.offers,
+    filters.inStock,
     filters.gender,
     !fixedCategory && filters.category,
     filters.sort !== "destacados",
@@ -171,6 +174,10 @@ export async function CatalogView({
           <label className="flex h-11 cursor-pointer items-center gap-2 font-semibold">
             <input type="checkbox" name="ofertas" value="1" defaultChecked={filters.offers} className="size-5 accent-[var(--coral-deep)]" />
             Ofertas
+          </label>
+          <label className="flex h-11 cursor-pointer items-center gap-2 font-semibold">
+            <input type="checkbox" name="stock" value="1" defaultChecked={filters.inStock} className="size-5 accent-[var(--coral-deep)]" />
+            Solo con stock
           </label>
           <label className="flex h-11 cursor-pointer items-center gap-2 font-semibold">
             <input type="checkbox" name="repuestos" value="1" defaultChecked={filters.refills} className="size-5 accent-[var(--coral-deep)]" />

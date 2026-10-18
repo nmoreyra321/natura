@@ -51,7 +51,7 @@ export function ClubProgressCard({ minCents }: { minCents: number }) {
       ) : (
         <>
           <p className="font-display text-base font-bold sm:text-lg">
-            Entrá con tu cuenta y tu primera compra{min > 0 ? ` de ${formatARS(min)} o más` : ""} ya cuenta
+            Creá tu cuenta con Google: tu primera compra{min > 0 ? ` de ${formatARS(min)} o más` : ""} ya cuenta
           </p>
           {providers.length > 0 ? (
             <div className="w-full max-w-xs">

@@ -137,7 +137,7 @@ export function CartDrawer() {
             <div className="border-t border-line bg-cream px-5 py-4">
               <SavingsCelebration savingsCents={totals.savingsCents} totalCents={totals.totalCents} />
               <p className="mt-2 flex items-baseline justify-between tabular">
-                <span className="text-lg font-bold">Total</span>
+                <span className="text-lg font-bold">Subtotal</span>
                 <span className="flex items-baseline gap-2">
                   {totals.savingsCents > 0 ? (
                     <span className="text-base font-semibold text-muted line-through" aria-label="Precio de revista">

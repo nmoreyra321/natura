@@ -92,7 +92,8 @@ export function ReviewsSection({ r }: { r: ReviewSummary | null }) {
 const untilFmt = new Intl.DateTimeFormat("es-AR", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" });
 
 /** Lo que más le importa a la clienta antes de comprar (se muestra como texto con tildes, no como botones). */
-const PERKS = ["Más de 5 años vendiendo Natura", "Productos 100% originales", "Pagás con Mercado Pago o efectivo", "Sumá compras y ganá regalos"];
+// Lo de pagar y lo del club ya está en la barra de arriba y en su propia sección: acá no se repite.
+const PERKS = ["Más de 5 años vendiendo Natura", "Productos 100% originales", "Entregas en zona sur: a domicilio o en la estación"];
 
 const CATEGORY_TINTS = ["bg-pink", "bg-sun", "bg-sage", "bg-lilac", "bg-peach"];
 
@@ -206,18 +207,18 @@ export function HomeView({ d }: { d: HomeData }) {
           <div className="relative grid items-center gap-5 px-5 py-6 sm:gap-8 sm:px-10 sm:py-12 md:grid-cols-[1.05fr_1fr] md:py-16">
             <div className="animate-rise">
               <p className="inline-flex items-center gap-2 rounded-full bg-white/80 px-3 py-1 text-xs font-extrabold text-coral-deep shadow-soft backdrop-blur sm:px-3.5 sm:py-1.5 sm:text-sm">
-                <Sparkles className="size-4" aria-hidden="true" /> Belleza natural a precios especiales
+                <Sparkles className="size-4" aria-hidden="true" /> Revendedora de Natura en zona sur
               </p>
               <h1 className="mt-3 font-display text-[2.1rem] leading-[1.02] font-bold tracking-tight sm:mt-5 sm:text-6xl lg:text-[4.2rem]">
                 Natura te encanta.{" "}
-                <span className="text-coral-deep">Nuestros precios,</span>{" "}
+                <span className="text-coral-deep">Con nuestros precios,</span>{" "}
                 <span className="relative inline-block">
                   <span className="relative z-10">todavía más.</span>
                   <span aria-hidden="true" className="absolute inset-x-0 bottom-1 h-3.5 -rotate-1 rounded-full bg-sun sm:h-5" />
                 </span>
               </h1>
               <p className="mt-3 max-w-lg text-[0.95rem] font-semibold text-muted sm:mt-5 sm:text-lg">
-                Tus productos favoritos de perfumería, cuidado de la piel y maquillaje, con precios especiales y ofertas por debajo de la revista.
+                Perfumería, cuidado de la piel y maquillaje de Natura, con ofertas por debajo del precio de la revista.
               </p>
               {d.hasProducts ? (
                 <div className="mt-5 flex flex-wrap gap-2 sm:mt-7 sm:gap-3">
@@ -225,13 +226,13 @@ export function HomeView({ d }: { d: HomeData }) {
                     Ver productos <ArrowRight className="size-5" aria-hidden="true" />
                   </LinkButton>
                   {hasOffers ? (
-                    <LinkButton href="/productos?ofertas=1" size="md" variant="outline" className="bg-white/70 sm:h-13 sm:px-7 sm:text-base">
+                    <LinkButton href="/productos?ofertas=1" size="md" variant="outline" className="bg-white/70 max-md:hidden sm:h-13 sm:px-7 sm:text-base">
                       Ver ofertas
                     </LinkButton>
                   ) : null}
                 </div>
               ) : null}
-              <ul aria-label="Por qué comprar acá" className="mt-5 grid max-w-lg grid-cols-2 gap-x-3 gap-y-1.5 text-xs font-bold text-forest sm:mt-6 sm:gap-x-5 sm:gap-y-2 sm:text-sm">
+              <ul aria-label="Por qué comprar acá" className="mt-5 grid max-w-lg grid-cols-1 gap-x-3 gap-y-1.5 text-xs font-bold text-forest sm:mt-6 sm:gap-x-5 sm:gap-y-2 sm:text-sm">
                 {PERKS.map((perk) => (
                   <li key={perk} className="flex items-center gap-2">
                     <CircleCheck className="size-4 shrink-0 text-botanical-deep sm:size-[1.1rem]" aria-hidden="true" />
@@ -328,7 +329,6 @@ export function HomeView({ d }: { d: HomeData }) {
                 </p>
                 <ul className="mt-3 flex max-w-lg flex-col gap-1.5 text-sm font-bold sm:text-base">
                   {[
-                    `Cada ${GIFT_EVERY} compras, un regalo de Mariel`,
                     "Cada compra pagada y confirmada suma un sello",
                     "Los pedidos que hagas con tu cuenta quedan juntos para seguirlos",
                   ].map((t) => (
@@ -405,7 +405,7 @@ export function HomeView({ d }: { d: HomeData }) {
 
           {d.latest.length > 0 ? (
             <Section>
-              <SectionHeader title="Novedades ✨" subtitle="Lo último que llegó a la tienda" href="/productos?orden=nuevos" />
+              <SectionHeader title="Recién agregados ✨" subtitle="Lo último que sumamos a la tienda" href="/productos?orden=nuevos" />
               <ProductRail products={d.latest.slice(0, 8)} />
             </Section>
           ) : null}
@@ -415,7 +415,7 @@ export function HomeView({ d }: { d: HomeData }) {
             <Section className="pb-14">
               <SectionHeader
                 title="Todos los productos 🛍️"
-                subtitle={d.totalProducts > 0 ? `Mirá el catálogo completo: ${d.totalProducts} productos` : "Mirá el catálogo completo"}
+                subtitle="Mirá el catálogo completo"
                 href="/productos"
               />
               <ProductRail products={d.more} />

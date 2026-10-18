@@ -103,7 +103,6 @@ export function LiveSavings({ productId, magazinePrice, salePrice }: { productId
     <p className="mt-1 inline-flex w-fit flex-wrap items-center gap-x-1.5 rounded-full bg-sun px-3 py-1 text-sm font-extrabold text-forest tabular" aria-live="polite">
       ¡Ahorrás {formatARS(info.savingsCents * qty)}
       {qty > 1 ? ` llevando ${qty}` : ""}!
-      {info.discountPercent >= 1 ? <span> {info.discountPercent}% menos que en revista</span> : null}
     </p>
   );
 }

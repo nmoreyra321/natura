@@ -401,7 +401,7 @@ export function CartView({
                   <p className="mb-2 flex items-center gap-2 rounded-2xl bg-sage px-3 py-2 text-sm font-semibold text-botanical-deep">
                     <CircleUser className="size-5 shrink-0" aria-hidden="true" />
                     <span>
-                      Estás comprando con tu cuenta{account.name ? ` (${account.name.split(" ")[0]})` : ""}: este pedido suma al Club. ✓
+                      Estás comprando con tu cuenta{account.name ? ` (${account.name.split(" ")[0]})` : ""}.
                     </span>
                   </p>
                 ) : null}
@@ -589,7 +589,7 @@ export function CartView({
                   </span>
                 ) : totals.totalCents >= clubMinCents ? (
                   <span>
-                    Con este pedido <strong>sumás 1 compra</strong> al Club Natu Mariel: cada {GIFT_EVERY}, un regalo.
+                    Este pedido suma 1 compra al Club Natu Mariel cuando esté pagado y confirmado (cada {GIFT_EVERY}, un regalo).
                   </span>
                 ) : (
                   <span>
