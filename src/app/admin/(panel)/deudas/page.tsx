@@ -31,10 +31,7 @@ export default async function DebtsPage() {
     <div className="mx-auto max-w-3xl">
       <PlataTabs current="/admin/deudas" />
       <h1 className="font-display text-3xl font-bold">Quién me debe</h1>
-      <p className="text-muted">
-        Clientas con pedidos sin cobrar o pagados en parte. Cuando te paguen, tocá «Me pagó todo» o «Me pagó una parte» en
-        cada pedido. Si una clienta se arrepintió, marcá el pedido con el casillero y tocá «Borrar».
-      </p>
+      <p className="text-base text-muted">Cuando te paguen, tocá «Me pagó todo» o «Me pagó una parte».</p>
 
       {error ? (
         <p className="mt-6 rounded-2xl bg-coral-soft p-4 font-semibold">No pudimos cargar las deudas.</p>

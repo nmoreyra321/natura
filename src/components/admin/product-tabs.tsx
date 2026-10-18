@@ -4,10 +4,10 @@ import Link from "next/link";
 export type ProductTab = "lista" | "llego" | "categorias" | "natura";
 
 const TABS: { key: ProductTab; href: string; label: string; icon: typeof List }[] = [
-  { key: "llego", href: "/admin/productos?vista=llego", label: "Cargar caja de Natura", icon: PackagePlus },
+  { key: "llego", href: "/admin/productos?vista=llego", label: "Caja de Natura", icon: PackagePlus },
   { key: "lista", href: "/admin/productos", label: "Stock", icon: List },
   { key: "categorias", href: "/admin/categorias", label: "Categorías", icon: Tags },
-  { key: "natura", href: "/admin/precios", label: "Precios y fotos Natura", icon: RefreshCw },
+  { key: "natura", href: "/admin/precios", label: "Precios", icon: RefreshCw },
 ];
 
 /** Pestañas de la sección Productos (en el celular se deslizan de costado). */
@@ -22,7 +22,7 @@ export function ProductTabs({ active }: { active: ProductTab }) {
               <Link
                 href={t.href}
                 aria-current={on ? "page" : undefined}
-                className={`inline-flex h-9 items-center gap-1.5 rounded-full px-3.5 text-sm font-bold whitespace-nowrap ${on ? "bg-forest text-white" : "bg-warm-white text-forest/80 shadow-soft hover:bg-sun"}`}
+                className={`inline-flex h-11 items-center gap-1.5 rounded-full px-4 text-base font-bold whitespace-nowrap ${on ? "bg-forest text-white" : "bg-warm-white text-forest/80 shadow-soft hover:bg-sun"}`}
               >
                 <t.icon className="size-4" aria-hidden="true" /> {t.label}
               </Link>

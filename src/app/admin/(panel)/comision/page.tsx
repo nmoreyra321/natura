@@ -46,7 +46,7 @@ export default async function CommissionPage({ searchParams }: { searchParams: P
     <div className="mx-auto max-w-2xl">
       <PlataTabs current="/admin/comision" />
       <h1 className="font-display text-3xl font-bold">Comisión de Mercado Pago</h1>
-      <p className="mt-1 text-muted">Para saber si el recargo alcanza o si Mercado Pago te está sacando plata.</p>
+      <p className="mt-1 text-base text-muted">Para saber si el recargo alcanza.</p>
 
       <div className="mt-4 rounded-3xl bg-warm-white p-4 shadow-soft">
         <p className="mb-3 text-sm font-semibold">

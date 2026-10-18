@@ -1,4 +1,5 @@
 import { ArrowDownRight, ArrowUpRight, ChevronLeft, ChevronRight, Clock } from "lucide-react";
+import { CountUp } from "@/components/admin/count-up";
 import { PlataTabs } from "@/components/admin/plata-tabs";
 import Link from "next/link";
 
@@ -149,8 +150,7 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
       <PlataTabs current="/admin/ventas" />
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="font-display text-3xl font-bold">Ventas y estadísticas</h1>
-          <p className="text-muted">Lo vendido en la tienda web y con Venta rápida (pedidos confirmados y entregados).</p>
+          <h1 className="font-display text-3xl font-bold">Cuánto vendí</h1>
         </div>
         <nav aria-label="Elegir mes" className="flex items-center gap-1 rounded-full bg-warm-white p-1 shadow-soft">
           <Link
@@ -181,8 +181,8 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
         <>
           <section aria-label="Resumen del mes" className="mt-6 grid gap-3 lg:grid-cols-[1.3fr_2fr]">
             <div className="rounded-3xl border-2 border-forest bg-warm-white p-5 shadow-[4px_4px_0_var(--forest)]">
-              <p className="text-sm font-semibold text-muted">Vendido en {monthLabel(month).toLowerCase()}</p>
-              <p className="mt-1 text-5xl font-extrabold tracking-tight text-forest">{formatARS(s.totalCents)}</p>
+              <p className="text-base font-semibold text-muted">En {monthLabel(month).toLowerCase()} vendiste</p>
+              <p className="mt-1 text-5xl font-extrabold tracking-tight text-forest"><CountUp cents={s.totalCents} /></p>
               <div className="mt-2">
                 <Delta current={s.totalCents} previous={p.totalCents} previousLabel={prevLabel} />
               </div>

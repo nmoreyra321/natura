@@ -69,26 +69,23 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
   if (vista === "llego") {
     const byHand = one(sp.modo) === "mano";
     const modeClass = (on: boolean) =>
-      `inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-full text-sm font-bold sm:flex-none sm:px-5 ${on ? "bg-forest text-white" : "bg-warm-white shadow-soft hover:bg-sun"}`;
+      `inline-flex min-h-14 w-full items-center justify-center gap-3 rounded-2xl px-5 text-lg font-extrabold ${on ? "bg-coral-deep text-white shadow-soft" : "bg-warm-white shadow-soft hover:bg-sun"}`;
     return (
       <div className="mx-auto max-w-6xl">
         <ProductsHeader active={vista} action={<NewProductButton />} />
         <div className="mt-5">
             <div className="mx-auto max-w-3xl">
-              <p className="text-sm text-muted">
-                Cuando te llega una caja de Natura: todo lo que cargues acá <strong className="text-forest">se suma</strong> al
-                stock que ya tenías. Para corregir un número, usá la pestaña Stock.
-              </p>
-              <nav aria-label="Cómo cargar" className="mt-3 mb-5 flex gap-2">
+              <p className="text-base text-muted">Lo que cargues se suma al stock que ya tenías.</p>
+              <nav aria-label="Cómo cargar" className="mt-3 mb-6 flex flex-col gap-3">
                 <Link href="/admin/productos?vista=llego" aria-current={!byHand ? "page" : undefined} className={modeClass(!byHand)}>
-                  <Camera className="size-4" aria-hidden="true" /> Con la factura
+                  <Camera className="size-6" aria-hidden="true" /> Con la foto de la factura
                 </Link>
                 <Link
                   href="/admin/productos?vista=llego&modo=mano"
                   aria-current={byHand ? "page" : undefined}
                   className={modeClass(byHand)}
                 >
-                  <Keyboard className="size-4" aria-hidden="true" /> A mano
+                  <Keyboard className="size-6" aria-hidden="true" /> A mano, producto por producto
                 </Link>
               </nav>
               {byHand ? (
@@ -161,13 +158,8 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
         }
       />
 
-      <p className="mt-3 text-sm text-muted">
-        Escribí cuántos tenés de cada producto (o usá <strong className="text-forest">−</strong> y{" "}
-        <strong className="text-forest">+</strong>). Con Enter se guarda y pasa al siguiente. Si te llegó una caja, usá{" "}
-        <Link href="/admin/productos?vista=llego" className="font-semibold text-coral-deep underline">
-          Cargar caja de Natura
-        </Link>
-        , que suma.
+      <p className="mt-3 text-base text-muted">
+        Tocá <strong className="text-forest">+</strong> o <strong className="text-forest">−</strong> para cambiar cuánto tenés. Tocá el nombre para editarlo.
       </p>
       <ClearAllStock withStock={withStockCount} />
 
@@ -284,10 +276,10 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
                       )}
                     </div>
                     <div className="min-w-0">
-                      <Link href={`/admin/productos/${p.id}`} className="line-clamp-1 text-sm font-semibold hover:text-coral-deep">
+                      <Link href={`/admin/productos/${p.id}`} className="line-clamp-2 text-base font-bold hover:text-coral-deep">
                         {p.name}
                       </Link>
-                      <p className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted">
+                      <p className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm text-muted">
                         <span className="tabular">
                           <span className="font-bold text-forest">{formatARS(info.saleCents)}</span>
                           {info.hasDiscount ? (

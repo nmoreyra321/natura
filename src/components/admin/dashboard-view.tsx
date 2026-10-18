@@ -17,6 +17,7 @@ import Link from "next/link";
 
 import { ProductImageFallback } from "@/components/store/product-card";
 import { formatARS } from "@/lib/format";
+import { CountUp } from "./count-up";
 import { SalesChart, type SalesBar } from "./sales-chart";
 
 export type DashboardTask = { href: string; icon: LucideIcon; text: string; tone: "urgent" | "money" | "good" | "info" };
@@ -65,7 +66,7 @@ export function DashboardView({ d, imageUrl }: { d: DashboardData; imageUrl: (pa
       <section>
         <h1 className="font-display text-3xl font-bold sm:text-4xl">Hola, Mariel 👋</h1>
         <p className="mt-1 text-lg">
-          Este mes vendiste <strong>{formatARS(d.month.cents)}</strong>
+          Este mes vendiste <strong><CountUp cents={d.month.cents} /></strong>
           {d.month.change !== null ? (
             <span className={`ml-2 inline-flex items-center gap-0.5 rounded-full px-2.5 py-0.5 text-sm font-bold ${up ? "bg-sage text-botanical-deep" : "bg-coral-soft text-coral-deep"}`}>
               {up ? <ArrowUpRight className="size-4" aria-hidden="true" /> : <ArrowDownRight className="size-4" aria-hidden="true" />}

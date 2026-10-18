@@ -63,20 +63,29 @@ export function ProductRowActions({
     run(() => updateProductQuick(id, { stock: n }), "Stock actualizado.");
   };
 
+  const shown = Number.isInteger(Number(stockValue)) ? Number(stockValue) : stock;
+  const pill =
+    shown <= 0
+      ? { text: "Sin stock", tone: "bg-coral-soft text-coral-deep" }
+      : shown <= 3
+        ? { text: `Quedan ${shown}`, tone: "bg-sun text-forest" }
+        : { text: `Quedan ${shown}`, tone: "bg-sage text-botanical-deep" };
+
   return (
-    <div className="ml-auto flex items-center gap-1">
+    <div className="ml-auto flex flex-wrap items-center gap-1">
+      <span className={`mr-1 rounded-full px-3 py-1 text-sm font-extrabold whitespace-nowrap ${pill.tone}`}>{pill.text}</span>
       <div className="mr-1 flex items-center gap-1.5">
-        <label htmlFor={`stock-${id}`} className="text-xs font-semibold text-muted">
+        <label htmlFor={`stock-${id}`} className="sr-only">
           Stock
         </label>
         <button
           type="button"
           onClick={() => bump(-1)}
           disabled={pending || Number(stockValue) <= 0}
-          className="inline-flex size-8 items-center justify-center rounded-full border border-line bg-white text-forest hover:bg-coral-soft disabled:opacity-40"
+          className="inline-flex size-11 items-center justify-center rounded-full border-2 border-line bg-white text-forest hover:bg-coral-soft disabled:opacity-40"
           aria-label={`Restar 1 al stock de ${name}`}
         >
-          <Minus className="size-4" aria-hidden="true" />
+          <Minus className="size-5" aria-hidden="true" />
         </button>
         <input
           id={`stock-${id}`}
@@ -101,16 +110,16 @@ export function ProductRowActions({
             }
           }}
           disabled={pending}
-          className="h-9 w-12 rounded-xl border border-line bg-white px-1 text-center text-sm tabular [appearance:textfield] focus:border-botanical focus:outline-none [&::-webkit-inner-spin-button]:appearance-none"
+          className="h-11 w-14 rounded-xl border-2 border-line bg-white px-1 text-center text-base font-bold tabular [appearance:textfield] focus:border-botanical focus:outline-none [&::-webkit-inner-spin-button]:appearance-none"
         />
         <button
           type="button"
           onClick={() => bump(1)}
           disabled={pending}
-          className="inline-flex size-8 items-center justify-center rounded-full border border-line bg-white text-forest hover:bg-sage disabled:opacity-40"
+          className="inline-flex size-11 items-center justify-center rounded-full border-2 border-line bg-white text-forest hover:bg-sage disabled:opacity-40"
           aria-label={`Sumar 1 al stock de ${name}`}
         >
-          <Plus className="size-4" aria-hidden="true" />
+          <Plus className="size-5" aria-hidden="true" />
         </button>
       </div>
       <button

@@ -1,5 +1,7 @@
 import { CheckCircle2, CircleAlert } from "lucide-react";
 
+import { SettingCard } from "@/components/admin/setting-card";
+import { formatARS } from "@/lib/format";
 import { PushToggle } from "@/components/admin/push-toggle";
 import { ShippingPricesForm } from "@/components/admin/shipping-prices-form";
 import { SocialLinksForm } from "@/components/admin/social-links-form";
@@ -42,64 +44,69 @@ export default async function SettingsPage() {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ? getSiteUrl() : null;
   return (
     <div className="mx-auto max-w-3xl">
-      <h1 className="font-display text-3xl font-bold">Configuración</h1>
-      <p className="text-muted">Cosas que tienen que estar listas para que la tienda funcione.</p>
+      <h1 className="font-display text-3xl font-bold">Ajustes</h1>
 
       <div className="mt-6">
         <PushToggle />
       </div>
 
-      <section className="mt-6 rounded-3xl bg-warm-white p-5 shadow-soft">
-        <h2 className="font-display text-xl font-bold">Cómo te pagan las clientas</h2>
-        <p className="mt-1 mb-4 text-sm text-muted">
-          Con el <strong>link de pago</strong> cargado, en el carrito aparece <strong>Mercado Pago</strong>: en la página
-          de su pedido la clienta abre tu link, paga y toca «Ya pagué». Vos tocás «Confirmar pago» en Pedidos. Si no hay link, se
-          ofrece <strong>Transferencia</strong> con el alias. Si borrás todo, la opción desaparece.
-        </p>
-        <TransferSettingsForm
-          defaults={{
-            mpLink: settings?.mp_link ?? "",
-            alias: settings?.transfer_alias ?? "",
-            cbu: settings?.transfer_cbu ?? "",
-            holder: settings?.transfer_holder ?? "",
-            bank: settings?.transfer_bank ?? "",
-          }}
-        />
-      </section>
+      <div className="mt-4 flex flex-col gap-3">
+        <SettingCard
+          icon="🏦"
+          title="Cómo te pagan"
+          state={
+            settings?.transfer_alias || settings?.transfer_cbu ? (
+              <>
+                Alias <strong>{settings?.transfer_alias ?? settings?.transfer_cbu}</strong>
+                {settings?.transfer_holder ? ` · ${settings.transfer_holder}` : ""}
+              </>
+            ) : (
+              "Todavía no cargaste tu alias"
+            )
+          }
+        >
+          <p className="mb-4 text-base text-muted">Es lo que ve la clienta cuando elige pagar por transferencia.</p>
+          <TransferSettingsForm
+            defaults={{
+              mpLink: settings?.mp_link ?? "",
+              alias: settings?.transfer_alias ?? "",
+              cbu: settings?.transfer_cbu ?? "",
+              holder: settings?.transfer_holder ?? "",
+              bank: settings?.transfer_bank ?? "",
+            }}
+          />
+        </SettingCard>
 
-      <section className="mt-4 rounded-3xl bg-warm-white p-5 shadow-soft">
-        <h2 className="font-display text-xl font-bold">Envíos a domicilio</h2>
-        <p className="mt-1 mb-4 text-sm text-muted">
-          El envío es un % de la compra, según la localidad, y se suma solo al total del pedido. Si no llega a la compra mínima, no se ofrece el envío.
-        </p>
-        <ShippingPricesForm
-          zones={(zones ?? []).map((z) => ({ id: z.id, name: z.name, percent: Number(z.percent), is_active: z.is_active }))}
-          minTotal={Number(settings?.shipping_min_total ?? 35000)}
-        />
-      </section>
+        {/* Recargo: solo si se conecta la cuenta de Mercado Pago (MP_ACCESS_TOKEN). */}
+        {isMercadoPagoEnabled() ? (
+          <SettingCard icon="💳" title="Recargo de Mercado Pago" state={<>Hoy: <strong>{String(Number(settings?.mp_surcharge_percent ?? 0)).replace(".", ",")} %</strong></>}>
+            <p className="mb-4 text-base text-muted">Se suma solo si la clienta paga con Mercado Pago, para que la comisión no la pagues vos.</p>
+            <SurchargeForm defaultPercent={Number(settings?.mp_surcharge_percent ?? 0)} />
+          </SettingCard>
+        ) : null}
 
-      <section className="mt-4 rounded-3xl bg-warm-white p-5 shadow-soft">
-        <h2 className="font-display text-xl font-bold">Redes sociales</h2>
-        <p className="mt-1 mb-4 text-sm text-muted">
-          Aparecen en la página <strong>Quiénes somos</strong> de la tienda, con un botón para seguirte. Si dejás uno vacío,
-          no se muestra.
-        </p>
-        <SocialLinksForm defaults={{ facebook: settings?.facebook_url ?? "", instagram: settings?.instagram_url ?? "" }} />
-      </section>
+        <SettingCard
+          icon="🚚"
+          title="Envíos"
+          state={`Desde ${formatARS(Math.round(Number(settings?.shipping_min_total ?? 35000) * 100))} · ${(zones ?? []).filter((z) => z.is_active).length} localidades`}
+        >
+          <p className="mb-4 text-base text-muted">El envío es un porcentaje de la compra y se suma solo al total. Debajo de la compra mínima no se ofrece.</p>
+          <ShippingPricesForm
+            zones={(zones ?? []).map((z) => ({ id: z.id, name: z.name, percent: Number(z.percent), is_active: z.is_active }))}
+            minTotal={Number(settings?.shipping_min_total ?? 35000)}
+          />
+        </SettingCard>
 
-      {/* Cobro con link de Mercado Pago: solo si se conecta la cuenta (MP_ACCESS_TOKEN). */}
-      {isMercadoPagoEnabled() ? (
-      <section className="mt-4 rounded-3xl bg-warm-white p-5 shadow-soft">
-        <h2 className="font-display text-xl font-bold">Cobrar con Mercado Pago</h2>
-        <p className="mt-1 text-sm text-muted">
-          Activo: en el carrito aparece <strong>Mercado Pago</strong>. Mercado Pago cobra una comisión por cada venta;
-          con el recargo la paga la clienta.
-        </p>
-        <div className="mt-4">
-          <SurchargeForm defaultPercent={Number(settings?.mp_surcharge_percent ?? 0)} />
-        </div>
-      </section>
-      ) : null}
+        <SettingCard
+          icon="📱"
+          title="Redes sociales"
+          state={settings?.instagram_url || settings?.facebook_url ? "Cargadas" : "Todavía no cargaste ninguna"}
+        >
+          <p className="mb-4 text-base text-muted">Aparecen en «Quiénes somos». Si dejás una vacía, no se muestra.</p>
+          <SocialLinksForm defaults={{ facebook: settings?.facebook_url ?? "", instagram: settings?.instagram_url ?? "" }} />
+        </SettingCard>
+      </div>
+
       <ul className="mt-6 flex flex-col gap-3">
         <Status ok={Boolean(whatsapp)} label="WhatsApp para pedidos">
           {whatsapp ? (
