@@ -88,7 +88,7 @@ export function StarCarousel({ items }: { items: StarItem[] }) {
                 <div className="text-center sm:text-left">
                   <h2 className="font-display text-2xl leading-tight font-bold sm:text-4xl">{p.name}</h2>
                   <p className="mt-3 text-xs font-extrabold tracking-wide text-forest/70 uppercase">Precio en revista</p>
-                  <p className="text-lg text-forest/70 line-through decoration-coral-deep decoration-2 tabular">{formatARS(p.magazineCents)}</p>
+                  <p className="text-lg text-forest/70 line-through decoration-coral-deep/50 decoration-1 tabular">{formatARS(p.magazineCents)}</p>
                   <p className="mt-1 text-xs font-extrabold tracking-wide text-coral-deep uppercase">Precio en Natu Mariel</p>
                   <p className="font-display text-4xl font-bold text-coral-deep sm:text-5xl">
                     {/* Se vuelve a armar cuando este producto queda a la vista: así el precio baja contando en cada uno. */}
