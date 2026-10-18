@@ -102,7 +102,7 @@ export default async function DashboardPage() {
       href: "/admin/pedidos",
       icon: BadgeDollarSign,
       tone: "urgent",
-      text: `${paymentsToReview} ${paymentsToReview === 1 ? "clienta avisó que pagó" : "clientas avisaron que pagaron"}: revisá y confirmá el pago`,
+      text: `${paymentsToReview} ${paymentsToReview === 1 ? "pago informado" : "pagos informados"}: comprobar el pago`,
     });
   }
   if (pendingOrders) {

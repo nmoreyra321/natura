@@ -122,8 +122,8 @@ export function OrderCard(o: OrderCardProps) {
     tone = "text-muted";
     ask = o.cancelledByCustomer ? "La clienta canceló este pedido" : "Pedido cancelado";
   } else if (o.onlineUnpaid && o.review) {
-    ask = `${who} dice que ya te pagó`;
-    body = `Avisó el ${o.reportedAtLabel}. Mirá en Mercado Pago si te llegó la plata y elegí una opción.`;
+    ask = "Informó pago (comprobar el pago)";
+    body = `${who} avisó que pagó el ${o.reportedAtLabel?.replace(/\.$/, "")}. Mirá en Mercado Pago si te llegó la plata y elegí una opción.`;
   } else if (o.onlineUnpaid) {
     ask = `${who} todavía no avisó que pagó`;
     body = "Eligió pagar por transferencia, pero no dijo que ya transfirió. Si ves que la plata entró, igual podés confirmar.";
