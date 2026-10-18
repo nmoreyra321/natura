@@ -46,7 +46,7 @@ const reviewDateFmt = new Intl.DateTimeFormat("es-AR", { month: "long", year: "n
 /** «Calificaciones»: franja finita con el promedio; el carrusel de reseñas se abre al tocar «Ver reseñas». */
 export function ReviewsSection({ r }: { r: ReviewSummary | null }) {
   const cards = (r?.latest ?? []).map((rev) => (
-    <li key={rev.id} className="flex w-[80%] shrink-0 snap-start flex-col self-start rounded-3xl bg-white p-5 shadow-soft sm:w-[45%] lg:w-[31%]">
+    <li key={rev.id} className="flex w-[80%] shrink-0 snap-start flex-col rounded-3xl bg-white p-5 shadow-soft sm:w-[45%] lg:w-[31%]">
       {/* Quién la escribió, arriba de todo, y después lo que dijo. */}
       <div className="flex items-center gap-3">
         <span aria-hidden="true" className="flex size-11 shrink-0 items-center justify-center rounded-full bg-lilac font-display text-lg font-bold text-grape">
@@ -62,11 +62,15 @@ export function ReviewsSection({ r }: { r: ReviewSummary | null }) {
       </div>
       {rev.comment ? <p className="mt-2 text-forest/90">“{rev.comment}”</p> : null}
       {rev.reply ? (
-        <p className="mt-3 rounded-2xl bg-blush/60 p-3 text-sm">
+        // Todas las tarjetas miden lo mismo: la respuesta ocupa el lugar que sobra y su firma queda siempre abajo.
+        <div className="mt-3 flex flex-1 flex-col rounded-2xl bg-blush/60 p-3 text-sm">
           <b className="block text-coral-deep">Respuesta de Mariel</b>
-          {rev.reply}
-        </p>
-      ) : null}
+          <p>{rev.reply}</p>
+          <span className="mt-auto pt-2 text-xs font-bold text-coral-deep/80">— Mariel · Natu Mariel 🌷</span>
+        </div>
+      ) : (
+        <span className="mt-auto pt-3 text-xs font-bold text-muted">Reseña de una clienta de Natu Mariel 🌷</span>
+      )}
     </li>
   ));
 
