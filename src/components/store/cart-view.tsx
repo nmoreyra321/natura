@@ -156,7 +156,11 @@ export function CartView({
       ? [
           transfer.mpLink
             ? { value: "transferencia" as const, label: "Mercado Pago", Icon: CreditCard }
-            : { value: "transferencia" as const, label: "Transferencia", Icon: ArrowLeftRight },
+            : {
+                value: "transferencia" as const,
+                label: mercadoPago && mpSurcharge > 0 ? "Transferencia (sin recargo)" : "Transferencia",
+                Icon: ArrowLeftRight,
+              },
         ]
       : []),
     ...(mercadoPago
@@ -629,7 +633,9 @@ export function CartView({
                   Pagando con Mercado Pago se suma un recargo de {mpSurcharge}% (
                   {formatARS(surchargeCents(grandCents, mpSurcharge))}). Total a pagar:{" "}
                   <strong>{formatARS(grandCents + surchargeCents(grandCents, mpSurcharge))}</strong>
-                  {shippingNote}. En efectivo no hay recargo.
+                  {shippingNote}. En efectivo
+                  {transfer && !transfer.mpLink ? " o transferencia" : ""} no hay recargo: ahorrás{" "}
+                  <strong>{formatARS(surchargeCents(grandCents, mpSurcharge))}</strong>.
                 </p>
               ) : null}
               {payment === "transferencia" && transfer ? (
@@ -646,7 +652,9 @@ export function CartView({
                     <span>
                       Tocá <strong>Hacer pedido</strong> y en el paso siguiente te mostramos el alias para transferir{" "}
                       <strong>{formatARS(grandCents)}</strong>
-                      {shippingNote} (sin recargo). Ahí mismo subís el comprobante.
+                      {shippingNote} (sin recargo
+                      {mercadoPago && mpSurcharge > 0 ? `: ahorrás ${formatARS(surchargeCents(grandCents, mpSurcharge))} frente a Mercado Pago` : ""}
+                      ). Ahí mismo subís el comprobante.
                     </span>
                   )}
                 </p>
