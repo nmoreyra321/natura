@@ -46,14 +46,21 @@ const reviewDateFmt = new Intl.DateTimeFormat("es-AR", { month: "long", year: "n
 /** «Calificaciones»: franja finita con el promedio; el carrusel de reseñas se abre al tocar «Ver reseñas». */
 export function ReviewsSection({ r }: { r: ReviewSummary | null }) {
   const cards = (r?.latest ?? []).map((rev) => (
-    <li key={rev.id} className="flex w-[80%] shrink-0 snap-start flex-col rounded-3xl bg-white p-5 shadow-soft sm:w-[45%] lg:w-[31%]">
-      <Stars value={rev.rating} />
+    <li key={rev.id} className="flex w-[80%] shrink-0 snap-start flex-col self-start rounded-3xl bg-white p-5 shadow-soft sm:w-[45%] lg:w-[31%]">
+      {/* Quién la escribió, arriba de todo, y después lo que dijo. */}
+      <div className="flex items-center gap-3">
+        <span aria-hidden="true" className="flex size-11 shrink-0 items-center justify-center rounded-full bg-lilac font-display text-lg font-bold text-grape">
+          {rev.name.trim().charAt(0).toUpperCase()}
+        </span>
+        <div className="min-w-0">
+          <p className="truncate font-bold">{rev.name}</p>
+          <p className="text-xs font-semibold text-muted first-letter:uppercase">{reviewDateFmt.format(new Date(rev.createdAt))}</p>
+        </div>
+      </div>
+      <div className="mt-3">
+        <Stars value={rev.rating} />
+      </div>
       {rev.comment ? <p className="mt-2 text-forest/90">“{rev.comment}”</p> : null}
-      <p className="mt-3 text-sm font-bold">
-        {rev.name}
-        <span className="block text-xs font-semibold text-muted first-letter:uppercase">{reviewDateFmt.format(new Date(rev.createdAt))}</span>
-      </p>
-      <span className="flex-1" />
       {rev.reply ? (
         <p className="mt-3 rounded-2xl bg-blush/60 p-3 text-sm">
           <b className="block text-coral-deep">Respuesta de Mariel</b>
