@@ -73,7 +73,7 @@ function useTypedPlaceholder(enabled: boolean): string {
     let timer: ReturnType<typeof setTimeout>;
     const tick = () => {
       const w = hints[word];
-      setText(`Buscar ${w.slice(0, chars)}`);
+      setText(w.slice(0, chars));
       let wait = deleting ? 40 : 85;
       if (!deleting && chars < w.length) chars++;
       else if (!deleting) {
