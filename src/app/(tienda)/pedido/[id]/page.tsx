@@ -10,6 +10,7 @@ import { AutoRefresh, MpPayFlow, OrderPageEffects, ReportPayment } from "@/compo
 import { PaidOrderActions } from "@/components/store/paid-order-actions";
 import { AddReview } from "@/components/store/add-review";
 import { TransferAccount } from "@/components/store/transfer-account";
+import { SendProofWhatsApp } from "@/components/store/send-proof-whatsapp";
 import { ChangePayment } from "@/components/store/change-payment";
 import { UnpaidMpActions } from "@/components/store/unpaid-mp-actions";
 import { buttonClasses } from "@/components/ui/button";
@@ -293,26 +294,21 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
                 {transfer && whatsapp ? (
                   <>
                     <p className="mt-5 mb-2 font-bold">2. Mandale el comprobante a Mariel por WhatsApp</p>
-                    <a
+                    <SendProofWhatsApp
+                      orderId={order.id}
                       href={buildWhatsAppUrl(
                         whatsapp,
                         `¡Hola Mariel! 👋 Ya transferí ${formatARS(owed)} por mi pedido ${order.code}. Te paso el comprobante. ${trackUrl}`,
                       )}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={buttonClasses("primary", "lg", "w-full")}
-                    >
-                      <MessageCircle className="size-5" aria-hidden="true" /> Enviar comprobante por WhatsApp
-                    </a>
+                    />
                     <p className="mt-2 text-xs text-muted">Ella lo revisa y confirma tu pedido.</p>
                   </>
                 ) : (
-                  <p className="mt-5 mb-2 font-bold">{transfer ? "2. " : ""}Avisá que ya pagaste</p>
+                  <>
+                    <p className="mt-5 mb-2 font-bold">{transfer ? "2. " : ""}Avisá que ya pagaste</p>
+                    <ReportPayment orderId={order.id} />
+                  </>
                 )}
-                <ReportPayment
-                  whatsappProof={Boolean(transfer && whatsapp)}
-                  orderId={order.id}
-                  />
               </>
             )}
           </div>
