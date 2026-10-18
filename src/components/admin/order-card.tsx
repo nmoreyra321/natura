@@ -9,6 +9,7 @@ import { approveTransferPayment, rejectTransferPayment, setOrderContact, setOrde
 import { buttonClasses } from "@/components/ui/button";
 import { inputClasses } from "@/components/ui/fields";
 import { formatPhone, toWhatsAppPhone } from "@/lib/debts";
+import { celebrate } from "@/lib/celebrate";
 import { formatARS } from "@/lib/format";
 import { ConfirmDialog } from "./confirm-dialog";
 import { PaymentControl } from "./order-actions";
@@ -85,7 +86,7 @@ export function OrderCard(o: OrderCardProps) {
     });
 
   /** Abre WhatsApp durante el toque (para que no lo bloquee el navegador) y lo completa cuando termina. */
-  const payAction = (action: () => ReturnType<typeof approveTransferPayment>, text: string) => {
+  const payAction = (action: () => ReturnType<typeof approveTransferPayment>, text: string, party = false) => {
     const win = wa ? window.open("", "_blank") : null;
     start(async () => {
       const res = await action();
@@ -94,7 +95,10 @@ export function OrderCard(o: OrderCardProps) {
         toast.error(res.error);
         return;
       }
-      toast.success(res.message ?? "Listo.");
+      if (party) {
+        celebrate("confetti");
+        toast.success(`✓ ¡Pago confirmado! +${formatARS(o.totalCents)}`);
+      } else toast.success(res.message ?? "Listo.");
       if (win && wa) {
         win.opener = null;
         win.location.href = `https://wa.me/${wa}?text=${encodeURIComponent(text)}`;
@@ -106,6 +110,7 @@ export function OrderCard(o: OrderCardProps) {
     payAction(
       () => approveTransferPayment(o.id),
       `${hello} Recibimos tu pago del pedido ${o.code} ✅ ¡Muchísimas gracias por tu compra! Tu pedido ya está reservado. ¿Coordinamos la entrega? Contame qué día y en qué lugar te queda cómodo recibirlo.`,
+      true,
     );
 
   const reject = () =>

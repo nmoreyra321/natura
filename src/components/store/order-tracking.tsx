@@ -9,6 +9,7 @@ import { reportTransferPayment } from "@/app/(tienda)/pedido/actions";
 import { buttonClasses } from "@/components/ui/button";
 import { cart } from "@/lib/cart-store";
 import { rememberOrder } from "@/lib/my-orders";
+import { celebrate } from "@/lib/celebrate";
 import { MpLinkPay } from "./transfer-account";
 
 /** Guarda el pedido en este celular (para "Seguir mi pedido") y, si recién se hizo, vacía el carrito. */
@@ -29,6 +30,7 @@ export function OrderPageEffects({
   useEffect(() => {
     if (remember) rememberOrder({ id, code, at: createdAt });
     if (isNew) {
+      celebrate("rain");
       cart.clear();
       // Si recarga la página más adelante, no vuelve a vaciar un carrito nuevo.
       window.history.replaceState(null, "", window.location.pathname);

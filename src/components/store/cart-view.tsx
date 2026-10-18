@@ -18,6 +18,7 @@ import { productImageUrl } from "@/lib/images";
 import { surchargeCents, toCents } from "@/lib/pricing";
 import { getOrderTotals, type OrderLine } from "@/lib/whatsapp";
 import type { TransferDetails } from "@/lib/store-settings";
+import { CartProgress } from "./cart-progress";
 import { paysWithMpLink } from "@/lib/transfer-mode";
 import { QuantityInput } from "./add-to-cart";
 import { SavingsCelebration } from "./savings-celebration";
@@ -580,6 +581,12 @@ export function CartView({
                   </div>
                 )}
               </fieldset>
+              <CartProgress
+                totalCents={totals.totalCents}
+                clubMinCents={clubMinCents}
+                shippingMinCents={shippingMinCents}
+                shippingAvailable={shippingZones.length > 0}
+              />
               <p className="flex items-center gap-2 rounded-2xl bg-sun/50 px-3 py-2 text-sm">
                 <span aria-hidden="true">🎁</span>
                 {!account && !accountsEnabled ? (

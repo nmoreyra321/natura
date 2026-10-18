@@ -81,6 +81,9 @@ export default async function DashboardPage() {
       .or("payment_status.is.null,payment_status.neq.approved"),
   ]);
 
+  const { data: goalRow } = await supabase.from("store_settings").select("monthly_goal").eq("id", 1).maybeSingle();
+  const goalPesos = Number(goalRow?.monthly_goal ?? 0);
+
   const list = products ?? [];
   const sales = (orders ?? []) as SalesOrder[];
   const s = summarizeMonth(sales, month);
@@ -191,6 +194,8 @@ export default async function DashboardPage() {
       d={{
         dateLabel: date,
         monthLabel: monthLabel(month).replace(/ de \d{4}$/, ""),
+        monthKey: month,
+        goalPesos,
         prevMonthLabel: monthLabel(prevMonth).replace(/ de \d{4}$/, "").toLowerCase(),
         month: {
           cents: s.totalCents,

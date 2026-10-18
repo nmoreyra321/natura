@@ -5,7 +5,6 @@ import {
   PackagePlus,
   CirclePlus,
   ExternalLink,
-  PackageCheck,
   Plus,
   Receipt,
   ShoppingBag,
@@ -17,7 +16,9 @@ import Link from "next/link";
 
 import { ProductImageFallback } from "@/components/store/product-card";
 import { formatARS } from "@/lib/format";
+import { AllDone } from "./all-done";
 import { CountUp } from "./count-up";
+import { MonthGoal } from "./month-goal";
 import { SalesChart, type SalesBar } from "./sales-chart";
 
 export type DashboardTask = { href: string; icon: LucideIcon; text: string; tone: "urgent" | "money" | "good" | "info" };
@@ -27,6 +28,10 @@ export type DashboardStat = { label: string; value: number; href: string; alert?
 export type DashboardData = {
   dateLabel: string;
   monthLabel: string;
+  /** «2026-10»: para festejar la meta una sola vez por mes. */
+  monthKey: string;
+  /** Meta de ventas del mes en pesos (0 = sin meta). */
+  goalPesos: number;
   prevMonthLabel: string;
   month: { cents: number; orders: number; units: number; averageCents: number; change: number | null };
   today: { cents: number; orders: number };
@@ -79,6 +84,8 @@ export function DashboardView({ d, imageUrl }: { d: DashboardData; imageUrl: (pa
 
       {d.warnings}
 
+      <MonthGoal monthKey={d.monthKey} soldCents={d.month.cents} goalPesos={d.goalPesos} />
+
       {/* Para hacer */}
       <section aria-labelledby="hacer">
         <h2 id="hacer" className="mb-3 font-display text-2xl font-bold">
@@ -97,9 +104,7 @@ export function DashboardView({ d, imageUrl }: { d: DashboardData; imageUrl: (pa
             ))}
           </ol>
         ) : (
-          <p className="flex items-center gap-3 rounded-2xl bg-sage p-4 text-lg font-bold text-botanical-deep">
-            <PackageCheck className="size-6 shrink-0" aria-hidden="true" /> ¡Todo al día! No hay nada pendiente.
-          </p>
+          <AllDone />
         )}
       </section>
 

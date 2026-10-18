@@ -285,14 +285,14 @@ isOneToOne: false
                   ]
                 },"store_settings": {
                   Row: {
-                    "facebook_url": string | null,"id": number,"instagram_url": string | null,"loyalty_min_total": number,"mp_link": string | null,"mp_surcharge_percent": number,"shipping_min_total": number,"transfer_alias": string | null,"transfer_bank": string | null,"transfer_cbu": string | null,"transfer_holder": string | null,"updated_at": string
+                    "facebook_url": string | null,"id": number,"instagram_url": string | null,"loyalty_min_total": number,"monthly_goal": number,"mp_link": string | null,"mp_surcharge_percent": number,"shipping_min_total": number,"transfer_alias": string | null,"transfer_bank": string | null,"transfer_cbu": string | null,"transfer_holder": string | null,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "facebook_url"?: string | null,"id"?: number,"instagram_url"?: string | null,"loyalty_min_total"?: number,"mp_link"?: string | null,"mp_surcharge_percent"?: number,"shipping_min_total"?: number,"transfer_alias"?: string | null,"transfer_bank"?: string | null,"transfer_cbu"?: string | null,"transfer_holder"?: string | null,"updated_at"?: string
+                    "facebook_url"?: string | null,"id"?: number,"instagram_url"?: string | null,"loyalty_min_total"?: number,"monthly_goal"?: number,"mp_link"?: string | null,"mp_surcharge_percent"?: number,"shipping_min_total"?: number,"transfer_alias"?: string | null,"transfer_bank"?: string | null,"transfer_cbu"?: string | null,"transfer_holder"?: string | null,"updated_at"?: string
                   }
                   Update: {
-                    "facebook_url"?: string | null,"id"?: number,"instagram_url"?: string | null,"loyalty_min_total"?: number,"mp_link"?: string | null,"mp_surcharge_percent"?: number,"shipping_min_total"?: number,"transfer_alias"?: string | null,"transfer_bank"?: string | null,"transfer_cbu"?: string | null,"transfer_holder"?: string | null,"updated_at"?: string
+                    "facebook_url"?: string | null,"id"?: number,"instagram_url"?: string | null,"loyalty_min_total"?: number,"monthly_goal"?: number,"mp_link"?: string | null,"mp_surcharge_percent"?: number,"shipping_min_total"?: number,"transfer_alias"?: string | null,"transfer_bank"?: string | null,"transfer_cbu"?: string | null,"transfer_holder"?: string | null,"updated_at"?: string
                   }
                   Relationships: [
                     

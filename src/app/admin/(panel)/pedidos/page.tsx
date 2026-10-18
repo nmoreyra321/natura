@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import type { OrderStatus } from "@/app/admin/actions";
 import { CancelledOrders } from "@/components/admin/cancelled-orders";
+import { AllDone } from "@/components/admin/all-done";
 import { OrderCard } from "@/components/admin/order-card";
 import { buttonClasses } from "@/components/ui/button";
 import { SelectToDelete } from "@/components/admin/select-to-delete";
@@ -165,6 +166,10 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
 
       {error && error.code !== "PGRST103" ? (
         <p className="mt-6 rounded-2xl bg-coral-soft p-4 font-semibold">No pudimos cargar los pedidos.</p>
+      ) : orders.length === 0 && estado === "atender" && !q ? (
+        <div className="mt-6">
+          <AllDone message="¡No hay nada para hacer! Todo al día 💖" />
+        </div>
       ) : orders.length === 0 ? (
         <div className="mt-6 rounded-3xl border border-dashed border-line bg-warm-white p-10 text-center">
           <ClipboardList className="mx-auto size-10 text-muted" aria-hidden="true" />

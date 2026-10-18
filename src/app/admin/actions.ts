@@ -1025,6 +1025,24 @@ export async function saveMercadoPagoSurcharge(percent: unknown): Promise<Action
   }
 }
 
+/** Meta de ventas del mes que se muestra en el Inicio (0 = sin meta). */
+export async function saveMonthlyGoal(value: unknown): Promise<ActionResult> {
+  try {
+    const { supabase } = await assertAdmin();
+    const n = parseMoney(typeof value === "string" ? value : String(value ?? ""));
+    if (!Number.isFinite(n) || n < 0 || n > 100_000_000) return { ok: false, error: "Escribí un monto válido, por ejemplo 300000." };
+    const { error } = await supabase
+      .from("store_settings")
+      .update({ monthly_goal: Math.round(n), updated_at: new Date().toISOString() })
+      .eq("id", 1);
+    if (error) return fail(error, "No pudimos guardar la meta.");
+    revalidatePath("/admin");
+    return { ok: true, message: n > 0 ? "¡Meta guardada!" : "Sacaste la meta." };
+  } catch (e) {
+    return fail(e, "No pudimos guardar la meta.");
+  }
+}
+
 /** Cantidad de pagos recientes con los que se comprueba la comisión real de Mercado Pago. */
 const FEE_CHECK_PAYMENTS = 20;
 const FEE_CHECK_MIN_PAYMENTS = 3;

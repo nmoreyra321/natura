@@ -609,3 +609,102 @@ h3,
 .idemo-cap2 { animation-name: idemo-cap2; }
 .idemo-cap3 { animation-name: idemo-cap3; }
 .idemo-cap4 { animation-name: idemo-cap4; }
+
+/* «Todo al día»: el tilde se dibuja solo. */
+.all-done-check circle,
+.all-done-check path {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 300;
+  stroke-dashoffset: 300;
+}
+.all-done-check.go circle {
+  animation: all-done-draw 0.7s ease forwards;
+}
+.all-done-check.go path {
+  animation: all-done-draw 0.5s 0.5s ease forwards;
+}
+.all-done-check.go {
+  animation: all-done-pop 0.6s 0.9s ease;
+}
+@keyframes all-done-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes all-done-pop {
+  50% {
+    transform: scale(1.12);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .all-done-check circle,
+  .all-done-check path {
+    stroke-dashoffset: 0;
+    animation: none !important;
+  }
+}
+
+/* Barra de progreso del carrito. */
+.cart-bar {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(90deg, var(--coral-deep), #ff9d5c);
+  transition: width 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.cart-bar-full::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, 0.7) 50%, transparent 70%);
+  animation: cart-bar-shine 1.4s infinite;
+}
+@keyframes cart-bar-shine {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cart-bar {
+    transition: none;
+  }
+  .cart-bar-full::after {
+    animation: none;
+  }
+}
+
+/* Producto de la semana: flota y brilla. */
+.star-float {
+  animation: star-float 3.2s ease-in-out infinite;
+}
+@keyframes star-float {
+  50% {
+    transform: translateY(-12px) rotate(3deg);
+  }
+}
+.star-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(110deg, transparent 35%, rgba(255, 255, 255, 0.55) 50%, transparent 65%);
+  transform: translateX(-120%);
+  animation: star-shine 4.5s 1s infinite;
+}
+@keyframes star-shine {
+  to {
+    transform: translateX(120%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .star-float,
+  .star-card::after {
+    animation: none;
+  }
+}
