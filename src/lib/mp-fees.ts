@@ -50,3 +50,18 @@ export function summarizeMpFees(orders: MpOrder[], currentPercent: number): MpFe
     suggestedPercent: share !== null && share > 0 && share < 0.5 ? Math.ceil((share / (1 - share)) * 1000) / 10 : null,
   };
 }
+
+export type MpRunningRow<T extends MpOrder> = { order: T; resultCents: number; runningCents: number };
+
+/** Cada pago con lo que dejó (+ o −) y el acumulado hasta ese pago. Espera los pedidos de más viejo a más nuevo. */
+export function runningResult<T extends MpOrder>(orders: T[]): MpRunningRow<T>[] {
+  let running = 0;
+  const rows: MpRunningRow<T>[] = [];
+  for (const o of orders) {
+    if (o.mp_net_received === null) continue;
+    const resultCents = toCents(o.mp_net_received) - toCents(o.total);
+    running += resultCents;
+    rows.push({ order: o, resultCents, runningCents: running });
+  }
+  return rows;
+}

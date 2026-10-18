@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { summarizeMpFees } from "@/lib/mp-fees";
+import { runningResult, summarizeMpFees } from "@/lib/mp-fees";
 
 describe("summarizeMpFees", () => {
   it("sin datos no inventa nada", () => {
@@ -23,5 +23,17 @@ describe("summarizeMpFees", () => {
     expect(s.resultCents).toBe(-40000);
     expect(s.shortCount).toBe(1);
     expect(s.suggestedPercent).toBeGreaterThan(5);
+  });
+});
+
+describe("runningResult", () => {
+  it("va sumando lo que deja cada pago", () => {
+    const rows = runningResult([
+      { total: 10000, mp_net_received: 10100 },
+      { total: 10000, mp_net_received: 9700 },
+      { total: 5000, mp_net_received: null },
+    ]);
+    expect(rows.map((r) => r.resultCents)).toEqual([10000, -30000]);
+    expect(rows.map((r) => r.runningCents)).toEqual([10000, -20000]);
   });
 });

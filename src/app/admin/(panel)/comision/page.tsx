@@ -3,7 +3,7 @@ import Link from "next/link";
 
 import { requireAdmin } from "@/lib/auth";
 import { formatARS } from "@/lib/format";
-import { summarizeMpFees } from "@/lib/mp-fees";
+import { runningResult, summarizeMpFees } from "@/lib/mp-fees";
 import { currentMonth, monthLabel, monthStartIso, parseMonth, shiftMonth } from "@/lib/sales";
 import { getMercadoPagoSurcharge } from "@/lib/store-settings";
 
@@ -11,6 +11,7 @@ export const metadata = { title: "Comisión de Mercado Pago" };
 
 type Search = Record<string, string | string[] | undefined>;
 const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
+const day = new Intl.DateTimeFormat("es-AR", { day: "numeric", month: "short", timeZone: "America/Argentina/Buenos_Aires" });
 const pct = (n: number) => `${String(n).replace(".", ",")} %`;
 
 export default async function CommissionPage({ searchParams }: { searchParams: Promise<Search> }) {
@@ -24,16 +25,18 @@ export default async function CommissionPage({ searchParams }: { searchParams: P
   const [{ data, error }, percent] = await Promise.all([
     supabase
       .from("orders")
-      .select("total, mp_net_received")
+      .select("code, customer_name, created_at, total, mp_net_received")
       .eq("payment_method", "mercadopago")
       .eq("payment_status", "approved")
       .gte("created_at", monthStartIso(month))
-      .lt("created_at", monthStartIso(next)),
+      .lt("created_at", monthStartIso(next))
+      .order("created_at", { ascending: true }),
     getMercadoPagoSurcharge(),
   ]);
   if (error) throw new Error("No se pudieron cargar los pagos");
 
   const s = summarizeMpFees(data ?? [], percent);
+  const rows = runningResult(data ?? []);
   const lost = s.resultCents < 0;
   const needsRaise = s.suggestedPercent !== null && s.suggestedPercent > percent;
 
@@ -104,6 +107,31 @@ export default async function CommissionPage({ searchParams }: { searchParams: P
               </div>
             ))}
           </dl>
+          <section className="mt-6">
+            <h2 className="font-display text-xl font-bold">Cómo vas sumando en {monthLabel(month).toLowerCase()}</h2>
+            <ul className="mt-3 overflow-hidden rounded-3xl bg-warm-white shadow-soft">
+              {[...rows].reverse().map(({ order: o, resultCents, runningCents }) => (
+                <li key={o.code} className="flex items-center gap-3 border-b border-line/60 px-4 py-3 last:border-b-0">
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-bold">{o.customer_name ?? o.code}</span>
+                    <span className="block text-xs text-muted">
+                      {day.format(new Date(o.created_at))} · {o.code}
+                    </span>
+                  </span>
+                  <span className="text-right">
+                    <span className={`block text-sm font-bold ${resultCents < 0 ? "text-coral-deep" : "text-botanical-deep"}`}>
+                      {resultCents < 0 ? "−" : "+"}
+                      {formatARS(Math.abs(resultCents))}
+                    </span>
+                    <span className="block text-xs text-muted">
+                      acumulado {runningCents < 0 ? "−" : "+"}
+                      {formatARS(Math.abs(runningCents))}
+                    </span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </section>
           <p className="mt-3 text-xs text-muted">
             Los montos usan el recargo actual ({pct(percent)}) y lo que Mercado Pago informó que te llegó en cada pago.
           </p>
