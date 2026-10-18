@@ -165,7 +165,8 @@ export function Header({ categories }: { categories: NavCategory[] }) {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
     document.addEventListener("keydown", onKey);
     document.body.style.overflow = "hidden";
-    menuRef.current?.querySelector<HTMLElement>("a, button")?.focus();
+    // Se enfoca el menú entero (sin marco), no el primer enlace: así el logo no aparece «seleccionado».
+    menuRef.current?.focus({ preventScroll: true });
     return () => {
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = "";
@@ -288,7 +289,8 @@ export function Header({ categories }: { categories: NavCategory[] }) {
           <div
             id="menu-movil"
             ref={menuRef}
-            className="animate-rise absolute inset-y-0 left-0 flex w-[min(86vw,340px)] flex-col gap-6 overflow-y-auto bg-warm-white p-5 shadow-lift"
+            tabIndex={-1}
+            className="outline-none animate-rise absolute inset-y-0 left-0 flex w-[min(86vw,340px)] flex-col gap-6 overflow-y-auto bg-warm-white p-5 shadow-lift"
           >
             <div className="flex items-center justify-between">
               <Logo />
