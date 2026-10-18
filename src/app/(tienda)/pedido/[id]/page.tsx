@@ -10,17 +10,20 @@ import { AutoRefresh, MpPayFlow, OrderPageEffects, ReportPayment } from "@/compo
 import { PaidOrderActions } from "@/components/store/paid-order-actions";
 import { AddReview } from "@/components/store/add-review";
 import { TransferAccount } from "@/components/store/transfer-account";
+import { ChangePayment } from "@/components/store/change-payment";
 import { UnpaidMpActions } from "@/components/store/unpaid-mp-actions";
 import { buttonClasses } from "@/components/ui/button";
 import { getSiteUrl, getLoginProviders } from "@/lib/config";
 import { getCustomer } from "@/lib/customer";
 import { formatARS } from "@/lib/format";
 import { clubOrderNote, GIFT_EVERY, loyaltyKey, loyaltyStatus, PURCHASE_STATUSES, type LoyaltyStatus } from "@/lib/loyalty";
-import { canCustomerCancel, canReportPayment, isUnpaidMercadoPago, owedOf, paymentState, trackingSteps } from "@/lib/order-tracking";
+import { canChangePayment, canCustomerCancel, canReportPayment, isUnpaidMercadoPago, owedOf, paymentState, trackingSteps } from "@/lib/order-tracking";
 import { syncMercadoPagoPayment } from "@/lib/payments";
 import { toCents } from "@/lib/pricing";
 import { paysWithMpLink } from "@/lib/transfer-mode";
-import { getLoyaltyMinTotal, getTransferDetails } from "@/lib/store-settings";
+import { isMercadoPagoEnabled } from "@/lib/mercadopago";
+import { getLoyaltyMinTotal, getMercadoPagoSurcharge, getTransferDetails } from "@/lib/store-settings";
+import type { PaymentChoice } from "@/app/(tienda)/pedido/actions";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { DELIVERY_TEXT } from "@/lib/delivery";
 import { buildWhatsAppUrl, getWhatsAppNumber } from "@/lib/whatsapp";
@@ -81,7 +84,18 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
   const isMp = order.payment_method === "mercadopago";
   const isTransfer = order.payment_method === "transferencia";
   const owed = owedOf(order);
-  const transfer = isTransfer ? await getTransferDetails() : null;
+  const savedTransfer = await getTransferDetails();
+  const transfer = isTransfer ? savedTransfer : null;
+  // Otras formas de pago a las que puede pasar el pedido si todavía no pagó nada.
+  const mpEnabled = isMercadoPagoEnabled();
+  const changeOptions: PaymentChoice[] = canChangePayment(order)
+    ? ([
+        "efectivo",
+        savedTransfer?.alias || savedTransfer?.cbu ? "transferencia" : null,
+        mpEnabled ? "mercadopago" : null,
+      ].filter((m): m is PaymentChoice => m !== null && m !== order.payment_method))
+    : [];
+  const changeSurcharge = mpEnabled ? await getMercadoPagoSurcharge() : 0;
 
   // Club de clientas: cuántas compras lleva con este teléfono (si el pedido no está cancelado).
   // Solo los pedidos hechos con cuenta suman al Club.
@@ -423,6 +437,7 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
           ) : null}
           {isMp && state === "paid" ? <PaidOrderActions /> : null}
           {isUnpaidMercadoPago(order) ? <UnpaidMpActions orderId={order.id} /> : null}
+          {!cancelled && changeOptions.length > 0 ? <ChangePayment orderId={order.id} options={changeOptions} mpSurcharge={changeSurcharge} /> : null}
           {isMp && state === "failed" ? (
             <Link href="/carrito" className={buttonClasses("primary", "lg")}>
               Volver al carrito

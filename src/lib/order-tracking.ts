@@ -110,3 +110,14 @@ export function isUnpaidMercadoPago(o: TrackingOrder): boolean {
     (o.payment_status === null || o.payment_status === "pending")
   );
 }
+
+/** true si la clienta todavía no pagó nada y puede elegir otra forma de pago para el mismo pedido. */
+export function canChangePayment(o: TrackingOrder): boolean {
+  return (
+    o.status === "pending" &&
+    o.payment_status !== "approved" &&
+    !o.mp_payment_id &&
+    !o.payment_reported_at &&
+    toCents(o.amount_paid) <= 0
+  );
+}

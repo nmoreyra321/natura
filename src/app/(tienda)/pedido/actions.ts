@@ -6,12 +6,12 @@ import { after } from "next/server";
 import { toWhatsAppPhone } from "@/lib/debts";
 import { getSiteUrl } from "@/lib/config";
 import { createPreference, isMercadoPagoEnabled } from "@/lib/mercadopago";
-import { canCustomerCancel, canReportPayment, isUnpaidMercadoPago, normalizeOrderCode, paymentState } from "@/lib/order-tracking";
+import { canChangePayment, canCustomerCancel, canReportPayment, isUnpaidMercadoPago, normalizeOrderCode, paymentState } from "@/lib/order-tracking";
 import { formatARS } from "@/lib/format";
 import { surchargeCents, toCents } from "@/lib/pricing";
 import { notifyAdmins } from "@/lib/push";
 import { allowRequest } from "@/lib/rate-limit";
-import { getMercadoPagoSurcharge } from "@/lib/store-settings";
+import { getMercadoPagoSurcharge, getTransferDetails } from "@/lib/store-settings";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -342,6 +342,60 @@ export async function switchOrderToCash(orderId: string): Promise<{ ok: true } |
     notifyAdmins({
       title: "🛍 Pedido nuevo",
       body: `${order.customer_name ?? "Una clienta"} · ${formatARS(toCents(order.total))} · paga en efectivo`,
+      url: "/admin/pedidos",
+      tag: `pedido-${orderId}`,
+    }),
+  );
+  revalidatePath(`/pedido/${orderId}`);
+  revalidatePath("/admin/pedidos");
+  return { ok: true };
+}
+
+export type PaymentChoice = "efectivo" | "transferencia" | "mercadopago";
+
+const PAYMENT_LABEL: Record<PaymentChoice, string> = {
+  efectivo: "efectivo",
+  transferencia: "transferencia",
+  mercadopago: "Mercado Pago",
+};
+
+/** La clienta se equivocó o se arrepintió: el mismo pedido pasa a otra forma de pago, mientras no haya pagado nada. */
+export async function changePaymentMethod(orderId: string, method: PaymentChoice): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (!UUID_RE.test(orderId)) return { ok: false, error: "No encontramos tu pedido." };
+  if (!["efectivo", "transferencia", "mercadopago"].includes(method)) return { ok: false, error: "Elegí una forma de pago." };
+  if (method === "mercadopago" && !isMercadoPagoEnabled()) return { ok: false, error: "El pago con Mercado Pago no está disponible." };
+  if (method === "transferencia") {
+    const transfer = await getTransferDetails();
+    if (!transfer?.alias && !transfer?.cbu) return { ok: false, error: "La transferencia no está disponible." };
+  }
+  const admin = createAdminClient();
+  if (!admin) return { ok: false, error: "La tienda no está configurada." };
+  if (!(await allowRequest("cambiar-pago", 10, 3600))) {
+    return { ok: false, error: "Probaste muchas veces. Escribile a Natu Mariel por WhatsApp." };
+  }
+  const { data: order } = await admin
+    .from("orders")
+    .select("id, status, payment_method, payment_status, mp_payment_id, amount_paid, total, payment_reported_at, payment_rejection, customer_name")
+    .eq("id", orderId)
+    .maybeSingle();
+  if (!order || !canChangePayment(order)) {
+    return { ok: false, error: "Este pedido ya no se puede cambiar desde acá. Escribile a Natu Mariel por WhatsApp." };
+  }
+  if (order.payment_method === method) return { ok: true };
+  const { data: done, error } = await admin
+    .from("orders")
+    .update({ payment_method: method, payment_status: null, payment_rejection: null })
+    .eq("id", orderId)
+    .eq("status", "pending")
+    .eq("payment_method", order.payment_method)
+    .is("mp_payment_id", null)
+    .is("payment_reported_at", null)
+    .select("id");
+  if (error || !done?.length) return { ok: false, error: "No pudimos cambiar el pedido. Probá de nuevo o escribile a Natu Mariel por WhatsApp." };
+  after(() =>
+    notifyAdmins({
+      title: "🔄 Cambió la forma de pago",
+      body: `${order.customer_name ?? "Una clienta"} · ${formatARS(toCents(order.total))} · ahora paga con ${PAYMENT_LABEL[method]}`,
       url: "/admin/pedidos",
       tag: `pedido-${orderId}`,
     }),
