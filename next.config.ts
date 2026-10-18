@@ -40,6 +40,9 @@ const nextConfig: NextConfig = {
   experimental: {
     // Las fotos de la boleta de Natura viajan en una acción del panel (ya achicadas en el teléfono).
     serverActions: { bodySizeLimit: "4mb" },
+    // Las pantallas que se arman en el servidor (Productos, Club) se bajan por adelantado desde la barra de abajo
+    // y se recuerdan un minuto: al tocarlas abren al instante, sin esperar al servidor.
+    staleTimes: { dynamic: 30, static: 60 },
   },
   images: {
     remotePatterns,

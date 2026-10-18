@@ -36,7 +36,7 @@ export function BottomNav() {
         {TABS.map(({ href, label, Icon }) => {
           const active = isActive(href);
           return (
-            <Link key={href} href={href} aria-current={active ? "page" : undefined} className={`${base} ${active ? "text-coral-deep" : "text-muted"}`}>
+            <Link key={href} href={href} prefetch aria-current={active ? "page" : undefined} className={`${base} ${active ? "text-coral-deep" : "text-muted"}`}>
               {active ? <span aria-hidden="true" className="animate-nav-dot absolute -top-1.5 h-1 w-6 rounded-full bg-coral-deep" /> : null}
               <Icon className="size-5.5" aria-hidden="true" />
               {label}
