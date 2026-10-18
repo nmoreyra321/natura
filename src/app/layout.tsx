@@ -19,6 +19,8 @@ const caveat = Caveat({
   subsets: ["latin"],
   weight: ["700"],
   display: "swap",
+  // Solo se usa en la tarjeta del Club: no hace falta bajarla antes de mostrar la página.
+  preload: false,
 });
 
 const nunito = Nunito({

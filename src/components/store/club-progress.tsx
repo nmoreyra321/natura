@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-import { myClub, type MyClub } from "@/app/(tienda)/cuenta/actions";
+import type { MyClub } from "@/app/(tienda)/cuenta/actions";
+import { myClubOnce } from "@/lib/my-club-once";
 import { getLoginProviders } from "@/lib/config";
 import { formatARS } from "@/lib/format";
 import { GIFT_EVERY } from "@/lib/loyalty";
@@ -16,7 +17,7 @@ export function ClubProgressCard({ minCents }: { minCents: number }) {
 
   useEffect(() => {
     let alive = true;
-    myClub()
+    myClubOnce()
       .then((r) => alive && setClub(r))
       .catch(() => undefined);
     return () => {

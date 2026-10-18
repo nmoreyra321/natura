@@ -10,6 +10,11 @@ import { getWhatsAppNumber } from "@/lib/whatsapp";
 
 export const revalidate = 300;
 
+/** Sin fichas armadas de antemano: cada una se arma en la primera visita y queda guardada (así abren al instante). */
+export function generateStaticParams() {
+  return [];
+}
+
 export async function generateMetadata({ params }: PageProps<"/productos/[slug]">): Promise<Metadata> {
   const { slug } = await params;
   const product = await getProductBySlug(slug);

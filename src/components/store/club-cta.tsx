@@ -4,7 +4,7 @@ import { ArrowRight, Gift } from "lucide-react";
 import Link from "next/link";
 import { type ReactNode, useEffect, useState } from "react";
 
-import { myClub } from "@/app/(tienda)/cuenta/actions";
+import { myClubOnce } from "@/lib/my-club-once";
 
 /**
  * Texto del Club en el inicio: quien todavía no tiene cuenta ve la invitación; quien ya entró
@@ -15,7 +15,7 @@ export function ClubPitch({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let alive = true;
-    myClub()
+    myClubOnce()
       .then((r) => alive && setSignedIn(r.signedIn))
       .catch(() => undefined);
     return () => {
