@@ -56,7 +56,7 @@ function loadHints(): Promise<string[]> {
 
 /** Placeholder que se escribe solo mientras el buscador está vacío (también con el teclado abierto). */
 function useTypedPlaceholder(enabled: boolean): string {
-  const [text, setText] = useState("Buscar perfumes, cremas, kits…");
+  const [text, setText] = useState("Perfumes, cremas, kits…");
   const [hints, setHints] = useState<string[]>(FALLBACK_HINTS);
   useEffect(() => {
     let alive = true;
@@ -90,7 +90,7 @@ function useTypedPlaceholder(enabled: boolean): string {
     timer = setTimeout(tick, 600);
     return () => {
       clearTimeout(timer);
-      setText("Buscar perfumes, cremas, kits…");
+      setText("Perfumes, cremas, kits…");
     };
   }, [enabled, hints]);
   return text;
