@@ -14,8 +14,6 @@ import { ConfirmDialog } from "./confirm-dialog";
 import { PaymentControl } from "./order-actions";
 import { SelectBox } from "./select-to-delete";
 
-const REASONS = ["No me llegó el pago", "El monto no coincide con el pedido", "No se ve bien el comprobante"];
-
 export type OrderCardItem = { id: string; name: string; size: string | null; quantity: number; lots: string | null };
 
 export type OrderCardProps = {
@@ -53,8 +51,6 @@ export type OrderCardProps = {
 export function OrderCard(o: OrderCardProps) {
   const router = useRouter();
   const [pending, start] = useTransition();
-  const [rejecting, setRejecting] = useState(false);
-  const [reason, setReason] = useState(REASONS[0]);
   const [editing, setEditing] = useState(false);
   const [newName, setNewName] = useState(o.name ?? "");
   const [newPhone, setNewPhone] = useState(o.phone ? formatPhone(o.phone) : "");
@@ -103,7 +99,6 @@ export function OrderCard(o: OrderCardProps) {
         win.opener = null;
         win.location.href = `https://wa.me/${wa}?text=${encodeURIComponent(text)}`;
       }
-      setRejecting(false);
       router.refresh();
     });
   };
@@ -111,6 +106,12 @@ export function OrderCard(o: OrderCardProps) {
     payAction(
       () => approveTransferPayment(o.id),
       `${hello} Recibimos tu pago del pedido ${o.code} ✅ ¡Muchísimas gracias por tu compra! Tu pedido ya está reservado. ¿Coordinamos la entrega? Contame qué día y en qué lugar te queda cómodo recibirlo.`,
+    );
+
+  const reject = () =>
+    payAction(
+      () => rejectTransferPayment(o.id, "No me llegó el pago"),
+      `${hello} Revisé y todavía no me llegó el pago del pedido ${o.code} 😕 ¿Podés mandarme el comprobante por acá? Si ya lo pagaste, avisame de nuevo desde acá: ${o.trackUrl}`,
     );
 
   // Qué le decimos arriba y cuál es el botón principal.
@@ -121,11 +122,11 @@ export function OrderCard(o: OrderCardProps) {
     tone = "text-muted";
     ask = o.cancelledByCustomer ? "La clienta canceló este pedido" : "Pedido cancelado";
   } else if (o.onlineUnpaid && o.review) {
-    ask = `¿Te llegó la plata de ${who}?`;
-    body = `Dice que transfirió el ${o.reportedAtLabel}. Mirá en Mercado Pago si entró.`;
+    ask = `${who} dice que ya te pagó`;
+    body = `Avisó el ${o.reportedAtLabel}. Mirá en Mercado Pago si te llegó la plata y elegí una opción.`;
   } else if (o.onlineUnpaid) {
-    ask = `Esperando el pago de ${who}`;
-    body = "Eligió pagar por transferencia. Cuando veas que la plata entró, tocá «Ya me llegó».";
+    ask = `${who} todavía no avisó que pagó`;
+    body = "Eligió pagar por transferencia, pero no dijo que ya transfirió. Si ves que la plata entró, igual podés confirmar.";
   } else if (isMp && !paid) {
     ask = "Esperando el pago por Mercado Pago";
     body = "Se confirma solo apenas pague. No tenés que hacer nada.";
@@ -196,61 +197,21 @@ export function OrderCard(o: OrderCardProps) {
       ) : null}
 
       {/* Botón principal */}
-      {!cancelled && o.onlineUnpaid && o.review ? (
-        <div className="grid grid-cols-2 gap-2">
+      {!cancelled && o.onlineUnpaid ? (
+        <div className="flex flex-col gap-2">
           <button type="button" disabled={pending} onClick={approve} className={buttonClasses("primary", "lg", mainBtn)}>
             {pending ? <Loader2 className="size-5 animate-spin" aria-hidden="true" /> : <BadgeCheck className="size-5" aria-hidden="true" />}
-            Sí, llegó
+            Me llegó: confirmar y avisarle
           </button>
-          <button
-            type="button"
-            disabled={pending}
-            onClick={() => setRejecting((v) => !v)}
-            aria-expanded={rejecting}
-            className={buttonClasses("outline", "lg", mainBtn)}
-          >
-            <ThumbsDown className="size-5" aria-hidden="true" /> No llegó
-          </button>
+          {o.review ? (
+            <button type="button" disabled={pending} onClick={reject} className={buttonClasses("outline", "lg", mainBtn)}>
+              <ThumbsDown className="size-5" aria-hidden="true" /> No me llegó: avisarle
+            </button>
+          ) : null}
+          {o.review ? (
+            <p className="text-sm text-muted">Los dos botones abren WhatsApp con el mensaje ya escrito para {who}.</p>
+          ) : null}
         </div>
-      ) : null}
-      {!cancelled && o.onlineUnpaid && !o.review ? (
-        <button type="button" disabled={pending} onClick={approve} className={buttonClasses("primary", "lg", mainBtn)}>
-          {pending ? <Loader2 className="size-5 animate-spin" aria-hidden="true" /> : <BadgeCheck className="size-5" aria-hidden="true" />}
-          Ya me llegó
-        </button>
-      ) : null}
-      {rejecting ? (
-        <form
-          className="flex flex-col gap-2 rounded-2xl bg-lilac/40 p-3"
-          onSubmit={(e) => {
-            e.preventDefault();
-            payAction(
-              () => rejectTransferPayment(o.id, reason),
-              `${hello} Revisé el pago del pedido ${o.code}: ${reason.charAt(0).toLowerCase()}${reason.slice(1)}. ¿Lo revisás? Cuando lo tengas, avisame de nuevo acá: ${o.trackUrl}`,
-            );
-          }}
-        >
-          <p className="font-bold">¿Qué pasó? La clienta lo ve en la página de su pedido.</p>
-          <div className="flex flex-wrap gap-2">
-            {REASONS.map((r) => (
-              <button
-                key={r}
-                type="button"
-                onClick={() => setReason(r)}
-                className={`rounded-full px-3 py-2 text-sm font-semibold ${reason === r ? "bg-forest text-white" : "bg-white hover:bg-sun"}`}
-              >
-                {r}
-              </button>
-            ))}
-          </div>
-          <label className="sr-only" htmlFor={`motivo-${o.id}`}>
-            Motivo
-          </label>
-          <input id={`motivo-${o.id}`} value={reason} maxLength={200} onChange={(e) => setReason(e.target.value)} className={inputClasses} />
-          <button type="submit" disabled={pending || reason.trim().length < 3} className={buttonClasses("secondary", "md", "self-start")}>
-            Avisarle a la clienta
-          </button>
-        </form>
       ) : null}
       {!cancelled && !o.onlineUnpaid && o.status === "pending" && (!isMp || paid) ? (
         <button type="button" disabled={pending} onClick={() => change("confirmed", "Pedido confirmado. Descontamos el stock y los vencimientos (primero el que vence antes).")} className={buttonClasses("primary", "lg", mainBtn)}>
