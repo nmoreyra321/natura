@@ -17,7 +17,7 @@ import { HeroArt } from "./hero-art";
 import { LeafMark } from "./logo";
 import { ProductRail } from "./product-card";
 import { ReviewsStrip } from "./reviews-strip";
-import { pickStarProduct, StarProduct } from "./star-product";
+import { pickStarProducts, StarProducts } from "./star-product";
 import { Stars } from "./stars";
 
 export type HomeData = {
@@ -166,7 +166,7 @@ function heroImage(p: PublicProduct | undefined): BannerSlide["image"] {
 export function HomeView({ d }: { d: HomeData }) {
   const [a, b, c] = d.heroProducts;
   const hasOffers = d.offers.length > 0;
-  const star = pickStarProduct(d.offers);
+  const stars = pickStarProducts(d.offers);
 
   // El mayor descuento real entre las ofertas del momento (nunca un número inventado).
   const maxOff = d.offers.reduce((max, p) => Math.max(max, getPriceInfo(p.magazine_price, p.sale_price).discountPercent), 0);
@@ -347,7 +347,7 @@ export function HomeView({ d }: { d: HomeData }) {
             </div>
           </section>
 
-          {star ? <StarProduct product={star} /> : null}
+          {stars.length > 0 ? <StarProducts products={stars} /> : null}
 
           {hasOffers ? (
             <Section>

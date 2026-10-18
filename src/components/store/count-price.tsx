@@ -19,7 +19,8 @@ export function CountPrice({ fromCents, toCents }: { fromCents: number; toCents:
     const tick = (now: number) => {
       const k = Math.min(Math.max((now - start) / duration, 0), 1);
       const eased = 1 - Math.pow(1 - k, 3);
-      setCents(Math.round(fromCents - (fromCents - toCents) * eased));
+      // Mientras cuenta, siempre pesos enteros (sin centavos sueltos); al final queda el precio exacto.
+      setCents(k >= 1 ? toCents : Math.round((fromCents - (fromCents - toCents) * eased) / 100) * 100);
       if (k < 1) raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
