@@ -18,6 +18,7 @@ import { productImageUrl } from "@/lib/images";
 import { surchargeCents, toCents } from "@/lib/pricing";
 import { getOrderTotals, type OrderLine } from "@/lib/whatsapp";
 import type { TransferDetails } from "@/lib/store-settings";
+import { paysWithMpLink } from "@/lib/transfer-mode";
 import { QuantityInput } from "./add-to-cart";
 import { SavingsCelebration } from "./savings-celebration";
 import { ProductImageFallback } from "./product-card";
@@ -154,7 +155,7 @@ export function CartView({
     // Con link de Mercado Pago, la clienta lo ve como "Mercado Pago" (por dentro se maneja igual que una transferencia).
     ...(transfer
       ? [
-          transfer.mpLink
+          paysWithMpLink(transfer)
             ? { value: "transferencia" as const, label: "Mercado Pago", Icon: CreditCard }
             : {
                 value: "transferencia" as const,
@@ -634,14 +635,14 @@ export function CartView({
                   {formatARS(surchargeCents(grandCents, mpSurcharge))}). Total a pagar:{" "}
                   <strong>{formatARS(grandCents + surchargeCents(grandCents, mpSurcharge))}</strong>
                   {shippingNote}. En efectivo
-                  {transfer && !transfer.mpLink ? " o transferencia" : ""} no hay recargo: ahorrás{" "}
+                  {transfer && !paysWithMpLink(transfer) ? " o transferencia" : ""} no hay recargo: ahorrás{" "}
                   <strong>{formatARS(surchargeCents(grandCents, mpSurcharge))}</strong>.
                 </p>
               ) : null}
               {payment === "transferencia" && transfer ? (
                 <p className="flex gap-2 rounded-2xl bg-sage/50 p-3 text-sm">
                   <ArrowLeftRight className="mt-0.5 size-4 shrink-0 text-botanical-deep" aria-hidden="true" />
-                  {transfer.mpLink ? (
+                  {paysWithMpLink(transfer) ? (
                     <span>
                       Tocá <strong>Hacer pedido</strong> y en el paso siguiente pagás{" "}
                       <strong>{formatARS(grandCents)}</strong>
@@ -654,7 +655,7 @@ export function CartView({
                       <strong>{formatARS(grandCents)}</strong>
                       {shippingNote} (sin recargo
                       {mercadoPago && mpSurcharge > 0 ? `: ahorrás ${formatARS(surchargeCents(grandCents, mpSurcharge))} frente a Mercado Pago` : ""}
-                      ). Ahí mismo subís el comprobante.
+                      ). Después le mandás el comprobante a Mariel por WhatsApp.
                     </span>
                   )}
                 </p>

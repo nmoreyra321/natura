@@ -19,6 +19,7 @@ import { clubOrderNote, GIFT_EVERY, loyaltyKey, loyaltyStatus, PURCHASE_STATUSES
 import { canCustomerCancel, canReportPayment, isUnpaidMercadoPago, owedOf, paymentState, trackingSteps } from "@/lib/order-tracking";
 import { syncMercadoPagoPayment } from "@/lib/payments";
 import { toCents } from "@/lib/pricing";
+import { paysWithMpLink } from "@/lib/transfer-mode";
 import { getLoyaltyMinTotal, getTransferDetails } from "@/lib/store-settings";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { DELIVERY_TEXT } from "@/lib/delivery";
@@ -185,7 +186,7 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
     text = (
       <>
         Natu Mariel recibió tu pedido <strong>{order.code}</strong>. Para confirmarlo, realizá el pago de{" "}
-        <strong>{formatARS(owed)}</strong> {transfer?.mpLink ? "con Mercado Pago" : "por transferencia"}.
+        <strong>{formatARS(owed)}</strong> {paysWithMpLink(transfer) ? "con Mercado Pago" : "por transferencia"}.
       </>
     );
   } else if (order.status === "confirmed") {
@@ -260,7 +261,7 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
 
         {canReportPayment(order) ? (
           <div className="mt-6 rounded-2xl border-2 border-dashed border-botanical/60 bg-sage/40 p-4 text-sm">
-            {transfer?.mpLink ? (
+            {transfer?.mpLink && paysWithMpLink(transfer) ? (
               <MpPayFlow
                 orderId={order.id}
                 link={transfer.mpLink}
@@ -275,7 +276,25 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
                     <TransferAccount transfer={transfer} totalCents={owed} />
                   </>
                 ) : null}
-                <p className="mt-5 mb-2 font-bold">{transfer ? "2. " : ""}Avisá que ya pagaste</p>
+                {transfer && whatsapp ? (
+                  <>
+                    <p className="mt-5 mb-2 font-bold">2. Mandale el comprobante a Mariel por WhatsApp</p>
+                    <a
+                      href={buildWhatsAppUrl(
+                        whatsapp,
+                        `¡Hola Mariel! 👋 Ya transferí ${formatARS(owed)} por mi pedido ${order.code}. Te paso el comprobante. ${trackUrl}`,
+                      )}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={buttonClasses("primary", "lg", "w-full")}
+                    >
+                      <MessageCircle className="size-5" aria-hidden="true" /> Enviar comprobante por WhatsApp
+                    </a>
+                    <p className="mt-2 text-xs text-muted">Ella lo revisa y confirma tu pedido. Si preferís, también podés avisar desde acá:</p>
+                  </>
+                ) : (
+                  <p className="mt-5 mb-2 font-bold">{transfer ? "2. " : ""}Avisá que ya pagaste</p>
+                )}
                 <ReportPayment
                   orderId={order.id}
                   />
