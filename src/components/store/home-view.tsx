@@ -306,24 +306,36 @@ export function HomeView({ d }: { d: HomeData }) {
 
           {/* Club de clientas */}
           <section className="px-3 py-4 sm:px-6" aria-labelledby="club">
-            <div className="relative mx-auto grid max-w-7xl gap-4 overflow-hidden rounded-[2rem] bg-gradient-to-br from-coral-deep to-grape p-5 text-white sm:gap-6 sm:p-8 md:grid-cols-[1.3fr_1fr] md:items-center">
-              <span aria-hidden="true" className="pointer-events-none absolute -right-16 -bottom-20 size-64 rounded-full bg-sun/30 blur-3xl" />
+            <div className="relative mx-auto grid max-w-7xl gap-5 overflow-hidden rounded-[2rem] bg-gradient-to-br from-blush via-lilac to-peach p-5 sm:gap-8 sm:p-8 md:grid-cols-[1.2fr_1fr] md:items-center">
+              <span aria-hidden="true" className="pointer-events-none absolute -right-16 -bottom-20 size-64 rounded-full bg-white/60 blur-3xl" />
               <div className="relative">
                 <p className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1 text-xs font-extrabold text-coral-deep sm:text-sm">
                   <span className="relative inline-flex">
                     <span aria-hidden="true" className="animate-ping-soft absolute inset-0 rounded-full bg-coral-deep/40" />
                     <Gift className="relative size-4" aria-hidden="true" />
                   </span>{" "}
-                  Club Natu Mariel
+                  Club Natu Mariel · Es gratis
                 </p>
                 <h2 id="club" className="mt-2 font-display text-2xl leading-tight font-bold sm:mt-3 sm:text-4xl">
-                  Cada {GIFT_EVERY} compras, <span className="text-sun">¡un regalo!</span>
+                  Creá tu cuenta y <span className="text-coral-deep">ganá regalos</span>
                 </h2>
-                <p className="mt-2 max-w-lg text-sm font-semibold text-white/90 sm:text-base">
-                  Suman las compras que hacés en la tienda con tu cuenta{d.clubMinCents > 0 ? `, de ${formatARS(d.clubMinCents)} o más` : ""}. Entrás con Google en un toque, sin contraseña.
+                <p className="mt-2 max-w-lg text-sm font-semibold text-forest/85 sm:text-base">
+                  Entrás con Google en un toque, sin contraseña. Cada {GIFT_EVERY} compras{d.clubMinCents > 0 ? ` de ${formatARS(d.clubMinCents)} o más` : ""}, Mariel te regala algo especial.
                 </p>
-                <Link href="/club" className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-full bg-white px-5 text-sm font-bold text-coral-deep shadow-lift transition hover:-translate-y-0.5 sm:mt-5 sm:min-h-11 sm:px-6 sm:text-base">
-                  Empezar a sumar <ArrowRight className="size-4" aria-hidden="true" />
+                <ul className="mt-3 flex max-w-lg flex-col gap-1.5 text-sm font-bold sm:text-base">
+                  {[
+                    `Cada ${GIFT_EVERY} compras, un regalo de Mariel`,
+                    "Tu tarjeta se llena sola con cada compra pagada",
+                    "Todos tus pedidos juntos, para seguirlos cuando quieras",
+                  ].map((t) => (
+                    <li key={t} className="flex items-start gap-2">
+                      <CircleCheck className="mt-0.5 size-5 shrink-0 text-botanical-deep" aria-hidden="true" />
+                      {t}
+                    </li>
+                  ))}
+                </ul>
+                <Link href="/club" className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-full bg-coral-deep px-5 text-sm font-bold text-white shadow-lift transition hover:-translate-y-0.5 sm:mt-5 sm:min-h-11 sm:px-6 sm:text-base">
+                  Quiero mi tarjeta <ArrowRight className="size-4" aria-hidden="true" />
                 </Link>
               </div>
               <ClubProgressCard minCents={d.clubMinCents} />

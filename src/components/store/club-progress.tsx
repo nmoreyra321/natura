@@ -1,6 +1,5 @@
 "use client";
 
-import { CircleCheck, Gift } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -9,6 +8,7 @@ import { getLoginProviders } from "@/lib/config";
 import { formatARS } from "@/lib/format";
 import { GIFT_EVERY } from "@/lib/loyalty";
 import { AccountLogin } from "./account-login";
+import { ClubCard } from "./club-card";
 
 /** Cuadrito del Club en la portada: el avance de la cuenta, o para entrar si no tiene sesión. */
 export function ClubProgressCard({ minCents }: { minCents: number }) {
@@ -30,30 +30,8 @@ export function ClubProgressCard({ minCents }: { minCents: number }) {
   const providers = getLoginProviders();
 
   return (
-    <div className="relative flex flex-col items-center gap-2 rounded-3xl bg-white/90 p-4 text-center text-forest backdrop-blur sm:gap-3 sm:p-5">
-      <span className="rounded-full bg-cream px-2.5 py-0.5 text-xs font-extrabold tracking-wide text-muted uppercase">
-        {mine ? "Tu avance" : "Tu tarjeta del Club"}
-      </span>
-      <div className="flex items-center gap-1.5 sm:gap-2" aria-label={`${done} de ${GIFT_EVERY} compras`}>
-        {Array.from({ length: GIFT_EVERY }, (_, i) =>
-          i < GIFT_EVERY - 1 ? (
-            <span
-              key={i}
-              style={{ "--i": i } as React.CSSProperties}
-              className={`flex size-9 items-center justify-center rounded-full sm:size-12 ${i < done ? "animate-stamp bg-botanical-deep text-white" : "border-2 border-dashed border-line bg-white text-line"}`}
-            >
-              <CircleCheck className="size-5" aria-hidden="true" />
-            </span>
-          ) : (
-            <span
-              key={i}
-              className={`flex size-10 items-center justify-center rounded-full sm:size-14 ${done >= GIFT_EVERY ? "animate-tada bg-coral-deep text-white shadow-lift" : "border-2 border-dashed border-coral-deep/50 bg-white text-coral-deep"}`}
-            >
-              <Gift className="size-6" aria-hidden="true" />
-            </span>
-          ),
-        )}
-      </div>
+    <div className="relative flex flex-col gap-3 text-center text-forest sm:gap-4">
+      <ClubCard done={done} name={club?.signedIn ? club.name : null} />
       {mine && mine.pending > 0 ? (
         <p className="font-display text-base font-bold text-coral-deep sm:text-lg">¡Te ganaste un regalo! 🎉</p>
       ) : mine ? (

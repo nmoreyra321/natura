@@ -1,8 +1,9 @@
-import { Gift, ShoppingBag } from "lucide-react";
+import { CircleCheck, Gift, ShoppingBag } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
 import { AccountLogin } from "@/components/store/account-login";
+import { ClubCard } from "@/components/store/club-card";
 import { buttonClasses } from "@/components/ui/button";
 import { getLoginProviders } from "@/lib/config";
 import { accountClub, getCustomer } from "@/lib/customer";
@@ -37,26 +38,16 @@ export default async function ClubPage() {
         Suman las compras que hacés en la tienda con tu cuenta{minCents > 0 ? `, de ${formatARS(minCents)} o más` : ""}.
       </p>
 
-      <section className="mt-6 rounded-3xl bg-gradient-to-br from-blush to-sun/40 p-5">
-        <h2 className="font-display text-lg font-bold">{customer ? "Tu avance" : "Tu tarjeta del Club"}</h2>
-        <span className="mt-3 flex gap-2" aria-label={`${done} de ${GIFT_EVERY} compras`}>
-          {Array.from({ length: GIFT_EVERY }, (_, i) => (
-            <span
-              key={i}
-              className={`flex size-10 items-center justify-center rounded-full text-sm font-bold ${i < done ? "bg-coral-deep text-white" : "border-2 border-dashed border-coral-deep/40 bg-white text-coral-deep/60"}`}
-            >
-              {i === GIFT_EVERY - 1 ? <Gift className="size-5" aria-hidden="true" /> : i + 1}
-            </span>
-          ))}
-        </span>
+      <section className="mt-6" aria-label={customer ? "Tu avance" : "Tu tarjeta del Club"}>
+        <ClubCard done={done} name={customer?.name ?? null} />
         {club && club.pending > 0 ? (
-          <p className="mt-3 font-display text-lg font-bold text-coral-deep">¡Te ganaste un regalo! 🎉 Natu Mariel te lo entrega con tu próximo pedido.</p>
+          <p className="mt-3 text-center font-display text-lg font-bold text-coral-deep">¡Te ganaste un regalo! 🎉 Natu Mariel te lo entrega con tu próximo pedido.</p>
         ) : club ? (
-          <p className="mt-3 font-semibold">
+          <p className="mt-3 text-center font-semibold">
             Llevás {club.progress} de {GIFT_EVERY}: {club.left === 1 ? "¡te falta solo 1 compra!" : `te faltan ${club.left} compras.`}
           </p>
         ) : customer ? (
-          <p className="mt-3 text-sm">
+          <p className="mt-3 text-center text-sm">
             Te falta un paso:{" "}
             <Link href="/cuenta" className="font-semibold text-coral-deep underline">
               cargá tu WhatsApp en Mi cuenta
@@ -64,8 +55,25 @@ export default async function ClubPage() {
             para empezar a sumar.
           </p>
         ) : (
-          <p className="mt-3 text-sm">Entrá con tu cuenta y tu primera compra ya cuenta.</p>
+          <p className="mt-3 text-center text-sm">Creá tu cuenta gratis y tu primera compra ya cuenta.</p>
         )}
+      </section>
+
+      <section className="mt-6 rounded-3xl bg-warm-white p-5 shadow-soft ring-1 ring-line/70">
+        <h2 className="font-display text-xl font-bold">¿Por qué crear tu cuenta?</h2>
+        <ul className="mt-3 flex flex-col gap-2.5 font-semibold">
+          {[
+            `Cada ${GIFT_EVERY} compras, Mariel te regala algo especial 💝`,
+            "Tu tarjeta se llena sola con cada compra pagada",
+            "Tenés todos tus pedidos juntos para seguirlos cuando quieras",
+            "Es gratis y entrás en un toque, sin contraseña",
+          ].map((t) => (
+            <li key={t} className="flex items-start gap-2.5">
+              <CircleCheck className="mt-0.5 size-5 shrink-0 text-botanical-deep" aria-hidden="true" />
+              {t}
+            </li>
+          ))}
+        </ul>
       </section>
 
       <section className="mt-6">
@@ -88,7 +96,7 @@ export default async function ClubPage() {
 
       {!customer ? (
         <section className="mt-6 rounded-3xl bg-warm-white p-5 shadow-soft ring-1 ring-line/70">
-          <h2 className="font-display text-xl font-bold">Entrá en un toque</h2>
+          <h2 className="font-display text-xl font-bold">Creá tu cuenta en un toque</h2>
           <p className="mt-1 mb-4 text-sm text-muted">Sin contraseña: usás tu cuenta de Google o de Facebook.</p>
           {providers.length > 0 ? (
             <AccountLogin next="/club" providers={providers} />

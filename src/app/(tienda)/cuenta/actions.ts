@@ -28,15 +28,15 @@ export async function saveMyAccount(input: { name: string; phone: string }): Pro
 
 export type MyClub =
   | { signedIn: false }
-  | { signedIn: true; hasPhone: false }
-  | { signedIn: true; hasPhone: true; progress: number; left: number; pending: number; minCents: number };
+  | { signedIn: true; hasPhone: false; name: string | null }
+  | { signedIn: true; hasPhone: true; name: string | null; progress: number; left: number; pending: number; minCents: number };
 
 /** Avance en el Club de la clienta con sesión iniciada (para la tarjeta del inicio). */
 export async function myClub(): Promise<MyClub> {
   const customer = await getCustomer();
   if (!customer) return { signedIn: false };
-  if (!customer.phone) return { signedIn: true, hasPhone: false };
+  if (!customer.phone) return { signedIn: true, hasPhone: false, name: customer.name };
   const club = await accountClub(customer.phone);
-  if (!club) return { signedIn: true, hasPhone: false };
-  return { signedIn: true, hasPhone: true, progress: club.progress, left: club.left, pending: club.pending, minCents: club.minCents };
+  if (!club) return { signedIn: true, hasPhone: false, name: customer.name };
+  return { signedIn: true, hasPhone: true, name: customer.name, progress: club.progress, left: club.left, pending: club.pending, minCents: club.minCents };
 }

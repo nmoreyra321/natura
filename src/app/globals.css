@@ -457,6 +457,36 @@ h3,
   transition: transform 0.8s;
 }
 
+/* Tarjeta del club: luz de colores que gira y un brillo que la cruza de vez en cuando. */
+.club-card::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: -40%;
+  background: conic-gradient(from 0deg, rgb(255 255 255 / 0), rgb(255 212 92 / 0.22), rgb(255 255 255 / 0) 30%, rgb(255 138 184 / 0.22) 55%, rgb(255 255 255 / 0) 75%);
+  animation: ring-spin 14s linear infinite;
+}
+
+.club-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(115deg, transparent 38%, rgb(255 255 255 / 0.35) 50%, transparent 62%);
+  transform: translateX(-130%);
+  animation: card-sweep 5s ease-in-out 1s infinite;
+  pointer-events: none;
+}
+
+@keyframes card-sweep {
+  0%,
+  60% {
+    transform: translateX(-130%);
+  }
+  100% {
+    transform: translateX(130%);
+  }
+}
+
 @keyframes slide-in-right {
   from {
     transform: translateX(100%);
