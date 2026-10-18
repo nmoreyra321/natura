@@ -76,8 +76,11 @@ async function shrinkPhoto(file: File): Promise<File | null> {
 export function ReportPayment({
   orderId,
   proofOptional = false,
+  whatsappProof = false,
 }: {
   orderId: string;
+  /** El comprobante se manda por WhatsApp: no se sube ninguna foto a la página. */
+  whatsappProof?: boolean;
   /** Pago con link de Mercado Pago: el comprobante es opcional y se muestra chiquito. */
   proofOptional?: boolean;
 }) {
@@ -111,7 +114,7 @@ export function ReportPayment({
 
   return (
     <div className="flex flex-col gap-3">
-      <input
+      {whatsappProof ? null : <input
         ref={input}
         type="file"
         accept="image/*,application/pdf"
@@ -121,8 +124,8 @@ export function ReportPayment({
           setFile(e.target.files?.[0] ?? null);
           setError(null);
         }}
-      />
-      {file ? (
+      />}
+      {whatsappProof ? null : file ? (
         <div className="flex items-center gap-3 rounded-2xl bg-white p-3 ring-1 ring-line">
           <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-sage text-botanical-deep">
             {file.type === "application/pdf" ? <FileText className="size-5" aria-hidden="true" /> : <Check className="size-5" aria-hidden="true" />}
@@ -157,7 +160,7 @@ export function ReportPayment({
         {sending ? <Loader2 className="size-5 animate-spin" aria-hidden="true" /> : <Send className="size-5" aria-hidden="true" />}
         {sending ? "Avisando…" : "Ya realicé el pago"}
       </button>
-      {proofOptional && !file ? (
+      {proofOptional && !file && !whatsappProof ? (
         <label
           htmlFor="comprobante"
           className="inline-flex cursor-pointer items-center justify-center gap-1.5 text-sm font-semibold text-coral-deep hover:underline"
@@ -171,7 +174,9 @@ export function ReportPayment({
         </p>
       ) : null}
       <p className="text-xs text-muted">
-        {file
+        {whatsappProof
+          ? "Cuando ya le hayas mandado el comprobante por WhatsApp, tocá este botón para avisar."
+          : file
           ? "Al tocar el botón se guarda el comprobante y Natu Mariel recibe el aviso."
           : proofOptional
             ? "Cuando termines de pagar en Mercado Pago, tocá este botón para avisarle a Natu Mariel."

@@ -290,12 +290,13 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
                     >
                       <MessageCircle className="size-5" aria-hidden="true" /> Enviar comprobante por WhatsApp
                     </a>
-                    <p className="mt-2 text-xs text-muted">Ella lo revisa y confirma tu pedido. Si preferís, también podés avisar desde acá:</p>
+                    <p className="mt-2 text-xs text-muted">Ella lo revisa y confirma tu pedido.</p>
                   </>
                 ) : (
                   <p className="mt-5 mb-2 font-bold">{transfer ? "2. " : ""}Avisá que ya pagaste</p>
                 )}
                 <ReportPayment
+                  whatsappProof={Boolean(transfer && whatsapp)}
                   orderId={order.id}
                   />
               </>
