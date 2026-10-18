@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Fredoka, Nunito } from "next/font/google";
+import { Caveat, Fredoka, Nunito } from "next/font/google";
 import { Toaster } from "sonner";
 
 import { SiteAnalytics } from "@/components/site-analytics";
@@ -10,6 +10,14 @@ const fredoka = Fredoka({
   variable: "--font-fredoka",
   subsets: ["latin"],
   weight: ["500", "600", "700"],
+  display: "swap",
+});
+
+// Letra a mano para la firma de la tarjeta del Club.
+const caveat = Caveat({
+  variable: "--font-caveat",
+  subsets: ["latin"],
+  weight: ["700"],
   display: "swap",
 });
 
@@ -49,7 +57,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es-AR" className={`${fredoka.variable} ${nunito.variable} antialiased`}>
+    <html lang="es-AR" className={`${fredoka.variable} ${nunito.variable} ${caveat.variable} antialiased`}>
       <body className="flex min-h-dvh flex-col">
         {children}
         <Toaster
