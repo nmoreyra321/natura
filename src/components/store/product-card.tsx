@@ -7,6 +7,7 @@ import { LeafMark } from "./logo";
 import { getPriceInfo } from "@/lib/pricing";
 import { Price } from "./price";
 import { StockBadge } from "./stock-badge";
+import { Tilt } from "./tilt";
 
 const CARD_TINTS = ["bg-pink", "bg-sun", "bg-sage", "bg-lilac", "bg-peach"];
 
@@ -26,13 +27,21 @@ export function ProductImageFallback({ className = "" }: { className?: string })
 }
 
 export function ProductCard({ product }: { product: PublicProduct }) {
+  return (
+    <Tilt className="h-full">
+      <ProductCardBody product={product} />
+    </Tilt>
+  );
+}
+
+function ProductCardBody({ product }: { product: PublicProduct }) {
   const img = product.images[0];
   const src = img ? productImageUrl(img.storage_path) : null;
   const info = getPriceInfo(product.magazine_price, product.sale_price);
   const soldOut = product.stock <= 0;
   return (
     <article className="group relative flex h-full flex-col overflow-hidden rounded-3xl bg-warm-white shadow-soft ring-1 ring-line/80 transition duration-300 hover:-translate-y-1 hover:shadow-lift active:scale-[0.97]">
-      <div className={`relative aspect-square overflow-hidden ${tintFor(product.id)}`}>
+      <div className={`shine-on-hover relative aspect-square overflow-hidden ${tintFor(product.id)}`}>
         {src ? (
           <Image
             src={src}
@@ -79,8 +88,8 @@ export function ProductCard({ product }: { product: PublicProduct }) {
 export function ProductGrid({ products }: { products: PublicProduct[] }) {
   return (
     <ul className="grid grid-cols-2 gap-3 sm:gap-5 md:grid-cols-3 lg:grid-cols-4">
-      {products.map((p) => (
-        <li key={p.id} className="flex">
+      {products.map((p, i) => (
+        <li key={p.id} className="animate-card-in flex" style={{ "--i": i } as React.CSSProperties}>
           <div className="w-full">
             <ProductCard product={p} />
           </div>
@@ -94,8 +103,8 @@ export function ProductGrid({ products }: { products: PublicProduct[] }) {
 export function ProductRail({ products }: { products: PublicProduct[] }) {
   return (
     <ul className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-3 sm:mx-0 sm:grid sm:grid-cols-3 sm:gap-5 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-4">
-      {products.map((p) => (
-        <li key={p.id} className="flex w-[46%] shrink-0 snap-start sm:w-auto">
+      {products.map((p, i) => (
+        <li key={p.id} className="animate-card-in flex w-[46%] shrink-0 snap-start sm:w-auto" style={{ "--i": i } as React.CSSProperties}>
           <div className="w-full">
             <ProductCard product={p} />
           </div>

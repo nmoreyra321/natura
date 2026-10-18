@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { cart, cartDrawer, useCart, type CartItem } from "@/lib/cart-store";
 import { formatARS } from "@/lib/format";
+import { flyToCart } from "@/lib/fly-to-cart";
 import { getPriceInfo, toCents } from "@/lib/pricing";
 
 /**
@@ -131,7 +132,8 @@ export function AddToCart({ product }: { product: Omit<CartItem, "quantity"> }) 
           size="lg"
           className="min-w-52 flex-1"
           disabled={available <= 0}
-          onClick={() => {
+          onClick={(e) => {
+            flyToCart(e.currentTarget);
             const res = cart.add(product, quantity);
             if (res.capped) {
               toast.warning(`Agregamos el máximo disponible: ${res.quantity} en tu carrito.`);

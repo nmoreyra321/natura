@@ -42,6 +42,42 @@ function useSuggestions(term: string) {
   return { results, loading, error: state.status === "error" };
 }
 
+const PLACEHOLDERS = ["perfumes…", "cremas para manos…", "labiales…", "desodorantes…", "kits de regalo…"];
+
+/** Placeholder que se escribe solo mientras el buscador está vacío y sin tocar. */
+function useTypedPlaceholder(enabled: boolean): string {
+  const [text, setText] = useState("Buscar perfumes, cremas, kits…");
+  useEffect(() => {
+    if (!enabled || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    let word = 0;
+    let chars = 0;
+    let deleting = false;
+    let timer: ReturnType<typeof setTimeout>;
+    const tick = () => {
+      const w = PLACEHOLDERS[word];
+      setText(`Buscar ${w.slice(0, chars)}`);
+      let wait = deleting ? 40 : 85;
+      if (!deleting && chars < w.length) chars++;
+      else if (!deleting) {
+        deleting = true;
+        wait = 1300;
+      } else if (chars > 0) chars--;
+      else {
+        deleting = false;
+        word = (word + 1) % PLACEHOLDERS.length;
+        wait = 300;
+      }
+      timer = setTimeout(tick, wait);
+    };
+    timer = setTimeout(tick, 600);
+    return () => {
+      clearTimeout(timer);
+      setText("Buscar perfumes, cremas, kits…");
+    };
+  }, [enabled]);
+  return text;
+}
+
 /** Cierra el panel al tocar afuera. */
 function useCloseOnOutside(open: boolean, ref: React.RefObject<HTMLElement | null>, close: () => void) {
   useEffect(() => {
@@ -101,7 +137,8 @@ function SuggestionsPanel({
                   onClick={onPick}
                   onMouseEnter={() => setActive(i)}
                   tabIndex={-1}
-                  className={`flex items-center gap-3 rounded-2xl p-2 ${i === active ? "bg-sun/60" : "hover:bg-sun/40"}`}
+                  style={{ "--i": i } as React.CSSProperties}
+                  className={`animate-sug-in flex items-center gap-3 rounded-2xl p-2 ${i === active ? "bg-sun/60" : "hover:bg-sun/40"}`}
                 >
                   <span className="relative size-12 shrink-0 overflow-hidden rounded-xl bg-white">
                     {src ? (
@@ -188,6 +225,7 @@ export function SearchBox({ onDone, autoFocus = false }: { onDone?: () => void; 
   const showPanel = open && term.length >= 2;
   const close = useCallback(() => setOpen(false), []);
   useCloseOnOutside(open, rootRef, close);
+  const placeholder = useTypedPlaceholder(q === "" && !open && !autoFocus);
 
   const finish = () => {
     setOpen(false);
@@ -238,7 +276,7 @@ export function SearchBox({ onDone, autoFocus = false }: { onDone?: () => void; 
         onKeyDown={(e) => {
           navigate(e, results.length, setActive, close);
         }}
-        placeholder="Buscar perfumes, cremas, kits…"
+        placeholder={placeholder}
         autoFocus={autoFocus}
         maxLength={80}
         enterKeyHint="search"

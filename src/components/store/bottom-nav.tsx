@@ -43,7 +43,7 @@ export function BottomNav() {
             </Link>
           );
         })}
-        <button type="button" onClick={() => cartDrawer.open()} aria-haspopup="dialog" aria-label={count > 0 ? `Carrito: ${count} ${count === 1 ? "producto" : "productos"}` : "Carrito vacío"} className={`${base} text-muted`}>
+        <button type="button" data-cart-target onClick={() => cartDrawer.open()} aria-haspopup="dialog" aria-label={count > 0 ? `Carrito: ${count} ${count === 1 ? "producto" : "productos"}` : "Carrito vacío"} className={`${base} text-muted`}>
           <span className="relative">
             <ShoppingBag className="size-5.5" aria-hidden="true" />
             {count > 0 ? (

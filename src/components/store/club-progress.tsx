@@ -39,14 +39,15 @@ export function ClubProgressCard({ minCents }: { minCents: number }) {
           i < GIFT_EVERY - 1 ? (
             <span
               key={i}
-              className={`flex size-9 items-center justify-center rounded-full sm:size-12 ${i < done ? "bg-botanical-deep text-white" : "border-2 border-dashed border-line bg-white text-line"}`}
+              style={{ "--i": i } as React.CSSProperties}
+              className={`flex size-9 items-center justify-center rounded-full sm:size-12 ${i < done ? "animate-stamp bg-botanical-deep text-white" : "border-2 border-dashed border-line bg-white text-line"}`}
             >
               <CircleCheck className="size-5" aria-hidden="true" />
             </span>
           ) : (
             <span
               key={i}
-              className={`flex size-10 items-center justify-center rounded-full sm:size-14 ${done >= GIFT_EVERY ? "animate-pulse bg-coral-deep text-white shadow-lift" : "border-2 border-dashed border-coral-deep/50 bg-white text-coral-deep"}`}
+              className={`flex size-10 items-center justify-center rounded-full sm:size-14 ${done >= GIFT_EVERY ? "animate-tada bg-coral-deep text-white shadow-lift" : "border-2 border-dashed border-coral-deep/50 bg-white text-coral-deep"}`}
             >
               <Gift className="size-6" aria-hidden="true" />
             </span>

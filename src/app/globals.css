@@ -231,6 +231,232 @@ h3,
   animation: ping-soft 2.2s ease-out infinite;
 }
 
+/* Productos que entran en cascada (cada uno con su demora: --i). */
+@keyframes card-in {
+  from {
+    opacity: 0;
+    transform: translateY(22px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.animate-card-in {
+  animation: card-in 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: calc(min(var(--i, 0), 7) * 70ms);
+}
+
+/* Cuadritos que brillan mientras carga. */
+@keyframes shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, var(--line) 25%, var(--blush) 50%, var(--line) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.3s linear infinite;
+}
+
+/* Sugerencias del buscador: entran de costado una a una. */
+@keyframes sug-in {
+  from {
+    opacity: 0;
+    transform: translateX(-14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.animate-sug-in {
+  animation: sug-in 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: calc(min(var(--i, 0), 6) * 70ms);
+}
+
+/* Sellos de la tarjeta del club: cada uno cae y se estampa. */
+@keyframes stamp-in {
+  0% {
+    transform: scale(2.2) rotate(-30deg);
+    opacity: 0;
+  }
+  100% {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+.animate-stamp {
+  animation: stamp-in 0.55s cubic-bezier(0.3, 1.7, 0.5, 1) both;
+  animation-delay: calc(var(--i, 0) * 140ms + 200ms);
+}
+
+@keyframes tada {
+  0% {
+    transform: scale(1);
+  }
+  10%,
+  20% {
+    transform: scale(0.9) rotate(-5deg);
+  }
+  30%,
+  50%,
+  70% {
+    transform: scale(1.2) rotate(6deg);
+  }
+  40%,
+  60% {
+    transform: scale(1.2) rotate(-6deg);
+  }
+  100% {
+    transform: scale(1) rotate(0);
+  }
+}
+
+.animate-tada {
+  animation: tada 1s ease-out 0.9s both;
+}
+
+/* Seguimiento del pedido: la línea se llena, los pasos se marcan y el camión avanza. */
+@keyframes line-grow {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+.animate-line-grow {
+  transform-origin: left;
+  animation: line-grow 0.5s ease-out both;
+  animation-delay: calc(var(--i, 0) * 500ms);
+}
+
+@keyframes step-pop {
+  0% {
+    transform: scale(0.4);
+  }
+  60% {
+    transform: scale(1.35);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.animate-step-pop {
+  animation: step-pop 0.5s ease-out both;
+  animation-delay: calc(var(--i, 0) * 500ms + 300ms);
+}
+
+@keyframes truck-go {
+  from {
+    left: var(--from);
+  }
+  to {
+    left: var(--to);
+  }
+}
+
+.animate-truck {
+  animation: truck-go calc(var(--steps, 1) * 0.5s) cubic-bezier(0.5, 0, 0.2, 1) both;
+}
+
+/* Precio de revista: la raya se dibuja de izquierda a derecha. */
+@keyframes strike-draw {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+.strike-draw {
+  position: relative;
+  display: inline-block;
+}
+
+.strike-draw::after {
+  content: "";
+  position: absolute;
+  inset-inline: -2px;
+  top: 52%;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--coral-deep);
+  transform-origin: left;
+  animation: strike-draw 0.5s 0.3s ease-out both;
+}
+
+@keyframes price-pop {
+  0% {
+    transform: scale(0.85);
+  }
+  60% {
+    transform: scale(1.08);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.animate-price-pop {
+  display: inline-block;
+  animation: price-pop 0.5s 1.3s ease-out both;
+}
+
+/* Campana de «Avisame cuando vuelva». */
+@keyframes bell-ring {
+  0%,
+  100% {
+    transform: rotate(0);
+  }
+  10%,
+  30%,
+  50% {
+    transform: rotate(16deg);
+  }
+  20%,
+  40% {
+    transform: rotate(-16deg);
+  }
+  60% {
+    transform: rotate(0);
+  }
+}
+
+.animate-bell {
+  transform-origin: 50% 10%;
+  animation: bell-ring 4s ease-in-out 1.2s infinite;
+}
+
+/* Tarjeta de producto: brillo que cruza la foto al pasar el mouse o tocar. */
+.shine-on-hover {
+  position: relative;
+  overflow: hidden;
+}
+
+.shine-on-hover::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(115deg, transparent 35%, rgb(255 255 255 / 0.5) 50%, transparent 65%);
+  transform: translateX(-120%);
+  pointer-events: none;
+}
+
+.group:hover .shine-on-hover::after,
+.group:active .shine-on-hover::after {
+  transform: translateX(120%);
+  transition: transform 0.8s;
+}
+
 @keyframes slide-in-right {
   from {
     transform: translateX(100%);

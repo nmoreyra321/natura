@@ -74,6 +74,7 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
   const isNew = one(sp.nuevo) === "1";
   const state = paymentState(order);
   const steps = trackingSteps(order);
+  const lastDone = steps.reduce((last, s, n) => (s.done ? n : last), -1);
   const cancelled = order.status === "cancelled";
   const isMp = order.payment_method === "mercadopago";
   const isTransfer = order.payment_method === "transferencia";
@@ -215,18 +216,30 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
         </div>
 
         {!cancelled ? (
-          <ol className="mt-6 flex items-start" aria-label="Cómo va tu pedido">
+          <div className="relative mt-6 pt-7">
+            {lastDone > 0 ? (
+              <span
+                aria-hidden="true"
+                className="animate-truck pointer-events-none absolute top-0 -translate-x-1/2 text-xl"
+                style={{ "--from": `${50 / steps.length}%`, "--to": `${((lastDone + 0.5) / steps.length) * 100}%`, "--steps": lastDone } as React.CSSProperties}
+              >
+                🚚
+              </span>
+            ) : null}
+          <ol className="flex items-start" aria-label="Cómo va tu pedido">
             {steps.map((s, n) => (
               <li key={s.label} className="relative flex flex-1 flex-col items-center gap-1.5 text-center">
                 {n > 0 ? (
                   <span
                     aria-hidden="true"
-                    className={`absolute top-3.5 right-1/2 h-1 w-full -translate-y-1/2 ${s.done && steps[n - 1].done ? "bg-botanical-deep" : "bg-line"}`}
+                    style={{ "--i": n - 1 } as React.CSSProperties}
+                    className={`absolute top-3.5 right-1/2 h-1 w-full -translate-y-1/2 ${s.done && steps[n - 1].done ? "animate-line-grow bg-botanical-deep" : "bg-line"}`}
                   />
                 ) : null}
                 <span
+                  style={{ "--i": n } as React.CSSProperties}
                   className={`relative z-10 flex size-7 items-center justify-center rounded-full text-xs font-bold ${
-                    s.done ? "bg-botanical-deep text-white" : "border-2 border-line bg-white text-muted"
+                    s.done ? "animate-step-pop bg-botanical-deep text-white" : "border-2 border-line bg-white text-muted"
                   }`}
                 >
                   {s.done ? <CheckCircle2 className="size-4" aria-hidden="true" /> : n + 1}
@@ -238,6 +251,7 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
               </li>
             ))}
           </ol>
+          </div>
         ) : null}
 
         {canReportPayment(order) ? (
@@ -314,7 +328,7 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
                 </p>
                 <span className="mt-2 flex gap-1.5" aria-hidden="true">
                   {Array.from({ length: GIFT_EVERY }, (_, i) => (
-                    <span key={i} className={`size-3.5 rounded-full ${i < club.progress ? "bg-coral-deep" : "bg-white"}`} />
+                    <span key={i} style={{ "--i": i } as React.CSSProperties} className={`size-3.5 rounded-full ${i < club.progress ? "animate-stamp bg-coral-deep" : "bg-white"}`} />
                   ))}
                 </span>
               </>

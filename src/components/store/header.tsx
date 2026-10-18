@@ -61,7 +61,7 @@ function CartLink() {
   // En la página del carrito el ícono no abre el panel: ya está todo a la vista.
   if (pathname === "/carrito") {
     return (
-      <Link href="/carrito" className={classes} aria-label={label}>
+      <Link href="/carrito" data-cart-target className={classes} aria-label={label}>
         {icon}
         {badge}
         {plusOne}
@@ -69,7 +69,7 @@ function CartLink() {
     );
   }
   return (
-    <button type="button" className={classes} aria-label={label} aria-haspopup="dialog" onClick={() => cartDrawer.open()}>
+    <button type="button" data-cart-target className={classes} aria-label={label} aria-haspopup="dialog" onClick={() => cartDrawer.open()}>
       {icon}
       {badge}
       {plusOne}

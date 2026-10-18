@@ -18,8 +18,8 @@ export function RestockForm({ productId }: { productId: string }) {
 
   if (done) {
     return (
-      <p className="flex items-start gap-2 rounded-2xl bg-sage px-4 py-3 font-semibold text-botanical-deep" role="status">
-        <Check className="mt-0.5 size-5 shrink-0" aria-hidden="true" /> {done}
+      <p className="animate-rise flex items-start gap-2 rounded-2xl bg-sage px-4 py-3 font-semibold text-botanical-deep" role="status">
+        <Check className="animate-pop mt-0.5 size-5 shrink-0" aria-hidden="true" /> {done}
       </p>
     );
   }
@@ -27,7 +27,7 @@ export function RestockForm({ productId }: { productId: string }) {
   if (!open) {
     return (
       <button type="button" onClick={() => setOpen(true)} className={buttonClasses("secondary", "lg")}>
-        <BellRing className="size-5" aria-hidden="true" /> Avisame cuando vuelva
+        <BellRing className="animate-bell size-5" aria-hidden="true" /> Avisame cuando vuelva
       </button>
     );
   }
