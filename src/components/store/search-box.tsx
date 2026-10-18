@@ -44,7 +44,7 @@ function useSuggestions(term: string) {
 
 const PLACEHOLDERS = ["perfumes…", "cremas para manos…", "labiales…", "desodorantes…", "kits de regalo…"];
 
-/** Placeholder que se escribe solo mientras el buscador está vacío y sin tocar. */
+/** Placeholder que se escribe solo mientras el buscador está vacío (también con el teclado abierto). */
 function useTypedPlaceholder(enabled: boolean): string {
   const [text, setText] = useState("Buscar perfumes, cremas, kits…");
   useEffect(() => {
@@ -225,7 +225,7 @@ export function SearchBox({ onDone, autoFocus = false }: { onDone?: () => void; 
   const showPanel = open && term.length >= 2;
   const close = useCallback(() => setOpen(false), []);
   useCloseOnOutside(open, rootRef, close);
-  const placeholder = useTypedPlaceholder(q === "" && !open && !autoFocus);
+  const placeholder = useTypedPlaceholder(q === "");
 
   const finish = () => {
     setOpen(false);
