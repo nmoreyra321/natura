@@ -237,6 +237,52 @@ export async function searchSuggestions(q: string, limit = 6): Promise<SearchSug
   }));
 }
 
+/** Acorta un nombre de producto para el cartel del buscador (sin cortar palabras). */
+function shortHint(name: string): string {
+  const clean = name.replace(/\s+/g, " ").trim();
+  if (clean.length <= 30) return clean;
+  const cut = clean.slice(0, 30);
+  return cut.slice(0, Math.max(cut.lastIndexOf(" "), 12));
+}
+
+/**
+ * Nombres de productos reales con stock para que el buscador los «escriba» de ejemplo.
+ * Se mezclan tipos distintos (perfume, crema, labial…) tomando uno de cada grupo por vuelta.
+ */
+export async function getSearchHints(max = 8): Promise<string[]> {
+  const supabase = createPublicClient();
+  if (!supabase) return [];
+  const { data, error } = await supabase
+    .from("products")
+    .select("name")
+    .eq("status", "published")
+    .eq("in_stock", true)
+    .order("is_featured", { ascending: false })
+    .order("updated_at", { ascending: false })
+    .limit(60);
+  if (error || !data) return [];
+  const groups = new Map<string, string[]>();
+  for (const row of data) {
+    const hint = shortHint(row.name);
+    const key = hint.split(" ")[0]?.toLowerCase() ?? hint;
+    const list = groups.get(key) ?? [];
+    if (!list.includes(hint)) list.push(hint);
+    groups.set(key, list);
+  }
+  const out: string[] = [];
+  for (let round = 0; out.length < max; round++) {
+    let added = false;
+    for (const list of groups.values()) {
+      if (list[round] && out.length < max) {
+        out.push(list[round]);
+        added = true;
+      }
+    }
+    if (!added) break;
+  }
+  return out;
+}
+
 /** Cantidad total de productos publicados (null si la base no está disponible). */
 export const getPublishedCount = cache(async (): Promise<number | null> => {
   const supabase = createPublicClient();

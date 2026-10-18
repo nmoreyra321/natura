@@ -42,11 +42,29 @@ function useSuggestions(term: string) {
   return { results, loading, error: state.status === "error" };
 }
 
-const PLACEHOLDERS = ["perfumes…", "cremas para manos…", "labiales…", "desodorantes…", "kits de regalo…"];
+const FALLBACK_HINTS = ["perfumes…", "cremas para manos…", "labiales…", "desodorantes…", "kits de regalo…"];
+
+/** Ejemplos con nombres de productos reales de la tienda; se piden una sola vez por visita. */
+let hintsPromise: Promise<string[]> | null = null;
+function loadHints(): Promise<string[]> {
+  hintsPromise ??= fetch("/api/buscar?ejemplos=1")
+    .then((r) => r.json() as Promise<{ hints?: string[] }>)
+    .then((d) => (d.hints ?? []).map((h) => `${h}…`))
+    .catch(() => []);
+  return hintsPromise;
+}
 
 /** Placeholder que se escribe solo mientras el buscador está vacío (también con el teclado abierto). */
 function useTypedPlaceholder(enabled: boolean): string {
   const [text, setText] = useState("Buscar perfumes, cremas, kits…");
+  const [hints, setHints] = useState<string[]>(FALLBACK_HINTS);
+  useEffect(() => {
+    let alive = true;
+    loadHints().then((h) => alive && h.length > 0 && setHints(h));
+    return () => {
+      alive = false;
+    };
+  }, []);
   useEffect(() => {
     if (!enabled || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     let word = 0;
@@ -54,7 +72,7 @@ function useTypedPlaceholder(enabled: boolean): string {
     let deleting = false;
     let timer: ReturnType<typeof setTimeout>;
     const tick = () => {
-      const w = PLACEHOLDERS[word];
+      const w = hints[word];
       setText(`Buscar ${w.slice(0, chars)}`);
       let wait = deleting ? 40 : 85;
       if (!deleting && chars < w.length) chars++;
@@ -64,7 +82,7 @@ function useTypedPlaceholder(enabled: boolean): string {
       } else if (chars > 0) chars--;
       else {
         deleting = false;
-        word = (word + 1) % PLACEHOLDERS.length;
+        word = (word + 1) % hints.length;
         wait = 300;
       }
       timer = setTimeout(tick, wait);
@@ -74,7 +92,7 @@ function useTypedPlaceholder(enabled: boolean): string {
       clearTimeout(timer);
       setText("Buscar perfumes, cremas, kits…");
     };
-  }, [enabled]);
+  }, [enabled, hints]);
   return text;
 }
 
