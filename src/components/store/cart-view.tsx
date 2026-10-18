@@ -583,7 +583,7 @@ export function CartView({
                   <span>
                     ¿Querés sumar al Club Natu Mariel (cada {GIFT_EVERY} compras, un regalo)?{" "}
                     <Link href="/cuenta?next=/carrito" className="font-semibold text-coral-deep underline">
-                      Entrá con Google o Facebook
+                      Entrá con tu cuenta
                     </Link>{" "}
                     antes de hacer el pedido.
                   </span>

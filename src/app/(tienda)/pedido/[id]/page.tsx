@@ -13,6 +13,7 @@ import { TransferAccount } from "@/components/store/transfer-account";
 import { UnpaidMpActions } from "@/components/store/unpaid-mp-actions";
 import { buttonClasses } from "@/components/ui/button";
 import { getSiteUrl, getLoginProviders } from "@/lib/config";
+import { getCustomer } from "@/lib/customer";
 import { formatARS } from "@/lib/format";
 import { GIFT_EVERY, loyaltyKey, loyaltyStatus, PURCHASE_STATUSES, type LoyaltyStatus } from "@/lib/loyalty";
 import { canCustomerCancel, canReportPayment, isUnpaidMercadoPago, owedOf, paymentState, trackingSteps } from "@/lib/order-tracking";
@@ -83,6 +84,7 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
 
   // Club de clientas: cuántas compras lleva con este teléfono (si el pedido no está cancelado).
   // Solo los pedidos hechos con cuenta suman al Club.
+  const signedInNow = Boolean(await getCustomer());
   const clubKey = cancelled || !order.customer_user_id ? null : loyaltyKey(order.customer_phone);
   let club: LoyaltyStatus | null = null;
   const clubMin = await getLoyaltyMinTotal();
@@ -341,13 +343,18 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
               <p className="mt-2 text-xs text-muted">Este pedido suma cuando esté pagado completo y confirmado.</p>
             ) : null}
           </section>
+        ) : !cancelled && !order.customer_user_id && signedInNow ? (
+          <p className="mt-6 rounded-2xl bg-gradient-to-br from-blush to-sun/40 px-4 py-3 text-sm">
+            🎁 <b>Club Natu Mariel:</b> ya tenés tu cuenta iniciada, pero este pedido lo hiciste antes de entrar, por eso no suma.
+            Tus próximas compras, hechas con la cuenta iniciada, sí suman.
+          </p>
         ) : !cancelled && !order.customer_user_id && getLoginProviders().length > 0 ? (
           <p className="mt-6 rounded-2xl bg-gradient-to-br from-blush to-sun/40 px-4 py-3 text-sm">
             🎁 <b>Club Natu Mariel:</b> cada {GIFT_EVERY} compras, un regalo.{" "}
-            <Link href="/cuenta" className="font-semibold text-coral-deep underline">
-              Hacete una cuenta
+            <Link href="/club#crear" className="font-semibold text-coral-deep underline">
+              Creá tu cuenta
             </Link>{" "}
-            con Google o Facebook para que tus próximas compras sumen.
+            con Google para que tus próximas compras sumen.
           </p>
         ) : null}
 

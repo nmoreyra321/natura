@@ -34,7 +34,7 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
         </div>
         <section className="mt-6 rounded-3xl bg-warm-white p-5 shadow-soft ring-1 ring-line/70">
           <h2 className="font-display text-xl font-bold">Entrá en un toque</h2>
-          <p className="mt-1 mb-4 text-sm text-muted">Sin contraseña: usás tu cuenta de Google o de Facebook.</p>
+          <p className="mt-1 mb-4 text-sm text-muted">Sin contraseña: usás tu cuenta de {getLoginProviders().includes("facebook") ? "Google o de Facebook" : "Google"}.</p>
           {sp.error ? (
             <p className="mb-3 text-sm font-semibold text-coral-deep" role="alert">
               No pudimos completar el ingreso. Probá de nuevo.
@@ -43,7 +43,7 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
           {getLoginProviders().length > 0 ? (
             <AccountLogin next={next} providers={getLoginProviders()} />
           ) : (
-            <p className="rounded-2xl bg-cream p-3 text-sm font-semibold">Muy pronto vas a poder entrar con Google o Facebook. 💖</p>
+            <p className="rounded-2xl bg-cream p-3 text-sm font-semibold">Muy pronto vas a poder entrar con tu cuenta. 💖</p>
           )}
         </section>
         <p className="mt-4 text-center text-sm text-muted">
