@@ -4,7 +4,7 @@ import Link from "next/link";
 import { UpdateFeeButton } from "@/components/admin/update-fee-button";
 import { requireAdmin } from "@/lib/auth";
 import { formatARS } from "@/lib/format";
-import { runningResult, summarizeMpFees } from "@/lib/mp-fees";
+import { FEE_MARGIN_PERCENT, recommendedPercent, runningResult, summarizeMpFees } from "@/lib/mp-fees";
 import { currentMonth, monthLabel, monthStartIso, parseMonth, shiftMonth } from "@/lib/sales";
 import { getMercadoPagoSurcharge } from "@/lib/store-settings";
 
@@ -90,7 +90,7 @@ export default async function CommissionPage({ searchParams }: { searchParams: P
 
           {needsRaise ? (
             <p className="mt-3 rounded-2xl bg-sun/40 p-4 font-semibold">
-              ⚠️ Mercado Pago cobra más de lo que cubre el recargo. Conviene subirlo de {pct(percent)} a {pct(s.suggestedPercent!)} en{" "}
+              ⚠️ Mercado Pago cobra más de lo que cubre el recargo. Conviene subirlo de {pct(percent)} a {pct(recommendedPercent(s.suggestedPercent!))} (el justo, {pct(s.suggestedPercent!)}, más {pct(FEE_MARGIN_PERCENT)} de colchón) en{" "}
               <Link href="/admin/configuracion" className="underline">
                 Configuración
               </Link>

@@ -17,7 +17,7 @@ import { getLoyaltyMinTotal } from "@/lib/store-settings";
 import { notifyAdmins } from "@/lib/push";
 import { formatARS } from "@/lib/format";
 import { loyaltyStatus, PURCHASE_STATUSES } from "@/lib/loyalty";
-import { summarizeMpFees } from "@/lib/mp-fees";
+import { recommendedPercent, summarizeMpFees } from "@/lib/mp-fees";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isValidPrice, planMagazinePriceUpdate, salePriceFromDiscount, toCents } from "@/lib/pricing";
 import { aliasKey, cleanInvoiceNumber, codeKey, mergeReceiptItems, parseArDate, skuFromCode } from "@/lib/receipt";
@@ -1050,9 +1050,9 @@ export async function updateSurchargeFromRealFees(): Promise<ActionResult> {
     if (summary.count < FEE_CHECK_MIN_PAYMENTS || summary.suggestedPercent === null) {
       return { ok: false, error: `Todavía hay pocos pagos para comprobarlo (hacen falta ${FEE_CHECK_MIN_PAYMENTS} con Mercado Pago).` };
     }
-    const next = Math.min(summary.suggestedPercent, 25);
+    const next = Math.min(recommendedPercent(summary.suggestedPercent), 25);
     if (Math.abs(next - current) < 0.05) {
-      return { ok: true, message: `Está bien: el recargo de ${current}% cubre la comisión (hoy cobran ${summary.feePercent}%).` };
+      return { ok: true, message: `Está bien: el recargo de ${current}% ya tiene el colchón de 0,5% sobre la comisión (hoy cobran ${summary.feePercent}%).` };
     }
     const { error } = await supabase
       .from("store_settings")
@@ -1061,7 +1061,7 @@ export async function updateSurchargeFromRealFees(): Promise<ActionResult> {
     if (error) return fail(error, "No pudimos guardar el recargo.");
     refreshCatalog();
     revalidatePath("/admin/comision");
-    return { ok: true, message: `Listo: el recargo pasó de ${current}% a ${next}% según los últimos ${summary.count} pagos.` };
+    return { ok: true, message: `Listo: el recargo pasó de ${current}% a ${next}% (comisión justa ${summary.suggestedPercent}% + 0,5% de colchón), según los últimos ${summary.count} pagos.` };
   } catch (e) {
     return fail(e, "No pudimos revisar los pagos.");
   }

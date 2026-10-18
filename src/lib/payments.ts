@@ -2,6 +2,7 @@ import "server-only";
 
 import { formatARS } from "@/lib/format";
 import { getPayment, isPaymentStatus, type PaymentStatus } from "@/lib/mercadopago";
+import { recommendedPercent } from "@/lib/mp-fees";
 import { toCents } from "@/lib/pricing";
 import { notifyAdmins } from "@/lib/push";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -113,7 +114,7 @@ async function warnIfFeeTooHigh(order: PaidOrder, money: { amount: number; net: 
   if (money.net === null || !(money.amount > 0) || money.net + 0.5 >= expected) return;
   const feeShare = (money.amount - money.net) / money.amount;
   if (!(feeShare > 0 && feeShare < 0.5)) return;
-  const suggested = Math.ceil(((feeShare / (1 - feeShare)) * 100) * 10) / 10;
+  const suggested = recommendedPercent(Math.ceil(((feeShare / (1 - feeShare)) * 100) * 10) / 10);
   const current = await getMercadoPagoSurcharge();
   await notifyAdmins({
     title: "⚠️ Mercado Pago cobró más comisión",

@@ -1,5 +1,13 @@
 import { surchargeCents, toCents } from "./pricing";
 
+/** Colchón que se le suma al recargo justo, por si la comisión sube un poco. */
+export const FEE_MARGIN_PERCENT = 0.5;
+
+/** Recargo que conviene dejar: el justo más el colchón. */
+export function recommendedPercent(justPercent: number): number {
+  return Math.round((justPercent + FEE_MARGIN_PERCENT) * 10) / 10;
+}
+
 export type MpOrder = { total: number | string; mp_net_received: number | string | null };
 
 export type MpFeeSummary = {
