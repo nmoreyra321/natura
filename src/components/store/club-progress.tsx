@@ -30,7 +30,7 @@ export function ClubProgressCard({ minCents }: { minCents: number }) {
   const providers = getLoginProviders();
 
   return (
-    <div className="relative flex flex-col items-center gap-2 rounded-3xl bg-white/70 p-4 text-center backdrop-blur sm:gap-3 sm:p-5">
+    <div className="relative flex flex-col items-center gap-2 rounded-3xl bg-white/90 p-4 text-center text-forest backdrop-blur sm:gap-3 sm:p-5">
       <span className="rounded-full bg-cream px-2.5 py-0.5 text-xs font-extrabold tracking-wide text-muted uppercase">
         {mine ? "Tu avance" : "Tu tarjeta del Club"}
       </span>
