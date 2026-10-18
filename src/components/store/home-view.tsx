@@ -8,6 +8,7 @@ import { GIFT_EVERY } from "@/lib/loyalty";
 import { productImageUrl } from "@/lib/images";
 import { getPriceInfo } from "@/lib/pricing";
 import { LinkButton } from "@/components/ui/button";
+import { ClubCta } from "./club-cta";
 import { ClubProgressCard } from "./club-progress";
 import { EmptyStore } from "./empty-store";
 import { HomeBanner, type BannerSlide } from "./home-banner";
@@ -334,9 +335,7 @@ export function HomeView({ d }: { d: HomeData }) {
                     </li>
                   ))}
                 </ul>
-                <Link href="/club" className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-full bg-coral-deep px-5 text-sm font-bold text-white shadow-lift transition hover:-translate-y-0.5 sm:mt-5 sm:min-h-11 sm:px-6 sm:text-base">
-                  Quiero mi tarjeta <ArrowRight className="size-4" aria-hidden="true" />
-                </Link>
+                <ClubCta />
               </div>
               <ClubProgressCard minCents={d.clubMinCents} />
             </div>
