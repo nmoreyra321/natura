@@ -172,6 +172,32 @@ export function Header({ categories }: { categories: NavCategory[] }) {
     };
   }, [open]);
 
+  // Deslizar desde el borde izquierdo hacia la derecha abre el menú; deslizar hacia la izquierda lo cierra.
+  useEffect(() => {
+    if (!window.matchMedia("(max-width: 1023px)").matches) return;
+    let from: { x: number; y: number; edge: boolean } | null = null;
+    const onStart = (e: TouchEvent) => {
+      const t = e.touches[0];
+      from = e.touches.length === 1 ? { x: t.clientX, y: t.clientY, edge: t.clientX <= 60 } : null;
+    };
+    const onEnd = (e: TouchEvent) => {
+      if (!from) return;
+      const t = e.changedTouches[0];
+      const dx = t.clientX - from.x;
+      const dy = t.clientY - from.y;
+      const horizontal = Math.abs(dx) > Math.abs(dy) * 1.6;
+      if (horizontal && !open && from.edge && dx >= 60) setOpen(true);
+      else if (horizontal && open && dx <= -60) setOpen(false);
+      from = null;
+    };
+    document.addEventListener("touchstart", onStart, { passive: true });
+    document.addEventListener("touchend", onEnd, { passive: true });
+    return () => {
+      document.removeEventListener("touchstart", onStart);
+      document.removeEventListener("touchend", onEnd);
+    };
+  }, [open]);
+
   const links = [
     { href: "/productos", label: "Todos los productos" },
     { href: "/productos?ofertas=1", label: "Ofertas" },
