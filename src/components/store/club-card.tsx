@@ -27,7 +27,8 @@ function Waves() {
   );
 }
 
-const FACE = "absolute inset-0 overflow-hidden rounded-[1.4rem] [backface-visibility:hidden] bg-gradient-to-br from-[#fff6e6] to-[#ffeccf] text-forest shadow-[0_22px_40px_-26px_rgb(209_22_107/0.55),0_0_0_1px_rgb(0_0_0/0.06)]";
+// El iPhone a veces ignora `backface-visibility`: por eso cada cara también se oculta a mitad del giro.
+const FACE = "absolute inset-0 overflow-hidden rounded-[1.4rem] [backface-visibility:hidden] [-webkit-backface-visibility:hidden] transition-[visibility] duration-0 delay-[350ms] motion-reduce:delay-0 bg-gradient-to-br from-[#fff6e6] to-[#ffeccf] text-forest shadow-[0_22px_40px_-26px_rgb(209_22_107/0.55),0_0_0_1px_rgb(0_0_0/0.06)]";
 
 /**
  * Tarjeta virtual del Club con aspecto de tarjeta real: adelante tiene chip, los sellos de las compras
@@ -88,7 +89,7 @@ export function ClubCard({ done, name }: { done: number; name: string | null }) 
             aria-hidden={flipped}
             aria-label={`Tarjeta del Club Natu Mariel: ${shown} de ${GIFT_EVERY} compras. Tocá para darla vuelta.`}
             onKeyDown={onKey}
-            className={`${FACE} flex cursor-pointer flex-col justify-between p-4 sm:p-5`}
+            className={`${FACE} ${flipped ? "invisible" : "visible"} flex cursor-pointer flex-col justify-between p-4 sm:p-5`}
           >
             <Waves />
             <div className="relative z-10 flex items-center justify-between gap-2">
@@ -116,10 +117,19 @@ export function ClubCard({ done, name }: { done: number; name: string | null }) 
                           : "text-[#e09a10] ring-[1.5px] ring-sun"
                         : on
                           ? "animate-stamp text-coral-deep shadow-[0_3px_8px_rgb(0_0_0/0.3)]"
-                          : "text-transparent"
+                          : "text-[#c06a96]"
                     }`}
                   >
-                    {gift ? <Gift className="size-[48%]" /> : <Check className="size-[46%]" strokeWidth={3} />}
+                    {gift ? (
+                      <Gift className="size-[48%]" />
+                    ) : on ? (
+                      <Check className="size-[46%]" strokeWidth={3} />
+                    ) : (
+                      <span className="flex flex-col items-center leading-none">
+                        <span className="text-[0.5rem] font-extrabold tracking-wide uppercase">Compra</span>
+                        <span className="font-display text-lg font-bold">{i + 1}</span>
+                      </span>
+                    )}
                   </li>
                 );
               })}
@@ -140,7 +150,7 @@ export function ClubCard({ done, name }: { done: number; name: string | null }) 
             aria-hidden={!flipped}
             aria-label="Dorso de la tarjeta del Club. Tocá para darla vuelta."
             onKeyDown={onKey}
-            className={`${FACE} cursor-pointer [transform:rotateY(180deg)]`}
+            className={`${FACE} ${flipped ? "visible" : "invisible"} cursor-pointer [transform:rotateY(180deg)]`}
           >
             <Waves />
             <i aria-hidden="true" className="absolute inset-x-0 top-[13%] z-10 h-[17%] bg-gradient-to-b from-[#2a2a2e] via-[#0e0e10] to-[#2a2a2e]" />
