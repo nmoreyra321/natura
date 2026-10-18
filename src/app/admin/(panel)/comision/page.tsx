@@ -1,6 +1,7 @@
 import { ArrowDownRight, ArrowUpRight, ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
 
+import { UpdateFeeButton } from "@/components/admin/update-fee-button";
 import { requireAdmin } from "@/lib/auth";
 import { formatARS } from "@/lib/format";
 import { runningResult, summarizeMpFees } from "@/lib/mp-fees";
@@ -44,6 +45,13 @@ export default async function CommissionPage({ searchParams }: { searchParams: P
     <div className="mx-auto max-w-2xl">
       <h1 className="font-display text-3xl font-bold">Comisión de Mercado Pago</h1>
       <p className="mt-1 text-muted">Para saber si el recargo alcanza o si Mercado Pago te está sacando plata.</p>
+
+      <div className="mt-4 rounded-3xl bg-warm-white p-4 shadow-soft">
+        <p className="mb-3 text-sm font-semibold">
+          Mira lo que Mercado Pago cobró en tus últimos pagos y deja el recargo justo para no perder (hoy: {pct(percent)}).
+        </p>
+        <UpdateFeeButton />
+      </div>
 
       <div className="mt-4 flex items-center justify-between rounded-2xl bg-warm-white p-2 shadow-soft">
         <Link href={`?mes=${prev}`} aria-label="Mes anterior" className="flex size-10 items-center justify-center rounded-full hover:bg-cream">

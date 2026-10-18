@@ -17,6 +17,7 @@ import { getLoyaltyMinTotal } from "@/lib/store-settings";
 import { notifyAdmins } from "@/lib/push";
 import { formatARS } from "@/lib/format";
 import { loyaltyStatus, PURCHASE_STATUSES } from "@/lib/loyalty";
+import { summarizeMpFees } from "@/lib/mp-fees";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isValidPrice, planMagazinePriceUpdate, salePriceFromDiscount, toCents } from "@/lib/pricing";
 import { aliasKey, cleanInvoiceNumber, codeKey, mergeReceiptItems, parseArDate, skuFromCode } from "@/lib/receipt";
@@ -1021,6 +1022,48 @@ export async function saveMercadoPagoSurcharge(percent: unknown): Promise<Action
     };
   } catch (e) {
     return fail(e, "No pudimos guardar el recargo.");
+  }
+}
+
+/** Cantidad de pagos recientes con los que se comprueba la comisión real de Mercado Pago. */
+const FEE_CHECK_PAYMENTS = 20;
+const FEE_CHECK_MIN_PAYMENTS = 3;
+
+/** Mira lo que Mercado Pago cobró de verdad en los últimos pagos y deja el recargo justo para no perder. */
+export async function updateSurchargeFromRealFees(): Promise<ActionResult> {
+  try {
+    const { supabase } = await assertAdmin();
+    const [{ data: orders, error: ordersError }, { data: settings, error: settingsError }] = await Promise.all([
+      supabase
+        .from("orders")
+        .select("total, mp_net_received")
+        .eq("payment_method", "mercadopago")
+        .eq("payment_status", "approved")
+        .not("mp_net_received", "is", null)
+        .order("created_at", { ascending: false })
+        .limit(FEE_CHECK_PAYMENTS),
+      supabase.from("store_settings").select("mp_surcharge_percent").eq("id", 1).single(),
+    ]);
+    if (ordersError || settingsError) return fail(ordersError ?? settingsError, "No pudimos revisar los pagos.");
+    const current = Number(settings?.mp_surcharge_percent ?? 0);
+    const summary = summarizeMpFees(orders ?? [], current);
+    if (summary.count < FEE_CHECK_MIN_PAYMENTS || summary.suggestedPercent === null) {
+      return { ok: false, error: `Todavía hay pocos pagos para comprobarlo (hacen falta ${FEE_CHECK_MIN_PAYMENTS} con Mercado Pago).` };
+    }
+    const next = Math.min(summary.suggestedPercent, 25);
+    if (Math.abs(next - current) < 0.05) {
+      return { ok: true, message: `Está bien: el recargo de ${current}% cubre la comisión (hoy cobran ${summary.feePercent}%).` };
+    }
+    const { error } = await supabase
+      .from("store_settings")
+      .update({ mp_surcharge_percent: next, updated_at: new Date().toISOString() })
+      .eq("id", 1);
+    if (error) return fail(error, "No pudimos guardar el recargo.");
+    refreshCatalog();
+    revalidatePath("/admin/comision");
+    return { ok: true, message: `Listo: el recargo pasó de ${current}% a ${next}% según los últimos ${summary.count} pagos.` };
+  } catch (e) {
+    return fail(e, "No pudimos revisar los pagos.");
   }
 }
 
