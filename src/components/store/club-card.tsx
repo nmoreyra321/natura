@@ -27,8 +27,8 @@ function Waves() {
   );
 }
 
-// El iPhone a veces ignora `backface-visibility`: por eso cada cara también se oculta a mitad del giro.
-const FACE = "absolute inset-0 overflow-hidden rounded-[1.4rem] [backface-visibility:hidden] [-webkit-backface-visibility:hidden] transition-[visibility] duration-0 delay-[350ms] motion-reduce:delay-0 bg-gradient-to-br from-[#fff6e6] to-[#ffeccf] text-forest shadow-[0_22px_40px_-26px_rgb(209_22_107/0.55),0_0_0_1px_rgb(0_0_0/0.06)]";
+// Cada cara se muestra o se oculta del todo (no se usa `backface-visibility`, que en el iPhone dejaba ver el frente "en espejo").
+const FACE = "absolute inset-0 overflow-hidden rounded-[1.4rem] bg-gradient-to-br from-[#fff6e6] to-[#ffeccf] text-forest shadow-[0_22px_40px_-26px_rgb(209_22_107/0.55),0_0_0_1px_rgb(0_0_0/0.06)]";
 
 /**
  * Tarjeta virtual del Club con aspecto de tarjeta real: adelante tiene chip, los sellos de las compras
@@ -37,6 +37,8 @@ const FACE = "absolute inset-0 overflow-hidden rounded-[1.4rem] [backface-visibi
  */
 export function ClubCard({ done, name }: { done: number; name: string | null }) {
   const tiltRef = useRef<HTMLDivElement>(null);
+  const flipRef = useRef<HTMLDivElement>(null);
+  const busy = useRef(false);
   const [flipped, setFlipped] = useState(false);
   const moved = useRef(false);
   const start = useRef({ x: 0, y: 0 });
@@ -56,7 +58,32 @@ export function ClubCard({ done, name }: { done: number; name: string | null }) 
   const reset = () => {
     if (tiltRef.current) tiltRef.current.style.transform = "";
   };
-  const toggle = () => setFlipped((f) => !f);
+  // Giro en dos tiempos: la tarjeta se pone de canto (90°), ahí se cambia de cara, y termina de girar por el otro lado.
+  const toggle = () => {
+    const el = flipRef.current;
+    if (!el || busy.current) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setFlipped((f) => !f);
+      return;
+    }
+    busy.current = true;
+    el.style.transition = "transform 200ms ease-in";
+    el.style.transform = "rotateY(90deg)";
+    setTimeout(() => {
+      setFlipped((f) => !f);
+      el.style.transition = "none";
+      el.style.transform = "rotateY(-90deg)";
+      requestAnimationFrame(() =>
+        requestAnimationFrame(() => {
+          el.style.transition = "transform 260ms ease-out";
+          el.style.transform = "rotateY(0deg)";
+          setTimeout(() => {
+            busy.current = false;
+          }, 270);
+        }),
+      );
+    }, 200);
+  };
   const onKey = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
@@ -79,9 +106,9 @@ export function ClubCard({ done, name }: { done: number; name: string | null }) 
         onClick={() => {
           if (!moved.current) toggle();
         }}
-        className="touch-pan-y transition-transform duration-200 ease-out [transform-style:preserve-3d]"
+        className="touch-pan-y transition-transform duration-200 ease-out"
       >
-        <div className={`relative aspect-[1.586] w-full transition-transform duration-700 ease-out [transform-style:preserve-3d] motion-reduce:duration-0 ${flipped ? "[transform:rotateY(180deg)]" : ""}`}>
+        <div ref={flipRef} className="relative aspect-[1.586] w-full">
           {/* Adelante */}
           <div
             role="button"
@@ -89,7 +116,7 @@ export function ClubCard({ done, name }: { done: number; name: string | null }) 
             aria-hidden={flipped}
             aria-label={`Tarjeta del Club Natu Mariel: ${shown} de ${GIFT_EVERY} compras. Tocá para darla vuelta.`}
             onKeyDown={onKey}
-            className={`${FACE} ${flipped ? "invisible" : "visible"} flex cursor-pointer flex-col justify-between p-4 sm:p-5`}
+            className={`${FACE} ${flipped ? "hidden" : "flex"} cursor-pointer flex-col justify-between p-4 sm:p-5`}
           >
             <Waves />
             <div className="relative z-10 flex items-center justify-between gap-2">
@@ -150,7 +177,7 @@ export function ClubCard({ done, name }: { done: number; name: string | null }) 
             aria-hidden={!flipped}
             aria-label="Dorso de la tarjeta del Club. Tocá para darla vuelta."
             onKeyDown={onKey}
-            className={`${FACE} ${flipped ? "visible" : "invisible"} cursor-pointer [transform:rotateY(180deg)]`}
+            className={`${FACE} ${flipped ? "block" : "hidden"} cursor-pointer`}
           >
             <Waves />
             <i aria-hidden="true" className="absolute inset-x-0 top-[13%] z-10 h-[17%] bg-gradient-to-b from-[#2a2a2e] via-[#0e0e10] to-[#2a2a2e]" />
