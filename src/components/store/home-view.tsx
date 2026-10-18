@@ -97,7 +97,7 @@ const PERKS = ["Más de 5 años vendiendo Natura", "Productos 100% originales", 
 
 const CATEGORY_TINTS = ["bg-pink", "bg-sun", "bg-sage", "bg-lilac", "bg-peach"];
 
-function SectionHeader({ title, subtitle, href }: { title: string; subtitle?: string; href: string }) {
+function SectionHeader({ title, subtitle, href, linkLabel = "Ver todo" }: { title: string; subtitle?: string; href: string; linkLabel?: string }) {
   return (
     <div className="mb-5 flex items-end justify-between gap-4">
       <div>
@@ -108,7 +108,7 @@ function SectionHeader({ title, subtitle, href }: { title: string; subtitle?: st
         href={href}
         className="group inline-flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-sm font-bold text-coral-deep transition-colors hover:bg-coral-soft"
       >
-        Ver todo <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+        {linkLabel} <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
       </Link>
     </div>
   );
@@ -359,7 +359,7 @@ export function HomeView({ d }: { d: HomeData }) {
           ) : null}
 
           <Section>
-            <SectionHeader title="Comprar es fácil" href="/como-comprar" />
+            <SectionHeader title="Comprar es fácil" href="/como-comprar" linkLabel="Cómo comprar" />
             <ol className="grid gap-2.5 sm:grid-cols-3">
               {BUY_STEPS.map((step, i) => (
                 <li key={step} className="flex items-center gap-3 rounded-2xl bg-warm-white p-3.5 text-sm font-bold shadow-soft ring-1 ring-line/60 sm:text-base">
