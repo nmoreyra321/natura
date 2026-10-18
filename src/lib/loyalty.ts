@@ -80,3 +80,34 @@ export function summarizeClub(orders: ClubOrder[], gifts: { phone: string }[], m
     })
     .sort((a, b) => b.pending - a.pending || b.progress - a.progress || b.purchases - a.purchases || a.name.localeCompare(b.name, "es"));
 }
+
+/**
+ * Por qué un pedido no suma (todavía) al Club, para decírselo bien a la clienta:
+ * - `below`: la compra en productos (sin el envío) no llega al mínimo, tenga o no cuenta.
+ * - `below_no_account`: no llega al mínimo y además no lo hizo con su cuenta.
+ * - `before_login`: llega al mínimo, pero lo hizo antes de entrar con su cuenta (hoy sí la tiene iniciada).
+ * - `no_account`: llega al mínimo, pero no lo hizo con una cuenta.
+ * - `null`: no hay nada que explicar (el pedido está unido a la cuenta y llega al mínimo).
+ */
+export type ClubNote = "below" | "below_no_account" | "before_login" | "no_account" | null;
+
+export function clubOrderNote({
+  linked,
+  signedInNow,
+  productsCents,
+  minCents,
+}: {
+  /** El pedido quedó unido a una cuenta cuando se hizo. */
+  linked: boolean;
+  /** Hoy tiene la sesión iniciada. */
+  signedInNow: boolean;
+  /** Lo que compró en productos, sin el envío (centavos). */
+  productsCents: number;
+  /** Compra mínima del Club (centavos, 0 = sin mínimo). */
+  minCents: number;
+}): ClubNote {
+  const reaches = productsCents >= minCents;
+  if (linked) return reaches ? null : "below";
+  if (!reaches) return signedInNow ? "below" : "below_no_account";
+  return signedInNow ? "before_login" : "no_account";
+}

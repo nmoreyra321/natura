@@ -15,7 +15,7 @@ import { buttonClasses } from "@/components/ui/button";
 import { getSiteUrl, getLoginProviders } from "@/lib/config";
 import { getCustomer } from "@/lib/customer";
 import { formatARS } from "@/lib/format";
-import { GIFT_EVERY, loyaltyKey, loyaltyStatus, PURCHASE_STATUSES, type LoyaltyStatus } from "@/lib/loyalty";
+import { clubOrderNote, GIFT_EVERY, loyaltyKey, loyaltyStatus, PURCHASE_STATUSES, type LoyaltyStatus } from "@/lib/loyalty";
 import { canCustomerCancel, canReportPayment, isUnpaidMercadoPago, owedOf, paymentState, trackingSteps } from "@/lib/order-tracking";
 import { syncMercadoPagoPayment } from "@/lib/payments";
 import { toCents } from "@/lib/pricing";
@@ -90,7 +90,9 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
   const clubMin = await getLoyaltyMinTotal();
   const shippingCents = toCents(order.shipping_cost);
   // El Club cuenta lo que compró en productos (sin el envío).
-  const counts = toCents(order.total) - shippingCents >= Math.round(clubMin * 100);
+  const productsCents = toCents(order.total) - shippingCents;
+  const clubMinCents = Math.round(clubMin * 100);
+  const clubNote = clubOrderNote({ linked: Boolean(order.customer_user_id), signedInNow, productsCents, minCents: clubMinCents });
   const delivery =
     order.delivery_method === "envio" && order.shipping_zone
       ? { method: "envio" as const, zone: order.shipping_zone, address: order.shipping_address ?? "", costCents: shippingCents }
@@ -335,26 +337,45 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
                 </span>
               </>
             )}
-            {!counts ? (
+            {clubNote === "below" ? (
               <p className="mt-2 text-xs text-muted">
-                Este pedido no suma al Club: suman las compras desde {formatARS(Math.round(clubMin * 100))}.
+                Este pedido no suma al Club: compraste {formatARS(productsCents)} en productos y el mínimo es {formatARS(clubMinCents)} (sin contar el envío).
               </p>
             ) : order.payment_status !== "approved" || order.status === "pending" ? (
               <p className="mt-2 text-xs text-muted">Este pedido suma cuando esté pagado completo y confirmado.</p>
             ) : null}
           </section>
-        ) : !cancelled && !order.customer_user_id && signedInNow ? (
+        ) : !cancelled && clubNote && (signedInNow || getLoginProviders().length > 0) ? (
           <p className="mt-6 rounded-2xl bg-gradient-to-br from-blush to-sun/40 px-4 py-3 text-sm">
-            🎁 <b>Club Natu Mariel:</b> ya tenés tu cuenta iniciada, pero este pedido lo hiciste antes de entrar, por eso no suma.
-            Tus próximas compras, hechas con la cuenta iniciada, sí suman.
-          </p>
-        ) : !cancelled && !order.customer_user_id && getLoginProviders().length > 0 ? (
-          <p className="mt-6 rounded-2xl bg-gradient-to-br from-blush to-sun/40 px-4 py-3 text-sm">
-            🎁 <b>Club Natu Mariel:</b> cada {GIFT_EVERY} compras, un regalo.{" "}
-            <Link href="/club#crear" className="font-semibold text-coral-deep underline">
-              Creá tu cuenta
-            </Link>{" "}
-            con Google para que tus próximas compras sumen.
+            🎁 <b>Club Natu Mariel:</b>{" "}
+            {clubNote === "below" ? (
+              <>
+                este pedido no suma: compraste {formatARS(productsCents)} en productos y el mínimo es {formatARS(clubMinCents)} (sin contar el envío).
+                Las compras de {formatARS(clubMinCents)} o más, hechas con tu cuenta iniciada, sí suman.
+              </>
+            ) : clubNote === "before_login" ? (
+              <>
+                ya tenés tu cuenta iniciada, pero este pedido lo hiciste antes de entrar, por eso no suma. Tus próximas compras, hechas con la
+                cuenta iniciada, sí suman.
+              </>
+            ) : clubNote === "below_no_account" ? (
+              <>
+                este pedido no suma: no llega al mínimo ({formatARS(clubMinCents)} en productos, sin contar el envío) y no lo hiciste con una
+                cuenta.{" "}
+                <Link href="/club#crear" className="font-semibold text-coral-deep underline">
+                  Creá tu cuenta
+                </Link>{" "}
+                con Google y comprá desde {formatARS(clubMinCents)} para sumar.
+              </>
+            ) : (
+              <>
+                este pedido no suma porque no lo hiciste con una cuenta. Cada {GIFT_EVERY} compras, un regalo:{" "}
+                <Link href="/club#crear" className="font-semibold text-coral-deep underline">
+                  creá tu cuenta
+                </Link>{" "}
+                con Google para que tus próximas compras sumen.
+              </>
+            )}
           </p>
         ) : null}
 

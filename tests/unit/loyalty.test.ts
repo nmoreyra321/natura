@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { loyaltyStatus, summarizeClub } from "@/lib/loyalty";
+import { clubOrderNote, loyaltyStatus, summarizeClub } from "@/lib/loyalty";
 
 const order = (phone: string, status = "confirmed", name = "Ana", at = "2026-10-01T10:00:00Z", total = 25000) => ({
   customer_name: name,
@@ -48,5 +48,35 @@ describe("summarizeClub", () => {
       ["Laura", 5, 1],
       ["Ana", 2, 0],
     ]);
+  });
+});
+
+describe("clubOrderNote: por qué un pedido no suma al Club", () => {
+  const min = 3_000_000; // $30.000
+  const base = { linked: false, signedInNow: false, productsCents: 3_500_000, minCents: min };
+
+  it("con cuenta y llega al mínimo: no hay nada que explicar", () => {
+    expect(clubOrderNote({ ...base, linked: true, signedInNow: true })).toBeNull();
+  });
+  it("con cuenta pero no llega al mínimo: el motivo es el mínimo", () => {
+    expect(clubOrderNote({ ...base, linked: true, signedInNow: true, productsCents: 500 })).toBe("below");
+  });
+  it("sin cuenta y no llega al mínimo: faltan las dos cosas", () => {
+    expect(clubOrderNote({ ...base, productsCents: 500 })).toBe("below_no_account");
+  });
+  it("hoy con sesión iniciada pero el pedido es de antes y no llega al mínimo: el motivo es el mínimo, no la sesión", () => {
+    expect(clubOrderNote({ ...base, signedInNow: true, productsCents: 500 })).toBe("below");
+  });
+  it("hoy con sesión iniciada, llega al mínimo, pero lo hizo antes de entrar", () => {
+    expect(clubOrderNote({ ...base, signedInNow: true })).toBe("before_login");
+  });
+  it("sin cuenta y llega al mínimo: solo falta la cuenta", () => {
+    expect(clubOrderNote(base)).toBe("no_account");
+  });
+  it("justo en el mínimo cuenta", () => {
+    expect(clubOrderNote({ ...base, linked: true, productsCents: min })).toBeNull();
+  });
+  it("sin mínimo configurado, cualquier compra llega", () => {
+    expect(clubOrderNote({ ...base, linked: true, productsCents: 100, minCents: 0 })).toBeNull();
   });
 });
