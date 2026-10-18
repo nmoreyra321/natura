@@ -81,6 +81,11 @@ export default async function DashboardPage() {
       .or("payment_status.is.null,payment_status.neq.approved"),
   ]);
 
+  const { count: doneToday } = await supabase
+    .from("orders")
+    .select("id", { count: "exact", head: true })
+    .in("status", ["confirmed", "delivered"])
+    .gte("updated_at", new Date(`${today}T00:00:00-03:00`).toISOString());
   const { data: goalRow } = await supabase.from("store_settings").select("monthly_goal").eq("id", 1).maybeSingle();
   const goalPesos = Number(goalRow?.monthly_goal ?? 0);
 
@@ -196,6 +201,7 @@ export default async function DashboardPage() {
         monthLabel: monthLabel(month).replace(/ de \d{4}$/, ""),
         monthKey: month,
         goalPesos,
+        doneToday: doneToday ?? 0,
         prevMonthLabel: monthLabel(prevMonth).replace(/ de \d{4}$/, "").toLowerCase(),
         month: {
           cents: s.totalCents,

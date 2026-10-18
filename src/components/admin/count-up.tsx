@@ -15,7 +15,8 @@ export function CountUp({ cents }: { cents: number }) {
     const duration = 1100;
     const tick = (now: number) => {
       const k = Math.min((now - start) / duration, 1);
-      setShown(Math.round(cents * (1 - Math.pow(1 - k, 3))));
+      // Mientras sube, pesos enteros; al final, el monto exacto.
+      setShown(k >= 1 ? cents : Math.round((cents * (1 - Math.pow(1 - k, 3))) / 100) * 100);
       if (k < 1) raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);

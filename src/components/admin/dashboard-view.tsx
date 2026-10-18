@@ -32,6 +32,8 @@ export type DashboardData = {
   monthKey: string;
   /** Meta de ventas del mes en pesos (0 = sin meta). */
   goalPesos: number;
+  /** Pedidos atendidos hoy (confirmados o entregados), para la barra de avance. */
+  doneToday: number;
   prevMonthLabel: string;
   month: { cents: number; orders: number; units: number; averageCents: number; change: number | null };
   today: { cents: number; orders: number };
@@ -84,19 +86,34 @@ export function DashboardView({ d, imageUrl }: { d: DashboardData; imageUrl: (pa
 
       {d.warnings}
 
-      <MonthGoal monthKey={d.monthKey} soldCents={d.month.cents} goalPesos={d.goalPesos} />
-
-      {/* Para hacer */}
-      <section aria-labelledby="hacer">
-        <h2 id="hacer" className="mb-3 font-display text-2xl font-bold">
-          {d.tasks.length > 0 ? `Para hacer hoy (${d.tasks.length})` : "Para hacer hoy"}
+      {/* Plan del día */}
+      <section aria-labelledby="hacer" className="flex flex-col gap-3">
+        <p className="text-xs font-extrabold tracking-wide text-botanical-deep uppercase">{d.dateLabel.charAt(0).toUpperCase() + d.dateLabel.slice(1)}</p>
+        <h2 id="hacer" className="font-display text-3xl leading-tight font-bold">
+          {d.tasks.length > 0 ? `Hoy: ${d.tasks.length} ${d.tasks.length === 1 ? "cosa" : "cosas"}` : "Hoy no queda nada"}
         </h2>
+        {d.tasks.length + d.doneToday > 0 ? (
+          <>
+            <div className="h-3 overflow-hidden rounded-full bg-line" role="progressbar" aria-valuemin={0} aria-valuemax={d.tasks.length + d.doneToday} aria-valuenow={d.doneToday} aria-label="Avance del día">
+              <div className="h-full rounded-full bg-botanical-deep transition-all duration-700" style={{ width: `${Math.round((d.doneToday / (d.tasks.length + d.doneToday)) * 100)}%` }} />
+            </div>
+            <p className="text-sm font-semibold text-muted">
+              {d.doneToday > 0 ? `Hiciste ${d.doneToday} y quedan ${d.tasks.length}. ¡Vas muy bien!` : `Quedan ${d.tasks.length}. ¡Empecemos!`}
+            </p>
+          </>
+        ) : null}
+        {d.doneToday > 0 ? (
+          <div className="flex items-center gap-3 rounded-2xl border-2 border-line bg-warm-white p-4">
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-botanical-deep font-extrabold text-white" aria-hidden="true">✓</span>
+            <span className="text-lg font-extrabold text-muted line-through">Atendiste {d.doneToday} {d.doneToday === 1 ? "pedido" : "pedidos"} hoy</span>
+          </div>
+        ) : null}
         {d.tasks.length > 0 ? (
           <ol className="flex flex-col gap-3">
             {d.tasks.map((t, n) => (
               <li key={t.href + t.text}>
-                <Link href={t.href} className="group flex items-center gap-4 rounded-2xl bg-warm-white p-4 shadow-soft">
-                  <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-coral-deep font-extrabold text-white">{n + 1}</span>
+                <Link href={t.href} className="group flex items-center gap-3 rounded-2xl border-2 border-line bg-warm-white p-4">
+                  <span className="flex size-9 shrink-0 items-center justify-center rounded-full border-[3px] border-botanical-deep font-extrabold text-botanical-deep">{n + 1}</span>
                   <span className="min-w-0 flex-1 text-lg leading-snug font-extrabold">{t.text}</span>
                   <ArrowRight className="size-5 shrink-0 text-muted" aria-hidden="true" />
                 </Link>
@@ -128,6 +145,8 @@ export function DashboardView({ d, imageUrl }: { d: DashboardData; imageUrl: (pa
           </Link>
         </div>
       </section>
+
+      <MonthGoal monthKey={d.monthKey} soldCents={d.month.cents} goalPesos={d.goalPesos} />
 
       <details className="group rounded-3xl bg-warm-white p-4 shadow-soft">
         <summary className="flex min-h-11 cursor-pointer items-center justify-between text-lg font-extrabold">
