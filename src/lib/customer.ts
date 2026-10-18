@@ -23,14 +23,14 @@ export type Customer = {
 export const getCustomer = cache(async (): Promise<Customer | null> => {
   const supabase = await createSessionClient();
   if (!supabase) return null;
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user || user.app_metadata?.provider === "email") return null;
-  const { data } = await supabase.from("customers").select("name, phone").eq("user_id", user.id).maybeSingle();
+  // Sesión verificada por su firma, sin viajar a Supabase (más rápido que getUser).
+  const { data: claimsData } = await supabase.auth.getClaims();
+  const user = claimsData?.claims;
+  if (!user?.sub || user.app_metadata?.provider === "email") return null;
+  const { data } = await supabase.from("customers").select("name, phone").eq("user_id", user.sub).maybeSingle();
   const meta = user.user_metadata ?? {};
   const metaName = typeof meta.full_name === "string" ? meta.full_name : typeof meta.name === "string" ? meta.name : null;
-  return { id: user.id, email: user.email ?? null, name: data?.name ?? metaName, phone: data?.phone ?? null };
+  return { id: user.sub, email: typeof user.email === "string" ? user.email : null, name: data?.name ?? metaName, phone: data?.phone ?? null };
 });
 
 /** Avance en el Club de una cuenta: sus compras hechas con la cuenta, agrupadas por su WhatsApp. */

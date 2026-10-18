@@ -36,9 +36,10 @@ export async function proxy(request: NextRequest) {
     },
   });
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // getClaims verifica la firma de la sesión en el servidor sin viajar a Supabase (mucho más rápido que getUser)
+  // y renueva la sesión si venció. La administradora se vuelve a verificar con getUser en el panel.
+  const { data: claimsData } = await supabase.auth.getClaims();
+  const user = claimsData?.claims ?? null;
 
   if (isAdmin && !user && !isLogin) {
     const loginUrl = request.nextUrl.clone();
