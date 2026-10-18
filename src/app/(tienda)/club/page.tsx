@@ -85,6 +85,7 @@ export default async function ClubPage() {
         )}
       </section>
 
+      {!customer ? (
       <section className="mt-6 rounded-3xl bg-warm-white p-5 shadow-soft ring-1 ring-line/70">
         <h2 className="font-display text-xl font-bold">¿Por qué crear tu cuenta?</h2>
         <ul className="mt-3 flex flex-col gap-2.5 font-semibold">
@@ -101,12 +102,13 @@ export default async function ClubPage() {
           ))}
         </ul>
       </section>
+      ) : null}
 
       <section className="mt-6">
         <h2 className="font-display text-xl font-bold">Cómo funciona</h2>
         <ol className="mt-3 flex flex-col gap-2.5 font-semibold">
           {[
-            customer ? "Entrá con tu cuenta (la personita de arriba) y cargá tu WhatsApp." : "Creá tu cuenta con Google (arriba) y cargá tu WhatsApp.",
+            ...(customer ? [] : ["Creá tu cuenta con Google (arriba) y cargá tu WhatsApp."]),
             minCents > 0
               ? `Comprá en la tienda con la sesión iniciada: cada pedido de ${formatARS(minCents)} o más, pagado completo, suma una compra.`
               : "Comprá en la tienda con la sesión iniciada: cada pedido pagado completo suma una compra.",

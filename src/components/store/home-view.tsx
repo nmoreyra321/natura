@@ -8,7 +8,7 @@ import { GIFT_EVERY } from "@/lib/loyalty";
 import { productImageUrl } from "@/lib/images";
 import { getPriceInfo } from "@/lib/pricing";
 import { LinkButton } from "@/components/ui/button";
-import { ClubCta } from "./club-cta";
+import { ClubPitch } from "./club-cta";
 import { ClubProgressCard } from "./club-progress";
 import { EmptyStore } from "./empty-store";
 import { HomeBanner, type BannerSlide } from "./home-banner";
@@ -314,6 +314,7 @@ export function HomeView({ d }: { d: HomeData }) {
             <div className="relative mx-auto grid max-w-7xl gap-5 overflow-hidden rounded-[2rem] bg-gradient-to-br from-blush via-lilac to-peach p-5 sm:gap-8 sm:p-8 md:grid-cols-[1.2fr_1fr] md:items-center">
               <span aria-hidden="true" className="pointer-events-none absolute -right-16 -bottom-20 size-64 rounded-full bg-white/60 blur-3xl" />
               <div className="relative">
+                <ClubPitch>
                 <p className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1 text-xs font-extrabold text-coral-deep sm:text-sm">
                   <span className="relative inline-flex">
                     <span aria-hidden="true" className="animate-ping-soft absolute inset-0 rounded-full bg-coral-deep/40" />
@@ -338,7 +339,7 @@ export function HomeView({ d }: { d: HomeData }) {
                     </li>
                   ))}
                 </ul>
-                <ClubCta />
+                </ClubPitch>
               </div>
               <ClubProgressCard minCents={d.clubMinCents} />
             </div>
