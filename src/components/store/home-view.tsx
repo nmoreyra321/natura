@@ -165,10 +165,13 @@ export function HomeView({ d }: { d: HomeData }) {
   const [a, b, c] = d.heroProducts;
   const hasOffers = d.offers.length > 0;
 
+  // El mayor descuento real entre las ofertas del momento (nunca un número inventado).
+  const maxOff = d.offers.reduce((max, p) => Math.max(max, getPriceInfo(p.magazine_price, p.sale_price).discountPercent), 0);
+
   const slides: BannerSlide[] = [
-    ...(hasOffers
-      ? [{ href: "/productos?ofertas=1", title: "Natura más barata que la revista", text: "Mirá las ofertas de hoy", cta: "Ver ofertas", tone: "from-coral-deep to-tangerine", image: heroImage(a) }]
-      : [{ href: "/productos", title: "Natura más barata que la revista", text: "Perfumería, piel y maquillaje", cta: "Ver productos", tone: "from-coral-deep to-tangerine", image: heroImage(a) }]),
+    ...(hasOffers && maxOff >= 1
+      ? [{ href: "/productos?ofertas=1", title: `Hasta ${maxOff}% menos que en la revista`, text: "Mirá las ofertas de hoy", cta: "Ver ofertas", tone: "from-coral-deep to-tangerine", image: heroImage(a) }]
+      : [{ href: "/productos", title: "Productos Natura originales", text: "Perfumería, piel y maquillaje", cta: "Ver productos", tone: "from-coral-deep to-tangerine", image: heroImage(a) }]),
     { href: "/club", title: "Sumá compras, ganá regalos", text: `Cada ${GIFT_EVERY} compras, un regalo`, cta: "Mi club", tone: "from-grape to-coral-deep", image: heroImage(b) },
     { href: "/como-comprar", title: "Pagás como quieras", text: "Mercado Pago o efectivo", cta: "Cómo comprar", tone: "from-botanical-deep to-botanical", image: heroImage(c) },
   ];
@@ -214,7 +217,7 @@ export function HomeView({ d }: { d: HomeData }) {
                 </span>
               </h1>
               <p className="mt-3 max-w-lg text-[0.95rem] font-semibold text-muted sm:mt-5 sm:text-lg">
-                Tus productos favoritos de perfumería, cuidado de la piel y maquillaje, más baratos que en la revista.
+                Tus productos favoritos de perfumería, cuidado de la piel y maquillaje, con precios especiales y ofertas por debajo de la revista.
               </p>
               {d.hasProducts ? (
                 <div className="mt-5 flex flex-wrap gap-2 sm:mt-7 sm:gap-3">
@@ -326,8 +329,8 @@ export function HomeView({ d }: { d: HomeData }) {
                 <ul className="mt-3 flex max-w-lg flex-col gap-1.5 text-sm font-bold sm:text-base">
                   {[
                     `Cada ${GIFT_EVERY} compras, un regalo de Mariel`,
-                    "Tu tarjeta se llena sola con cada compra pagada",
-                    "Todos tus pedidos juntos, para seguirlos cuando quieras",
+                    "Cada compra pagada y confirmada suma un sello",
+                    "Los pedidos que hagas con tu cuenta quedan juntos para seguirlos",
                   ].map((t) => (
                     <li key={t} className="flex items-start gap-2">
                       <CircleCheck className="mt-0.5 size-5 shrink-0 text-botanical-deep" aria-hidden="true" />
@@ -343,7 +346,7 @@ export function HomeView({ d }: { d: HomeData }) {
 
           {hasOffers ? (
             <Section>
-              <SectionHeader title="Ofertas para vos 🔥" subtitle="Aprovechá, son por tiempo limitado" href="/productos?ofertas=1" />
+              <SectionHeader title="Ofertas para vos 🔥" subtitle="Productos con descuento sobre el precio de revista" href="/productos?ofertas=1" />
               <ProductRail products={d.offers.slice(0, 8)} />
             </Section>
           ) : null}

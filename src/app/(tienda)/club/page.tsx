@@ -90,8 +90,8 @@ export default async function ClubPage() {
         <ul className="mt-3 flex flex-col gap-2.5 font-semibold">
           {[
             `Cada ${GIFT_EVERY} compras, Mariel te regala algo especial 💝`,
-            "Tu tarjeta se llena sola con cada compra pagada",
-            "Tenés todos tus pedidos juntos para seguirlos cuando quieras",
+            "Cada compra pagada y confirmada suma un sello a tu tarjeta",
+            "Los pedidos que hagas con tu cuenta quedan juntos para seguirlos cuando quieras",
             "Es gratis y entrás en un toque, sin contraseña",
           ].map((t) => (
             <li key={t} className="flex items-start gap-2.5">

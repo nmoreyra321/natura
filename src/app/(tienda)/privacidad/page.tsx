@@ -18,14 +18,14 @@ export default function PrivacyPage() {
             usamos solo para preparar y entregar tu pedido y para escribirte sobre él.
           </p>
           <p className="mt-2">
-            Si entrás con Google o Facebook, recibimos tu nombre y tu mail. No vemos tu contraseña ni publicamos nada en tu
+            Si entrás con tu cuenta de Google (o de Facebook, cuando esté disponible), recibimos tu nombre y tu mail. No vemos tu contraseña ni publicamos nada en tu
             nombre. Con tu cuenta guardamos tus pedidos y tu avance en el Club Natu Mariel.
           </p>
         </section>
         <section>
           <h2 className="font-display text-xl font-bold">Con quién los compartimos</h2>
           <p className="mt-1">
-            Con nadie, salvo Mercado Pago si pagás con esa opción: ahí el pago lo procesa Mercado Pago con sus propias reglas.
+            No los vendemos ni los damos a nadie para publicidad. Solo los usan los servicios que hacen funcionar la tienda (donde se guardan los datos y se muestra la página) y, si pagás con Mercado Pago, esa empresa, que procesa el pago con sus propias reglas.
           </p>
         </section>
         <section>

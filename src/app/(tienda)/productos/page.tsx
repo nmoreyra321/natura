@@ -9,7 +9,7 @@ export async function generateMetadata({ searchParams }: PageProps<"/productos">
   return {
     title: offers ? "Ofertas" : "Todos los productos",
     description: offers
-      ? "Ofertas de productos Natura más baratos que en la revista."
+      ? "Ofertas de productos Natura con descuento sobre el precio de revista."
       : "Catálogo de productos Natura a precios especiales: perfumería, cuerpo, rostro, cabello y más.",
     alternates: { canonical: offers ? "/productos?ofertas=1" : "/productos" },
   };

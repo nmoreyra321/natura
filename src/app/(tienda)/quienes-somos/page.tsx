@@ -16,7 +16,7 @@ export const metadata: Metadata = {
 export const revalidate = 300;
 
 const WHY = [
-  { icon: BadgePercent, title: "Precios especiales", text: "Precios más bajos que en la revista.", tone: "bg-sun" },
+  { icon: BadgePercent, title: "Precios especiales", text: "Muchos productos con descuento frente al precio de la revista.", tone: "bg-sun" },
   { icon: ShieldCheck, title: "Productos originales", text: "Todo es Natura original, como lo recibo de la marca.", tone: "bg-sage" },
   { icon: Heart, title: "Te asesoro", text: "Te ayudo a elegir el perfume, la crema o el regalo ideal.", tone: "bg-pink" },
   { icon: Truck, title: "Entrega coordinada", text: `En zona sur: punto de encuentro en las estaciones de ${DELIVERY_TEXT} (más que nada los sábados) o envío a domicilio. Arreglamos juntas el día.`, tone: "bg-lilac" },

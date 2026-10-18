@@ -2,7 +2,9 @@ import { ChevronDown, Handshake, MessageCircle, PackageCheck, ShoppingBag } from
 import { DELIVERY_TEXT } from "@/lib/delivery";
 import { formatARS } from "@/lib/format";
 import { GIFT_EVERY } from "@/lib/loyalty";
-import { getLoyaltyMinTotal } from "@/lib/store-settings";
+import { isMercadoPagoEnabled } from "@/lib/mercadopago";
+import { getShippingMinTotal } from "@/lib/shipping";
+import { getLoyaltyMinTotal, getMercadoPagoSurcharge } from "@/lib/store-settings";
 import type { Metadata } from "next";
 import Link from "next/link";
 
@@ -31,8 +33,8 @@ const steps = [
   },
   {
     icon: PackageCheck,
-    title: "Mariel te confirma",
-    text: "Te escribe por WhatsApp para confirmar la disponibilidad y coordinar la entrega.",
+    title: "Se confirma tu pedido",
+    text: "Con Mercado Pago, se confirma solo cuando se aprueba el pago. En efectivo, Mariel te escribe por WhatsApp para confirmar la disponibilidad.",
   },
   {
     icon: Handshake,
@@ -41,22 +43,32 @@ const steps = [
   },
 ];
 
-const faqsFor = (clubMin: string | null) => [
+type FaqInfo = { clubMin: string | null; shippingMin: string | null; mpSurcharge: number };
+
+const faqsFor = ({ clubMin, shippingMin, mpSurcharge }: FaqInfo) => [
   {
     q: "¿Tengo que crear una cuenta?",
     a: "No. Armás el carrito y hacés el pedido acá mismo, sin registrarte: solo te pedimos tu nombre y tu WhatsApp para coordinar la entrega. Si querés sumar compras al Club Natu Mariel, entrá con tu cuenta antes de pedir (un toque, sin contraseña).",
   },
   {
     q: "¿El pedido queda confirmado al enviarlo?",
-    a: "Todavía no. El pedido queda pendiente hasta que Mariel te confirme por WhatsApp. Hasta ese momento no se reservan los productos.",
+    a: "Depende de cómo pagues. Con Mercado Pago se confirma solo, apenas se aprueba el pago, y tus productos quedan reservados. En efectivo queda pendiente hasta que Mariel te confirme por WhatsApp: hasta ese momento no se reservan los productos.",
   },
   {
     q: "¿Cómo pago y cómo recibo el pedido?",
-    a: "En el carrito elegís cómo pagar: en efectivo (al recibir) o con Mercado Pago. Con Mercado Pago, en la página de tu pedido tocás «Pagar con Mercado Pago», pagás con tarjeta o dinero en cuenta y después tocás «Ya realicé el pago». Cuando Mariel aprueba el pago lo ves ahí mismo, y la entrega la coordinan por WhatsApp.",
+    a: "En el carrito elegís cómo pagar: en efectivo (al recibir) o con Mercado Pago. Con Mercado Pago pagás en la página segura de Mercado Pago, con tarjeta (en una sola cuota), dinero en cuenta o efectivo en puntos de pago, y volvés a la tienda: el pago se verifica solo y ves tu pedido confirmado ahí mismo. La entrega la coordinan por WhatsApp.",
   },
+  ...(mpSurcharge > 0
+    ? [
+        {
+          q: "¿Por qué Mercado Pago tiene un recargo?",
+          a: `Mercado Pago le cobra una comisión a Natu Mariel por cada pago. Por eso, si pagás con Mercado Pago se suma un ${mpSurcharge.toLocaleString("es-AR", { maximumFractionDigits: 2 })} % a tu compra, y antes de pagar ves el total exacto. En efectivo no hay recargo.`,
+        },
+      ]
+    : []),
   {
     q: "¿Dónde entregan?",
-    a: `De dos formas: gratis en punto de encuentro en las estaciones del Roca de ${DELIVERY_TEXT} (más que nada los sábados), o con envío a domicilio en zona sur, para compras desde un monto mínimo. En el carrito ves si llega tu localidad y cuánto cuesta (es un porcentaje de la compra) antes de pedir. Si estás en otra zona, escribinos y lo vemos.`,
+    a: `De dos formas: gratis en punto de encuentro en las estaciones del Roca de ${DELIVERY_TEXT} (más que nada los sábados), o con envío a domicilio en zona sur${shippingMin ? `, para compras desde ${shippingMin}` : ""}. En el carrito ves si llega tu localidad y cuánto cuesta (es un porcentaje de la compra) antes de pedir. Si estás en otra zona, escribinos y lo vemos.`,
   },
   {
     q: "¿Cómo sé en qué está mi pedido?",
@@ -86,8 +98,16 @@ const faqsFor = (clubMin: string | null) => [
 
 export default async function HowToBuyPage() {
   const number = getWhatsAppNumber();
-  const min = await getLoyaltyMinTotal();
-  const faqs = faqsFor(min > 0 ? formatARS(Math.round(min * 100)) : null);
+  const [min, shippingMin, mpSurcharge] = await Promise.all([
+    getLoyaltyMinTotal(),
+    getShippingMinTotal(),
+    isMercadoPagoEnabled() ? getMercadoPagoSurcharge() : 0,
+  ]);
+  const faqs = faqsFor({
+    clubMin: min > 0 ? formatARS(Math.round(min * 100)) : null,
+    shippingMin: shippingMin > 0 ? formatARS(Math.round(shippingMin * 100)) : null,
+    mpSurcharge,
+  });
   const faqJsonLd = {
     "@context": "https://schema.org",
     "@type": "FAQPage",
