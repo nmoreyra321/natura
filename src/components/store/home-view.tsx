@@ -62,11 +62,10 @@ export function ReviewsSection({ r }: { r: ReviewSummary | null }) {
       </div>
       {rev.comment ? <p className="mt-2 text-forest/90">“{rev.comment}”</p> : null}
       {rev.reply ? (
-        // Todas las tarjetas miden lo mismo: la respuesta ocupa el lugar que sobra y su firma queda siempre abajo.
-        <div className="mt-3 flex flex-1 flex-col rounded-2xl bg-blush/60 p-3 text-sm">
-          <b className="block text-coral-deep">Respuesta de Mariel</b>
+        // Todas las tarjetas miden lo mismo: el recuadro de la respuesta ocupa el lugar que sobra.
+        <div className="mt-3 flex-1 rounded-2xl bg-blush/60 p-3 text-sm">
+          <b className="block text-coral-deep">Respuesta de Mariel 🌷</b>
           <p>{rev.reply}</p>
-          <span className="mt-auto pt-2 text-xs font-bold text-coral-deep/80">— Mariel · Natu Mariel 🌷</span>
         </div>
       ) : (
         <span className="mt-auto pt-3 text-xs font-bold text-muted">Reseña de una clienta de Natu Mariel 🌷</span>
