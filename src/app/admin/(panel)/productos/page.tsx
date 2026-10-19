@@ -16,6 +16,7 @@ import { LinkButton, buttonClasses } from "@/components/ui/button";
 import { inputClasses } from "@/components/ui/fields";
 import { CatalogFiltersToggle } from "@/components/store/catalog-filters-toggle";
 import { ProductImageFallback } from "@/components/store/product-card";
+import { SafeThumb } from "@/components/admin/safe-thumb";
 import { requireAdmin } from "@/lib/auth";
 import { LOW_STOCK_THRESHOLD } from "@/lib/config";
 import { formatARS } from "@/lib/format";
@@ -269,8 +270,7 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
                     <SelectProductCheckbox id={p.id} name={p.name} />
                     <div className="relative size-11 shrink-0 overflow-hidden rounded-xl bg-white">
                       {src ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={src} alt="" className="size-full object-cover" loading="lazy" />
+                        <SafeThumb src={src} />
                       ) : (
                         <ProductImageFallback className="size-full" />
                       )}
