@@ -21,7 +21,7 @@ import { requireAdmin } from "@/lib/auth";
 import { LOW_STOCK_THRESHOLD } from "@/lib/config";
 import { formatARS } from "@/lib/format";
 import { productImageUrl } from "@/lib/images";
-import { getPriceInfo } from "@/lib/pricing";
+import { getPriceInfo, toCents } from "@/lib/pricing";
 import { nameSearchPatterns } from "@/lib/search";
 
 export const metadata = { title: "Productos" };
@@ -144,7 +144,7 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
   const withStockCount = withStock ?? 0;
   // Resumen de lo que hay (arriba de la lista): se actualiza solo y no cambia el orden de la lista de abajo.
   const { data: inStock } = withStockCount > 0
-    ? await supabase.from("products").select("id, name, size, stock").gt("stock", 0).order("name").limit(400)
+    ? await supabase.from("products").select("id, name, size, stock, sale_price").gt("stock", 0).order("name").limit(2000)
     : { data: [] };
   const pageCount = Math.ceil(total / PAGE_SIZE);
   const filtered = Boolean(q || estado || stock || oferta || categoria);
@@ -173,6 +173,10 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
           <summary className="cursor-pointer font-display text-lg font-bold">
             Lo que tenés ahora <span className="text-coral-deep">({withStockCount})</span>
           </summary>
+          <p className="mt-1 text-sm text-muted">
+            {inStock.reduce((n, p) => n + p.stock, 0)} unidades · valen{" "}
+            <strong className="text-forest">{formatARS(toCents(inStock.reduce((n, p) => n + p.stock * Number(p.sale_price), 0)))}</strong> a tu precio de venta
+          </p>
           <ul className="mt-3 grid max-h-72 gap-x-4 gap-y-1 overflow-y-auto pr-1 sm:grid-cols-2">
             {inStock.map((p) => (
               <li key={p.id}>
