@@ -1,9 +1,10 @@
+import { NoveltyFinder } from "@/components/admin/novelty-finder";
 import { PhotoUpdater } from "@/components/admin/photo-updater";
 import { ProductsHeader } from "@/components/admin/product-tabs";
 import { PriceUpdater } from "@/components/admin/price-updater";
 import { requireAdmin } from "@/lib/auth";
 
-export const metadata = { title: "Precios y fotos de Natura" };
+export const metadata = { title: "Precios, fotos y productos nuevos de Natura" };
 
 export default async function NaturaPricesPage() {
   const { supabase } = await requireAdmin();
@@ -30,6 +31,11 @@ export default async function NaturaPricesPage() {
           <PriceUpdater productIds={(data ?? []).map((p) => p.id)} />
         </div>
       )}
+      {!error ? (
+        <div className="mt-8">
+          <NoveltyFinder />
+        </div>
+      ) : null}
       {!error ? (
         <div className="mt-8">
           <PhotoUpdater

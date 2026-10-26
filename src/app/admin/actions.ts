@@ -1821,6 +1821,48 @@ export async function finishNaturaPhotos(): Promise<ActionResult> {
   }
 }
 
+/* ------------------------- Productos nuevos de Natura ------------------------- */
+
+export type NaturaNovelties = { total: number; have: number; pending: string[] };
+export type NoveltyStatus = "agregado" | "variante" | "sin_precio" | "no_disponible" | "ya_estaba" | "blocked" | "error";
+export type NoveltyResult = { status: NoveltyStatus; id?: string; name?: string; category?: string | null };
+
+/** Compara la lista pública de productos de Natura con la tienda y devuelve los códigos que faltan revisar. */
+export async function findNaturaNovelties(): Promise<ActionResult<NaturaNovelties>> {
+  try {
+    const { supabase } = await assertAdmin();
+    const { data, error } = await supabase.functions.invoke<{ status: string; total?: number; have?: number; pending?: string[]; message?: string }>(
+      "novedades-natura",
+      { body: { mode: "buscar" } },
+    );
+    if (error || !data) {
+      console.error("[admin] novedades-natura (buscar):", error?.message);
+      return { ok: false, error: "No pudimos consultar Natura. Probá de nuevo en un rato." };
+    }
+    if (data.status === "blocked") return { ok: false, error: "Natura no nos dejó entrar en este momento. Probá más tarde." };
+    if (data.status !== "ok") return { ok: false, error: data.message ?? "No pudimos leer la lista de Natura." };
+    return { ok: true, data: { total: data.total ?? 0, have: data.have ?? 0, pending: data.pending ?? [] } };
+  } catch (e) {
+    return fail(e, "No pudimos buscar productos nuevos.");
+  }
+}
+
+/** Un paso de «Agregar los nuevos»: revisa un código de Natura y, si es un producto nuevo, lo crea (sin stock). */
+export async function addNaturaNoveltyStep(sku: string): Promise<NoveltyResult> {
+  try {
+    const { supabase } = await assertAdmin();
+    if (!/^NATARG-\d{1,12}$/.test(String(sku))) return { status: "error" };
+    const { data, error } = await supabase.functions.invoke<NoveltyResult>("novedades-natura", { body: { mode: "agregar", sku } });
+    if (error || !data) {
+      console.error("[admin] novedades-natura (agregar):", error?.message);
+      return { status: "error" };
+    }
+    return data;
+  } catch {
+    return { status: "error" };
+  }
+}
+
 /** Club de clientas: anota que se entregó un regalo (solo si de verdad le toca). */
 export async function giveLoyaltyGift(phone: unknown): Promise<ActionResult> {
   try {
