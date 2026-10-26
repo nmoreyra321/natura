@@ -1,12 +1,13 @@
 "use client";
 
-import { Check, Loader2, PackagePlus, Search, Square } from "lucide-react";
+import { Check, Link2, Loader2, PackagePlus, Search, Square } from "lucide-react";
 import Link from "next/link";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { addNaturaNoveltyStep, findNaturaNovelties, finishNaturaPhotos, type NaturaNovelties } from "@/app/admin/actions";
 import { Button } from "@/components/ui/button";
+import { inputClasses } from "@/components/ui/fields";
 
 /** De a cuántos códigos se consulta Natura al mismo tiempo. */
 const PARALLEL = 3;
@@ -41,6 +42,33 @@ export function NoveltyFinder() {
   const [added, setAdded] = useState<Added[]>([]);
   const [finished, setFinished] = useState(false);
   const stopRef = useRef(false);
+  const [ref, setRef] = useState("");
+  const [adding, setAdding] = useState(false);
+  const [lastAdded, setLastAdded] = useState<Added | null>(null);
+
+  /** Agrega un producto puntual a partir de su enlace o código de Natura. */
+  const addOne = async () => {
+    const sku = /NATARG-(\d{1,12})/i.exec(ref)?.[1] ?? (/^\s*\d{1,12}\s*$/.test(ref) ? ref.trim() : null);
+    if (!sku) {
+      toast.error("Pegá el enlace del producto de Natura o su código (solo números).");
+      return;
+    }
+    setAdding(true);
+    setLastAdded(null);
+    const r = await addNaturaNoveltyStep(`NATARG-${sku}`);
+    setAdding(false);
+    if (r.status === "agregado" && r.id) {
+      setLastAdded({ id: r.id, name: r.name ?? "Producto", category: r.category ?? null });
+      toast.success("Producto agregado.");
+      setRef("");
+      await finishNaturaPhotos();
+    } else if (r.status === "ya_estaba") toast.info(`Ese ya lo tenés${r.name ? `: ${r.name}` : ""}.`);
+    else if (r.status === "variante") toast.info(`Ya está cargado${r.name ? ` como «${r.name}»` : ""} (mismo producto u otro tono).`);
+    else if (r.status === "sin_precio") toast.error("Ese producto no tiene precio en Natura, por eso no se agregó.");
+    else if (r.status === "no_disponible") toast.error("Natura ya no tiene la ficha de ese producto.");
+    else if (r.status === "blocked") toast.error("Natura no nos deja entrar en este momento. Probá más tarde.");
+    else toast.error("No pudimos agregarlo. Probá de nuevo.");
+  };
 
   const search = async () => {
     setSearching(true);
@@ -113,6 +141,39 @@ export function NoveltyFinder() {
           {found ? "Buscar de nuevo" : "Buscar productos nuevos"}
         </Button>
       </div>
+
+      <form
+        className="mt-5 border-t border-line pt-4"
+        onSubmit={(e) => {
+          e.preventDefault();
+          void addOne();
+        }}
+      >
+        <label htmlFor="nov-ref" className="font-semibold">¿Falta uno? Agregalo con su enlace</label>
+        <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+          <input
+            id="nov-ref"
+            value={ref}
+            onChange={(e) => setRef(e.target.value)}
+            placeholder="Enlace del producto en Natura (o su código)"
+            autoComplete="off"
+            className={`${inputClasses} h-11 min-w-0 flex-1`}
+          />
+          <Button type="submit" variant="secondary" disabled={adding || running || !ref.trim()}>
+            {adding ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : <Link2 className="size-4" aria-hidden="true" />}
+            Agregar producto
+          </Button>
+        </div>
+        {lastAdded ? (
+          <p className="mt-2 text-sm">
+            <Check className="mr-1 inline size-4 text-botanical-deep" aria-hidden="true" />
+            Agregado:{" "}
+            <Link href={`/admin/productos/${lastAdded.id}`} className="font-semibold text-coral-deep hover:underline">
+              {lastAdded.name}
+            </Link>
+          </p>
+        ) : null}
+      </form>
 
       {found ? (
         <div className="mt-4 rounded-2xl bg-cream p-4">

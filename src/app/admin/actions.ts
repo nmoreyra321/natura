@@ -8,6 +8,7 @@ import { z } from "zod";
 import { assertAdmin, UnauthorizedError, type AdminContext } from "@/lib/auth";
 import { PRODUCT_IMAGES_BUCKET } from "@/lib/config";
 import { isValidProductImagePath, MAX_IMAGES_PER_PRODUCT } from "@/lib/images";
+import { downloadRemoteImage, RemoteImageError } from "@/lib/remote-image";
 import type { NaturaLookup } from "@/lib/natura";
 import { parseExpiry } from "@/lib/lots";
 import { toWhatsAppPhone } from "@/lib/debts";
@@ -248,6 +249,27 @@ export async function addProductImage(productId: string, storagePath: string, al
     return { ok: true, data };
   } catch (e) {
     return fail(e, "No pudimos guardar la foto.");
+  }
+}
+
+/** Agrega una foto bajándola desde cualquier enlace (de la foto misma o de una página que la tenga). */
+export async function addProductImageFromUrl(productId: string, link: string): Promise<ActionResult<{ id: string }>> {
+  try {
+    const { supabase } = await assertAdmin();
+    if (!UUID_RE.test(String(productId))) return { ok: false, error: "Producto inválido." };
+    const { count } = await supabase.from("product_images").select("id", { count: "exact", head: true }).eq("product_id", productId);
+    if ((count ?? 0) >= MAX_IMAGES_PER_PRODUCT) return { ok: false, error: `Cada producto puede tener hasta ${MAX_IMAGES_PER_PRODUCT} fotos.` };
+
+    const image = await downloadRemoteImage(String(link ?? ""));
+    const path = `products/${productId}/${crypto.randomUUID()}.${image.ext}`;
+    const { error } = await supabase.storage
+      .from(PRODUCT_IMAGES_BUCKET)
+      .upload(path, image.bytes, { contentType: image.type, cacheControl: "31536000", upsert: false });
+    if (error) return fail(error, "No pudimos guardar la foto.");
+    return await addProductImage(productId, path);
+  } catch (e) {
+    if (e instanceof RemoteImageError) return { ok: false, error: e.message };
+    return fail(e, "No pudimos traer la foto de ese enlace.");
   }
 }
 

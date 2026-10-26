@@ -1,12 +1,13 @@
 "use client";
 
-import { ArrowLeft, ArrowRight, ImagePlus, Loader2, RefreshCw, Trash2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, ImagePlus, Link2, Loader2, RefreshCw, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import {
   addProductImage,
+  addProductImageFromUrl,
   deleteProductImage,
   reorderProductImages,
   replaceProductImage,
@@ -20,6 +21,7 @@ import {
   type AllowedImageType,
 } from "@/lib/images";
 import { getBrowserClient } from "@/lib/supabase/browser";
+import { inputClasses } from "@/components/ui/fields";
 import { ConfirmDialog } from "./confirm-dialog";
 
 type Img = { id: string; storage_path: string; alt: string | null; position: number };
@@ -85,6 +87,7 @@ export function ImageManager({ productId, images, productName }: { productId: st
   const [replacing, setReplacing] = useState<string | null>(null);
   const [toDelete, setToDelete] = useState<Img | null>(null);
   const [busy, setBusy] = useState(false);
+  const [link, setLink] = useState("");
   const [pending, start] = useTransition();
   const sorted = [...images].sort((a, b) => a.position - b.position);
   const full = sorted.length >= MAX_IMAGES_PER_PRODUCT;
@@ -109,6 +112,22 @@ export function ImageManager({ productId, images, productName }: { productId: st
     if (added) toast.success(added === 1 ? "Foto agregada." : `${added} fotos agregadas.`);
     setBusy(false);
     if (addRef.current) addRef.current.value = "";
+    router.refresh();
+  }
+
+  async function onAddLink() {
+    const url = link.trim();
+    if (!url) return;
+    setBusy(true);
+    try {
+      const res = await addProductImageFromUrl(productId, url);
+      if (!res.ok) throw new Error(res.error);
+      toast.success("Foto agregada.");
+      setLink("");
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
+    setBusy(false);
     router.refresh();
   }
 
@@ -178,6 +197,34 @@ export function ImageManager({ productId, images, productName }: { productId: st
           onChange={(e) => onReplace(e.target.files)}
         />
       </div>
+
+      <form
+        className="mt-4 flex flex-col gap-2 sm:flex-row"
+        onSubmit={(e) => {
+          e.preventDefault();
+          void onAddLink();
+        }}
+      >
+        <label className="sr-only" htmlFor={`foto-enlace-${productId}`}>Enlace de una foto</label>
+        <input
+          id={`foto-enlace-${productId}`}
+          type="url"
+          inputMode="url"
+          value={link}
+          onChange={(e) => setLink(e.target.value)}
+          placeholder="O pegá el enlace de una foto (de cualquier página)"
+          autoComplete="off"
+          disabled={disabled || full}
+          className={`${inputClasses} h-11 min-w-0 flex-1`}
+        />
+        <button
+          type="submit"
+          disabled={disabled || full || !link.trim()}
+          className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-full bg-warm-white px-5 font-semibold shadow-soft ring-1 ring-line hover:bg-cream disabled:pointer-events-none disabled:opacity-55"
+        >
+          <Link2 className="size-5" aria-hidden="true" /> Traer foto
+        </button>
+      </form>
 
       {sorted.length === 0 ? (
         <p className="mt-4 rounded-2xl border border-dashed border-line p-8 text-center text-muted">
