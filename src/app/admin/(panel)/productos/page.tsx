@@ -142,6 +142,10 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
   const total = count ?? 0;
   const { count: withStock } = await supabase.from("products").select("id", { count: "exact", head: true }).gt("stock", 0);
   const withStockCount = withStock ?? 0;
+  // Resumen de lo que hay (arriba de la lista): se actualiza solo y no cambia el orden de la lista de abajo.
+  const { data: inStock } = withStockCount > 0
+    ? await supabase.from("products").select("id, name, size, stock").gt("stock", 0).order("name").limit(400)
+    : { data: [] };
   const pageCount = Math.ceil(total / PAGE_SIZE);
   const filtered = Boolean(q || estado || stock || oferta || categoria);
 
@@ -163,6 +167,24 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
         Tocá <strong className="text-forest">+</strong> o <strong className="text-forest">−</strong> para cambiar cuánto tenés. Tocá el nombre para editarlo.
       </p>
       <ClearAllStock withStock={withStockCount} />
+
+      {inStock && inStock.length > 0 ? (
+        <details open className="mt-4 rounded-2xl bg-warm-white p-4 shadow-soft">
+          <summary className="cursor-pointer font-display text-lg font-bold">
+            Lo que tenés ahora <span className="text-coral-deep">({withStockCount})</span>
+          </summary>
+          <ul className="mt-3 grid max-h-72 gap-x-4 gap-y-1 overflow-y-auto pr-1 sm:grid-cols-2">
+            {inStock.map((p) => (
+              <li key={p.id}>
+                <Link href={`/admin/productos/${p.id}`} className="flex items-center justify-between gap-3 rounded-xl px-2 py-1.5 hover:bg-cream">
+                  <span className="min-w-0 truncate text-sm font-semibold">{p.name}</span>
+                  <span className="tabular shrink-0 rounded-full bg-sun/60 px-2.5 py-0.5 text-sm font-extrabold">× {p.stock}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </details>
+      ) : null}
 
       <form
         method="get"
