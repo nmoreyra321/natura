@@ -482,9 +482,11 @@ async function muertos(supabase: any): Promise<Response> {
 // deno-lint-ignore no-explicit-any
 async function crearManual(supabase: any, sku: string, rawName: unknown, rawPrice: unknown): Promise<Outcome> {
   const name = String(rawName ?? "").replace(/\s+/g, " ").trim().slice(0, 120);
-  const price = Number(rawPrice);
+  // Sin precio: queda como borrador con un precio provisorio de $1; el precio se pide recién al cargarle stock.
+  const noPrice = rawPrice === null || rawPrice === undefined || rawPrice === "";
+  const price = noPrice ? 1 : Number(rawPrice);
   if (name.length < 2) return { status: "error", message: "Escrib\u00ed el nombre del producto." };
-  if (!Number.isFinite(price) || price <= 0 || price > 100_000_000) return { status: "error", message: "Escrib\u00ed el precio de revista." };
+  if (!Number.isFinite(price) || price <= 0 || price > 100_000_000) return { status: "error", message: "Revis\u00e1 el precio de revista." };
 
   const { data: existing } = await supabase.from("products").select("id, name").eq("natura_sku", sku).maybeSingle();
   if (existing) return { status: "ya_estaba", id: existing.id, name: existing.name };
@@ -507,7 +509,7 @@ async function crearManual(supabase: any, sku: string, rawName: unknown, rawPric
       magazine_price: price,
       sale_price: price, // la categor\u00eda le pone su descuento guardado (si tiene)
       stock: 0,
-      status: "published",
+      status: noPrice ? "draft" : "published",
       natura_sku: sku,
       line,
       gender: guessGender(name),

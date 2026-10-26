@@ -55,9 +55,12 @@ const CATEGORY_NAMES: Record<string, string> = {
  * Foto chica del producto en Natura (por su código). El nombre de la carpeta con letras raras no hace falta.
  * Si la foto ya no existe, se muestra el dibujo de siempre.
  */
+const naturaImageUrl = (sku: string) =>
+  `https://production.na01.natura.com/dw/image/v2/BFKR_PRD/on/demandware.static/-/Sites-natura-ar-storefront-catalog/default/dw00000000/PRODUTOS/${sku}_1.jpg?sw=160`;
+
 function NaturaThumb({ sku }: { sku: string }) {
   const [failed, setFailed] = useState(false);
-  const src = `https://production.na01.natura.com/dw/image/v2/BFKR_PRD/on/demandware.static/-/Sites-natura-ar-storefront-catalog/default/dw00000000/PRODUTOS/${sku}_1.jpg?sw=160`;
+  const src = naturaImageUrl(sku);
   return (
     <span className="relative size-14 shrink-0 overflow-hidden rounded-xl bg-white">
       {failed ? (
@@ -90,6 +93,10 @@ export function NoveltyFinder() {
   const [missing, setMissing] = useState<Missing[] | null>(null);
   const [dead, setDead] = useState<Dead[] | null>(null);
   const [deadQuery, setDeadQuery] = useState("");
+  const [photoFilter, setPhotoFilter] = useState<"todas" | "con" | "sin">("todas");
+  const [photos, setPhotos] = useState<Record<string, boolean>>({});
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkRunning, setBulkRunning] = useState(false);
   const [loadingDead, setLoadingDead] = useState(false);
   const [lines, setLines] = useState<{ ok: boolean; text: string; id?: string }[]>([]);
 
@@ -236,48 +243,116 @@ export function NoveltyFinder() {
     }
   };
 
+  /** Mira en Natura cuáles todavía tienen su foto (para poder filtrar), de a pocas a la vez. */
+  const probePhotos = async (skus: string[]) => {
+    setPhotos({});
+    let next = 0;
+    const worker = async () => {
+      while (next < skus.length) {
+        const sku = skus[next++];
+        const has = await new Promise<boolean>((resolve) => {
+          const img = new window.Image();
+          img.onload = () => resolve(true);
+          img.onerror = () => resolve(false);
+          img.referrerPolicy = "no-referrer";
+          img.src = naturaImageUrl(sku);
+        });
+        setPhotos((prev) => ({ ...prev, [sku]: has }));
+      }
+    };
+    await Promise.all(Array.from({ length: 6 }, worker));
+  };
+
   const loadDead = async () => {
     setLoadingDead(true);
     const res = await listDeadNaturaProducts();
     setLoadingDead(false);
-    if (res.ok && res.data) setDead(res.data.map((d) => ({ ...d, nameInput: d.name, priceInput: "", photoLinks: [""] })));
-    else toast.error(res.ok ? "No pudimos consultar Natura." : res.error);
+    if (res.ok && res.data) {
+      setDead(res.data.map((d) => ({ ...d, nameInput: d.name, priceInput: "", photoLinks: [""] })));
+      setSelected(new Set());
+      void probePhotos(res.data.map((d) => d.sku));
+    } else toast.error(res.ok ? "No pudimos consultar Natura." : res.error);
   };
 
   const patchDead = (sku: string, patch: Partial<Dead>) => setDead((list) => (list ?? []).map((d) => (d.sku === sku ? { ...d, ...patch } : d)));
 
-  const addDead = async (d: Dead) => {
+  /** Crea un producto de la lista (y sus fotos). El precio es opcional: sin precio queda como borrador. */
+  const createDead = async (d: Dead): Promise<{ ok: true; id: string; links: number; errors: string[] } | { ok: false; error: string }> => {
     // «86.240» o «86240,50»: los puntos son de miles y la coma, de decimales.
     const clean = d.priceInput.replace(/[^\d.,]/g, "");
-    const price = Number(clean.includes(",") ? clean.replace(/\./g, "").replace(",", ".") : /^\d{1,3}(\.\d{3})+$/.test(clean) ? clean.replace(/\./g, "") : clean);
-    if (!Number.isFinite(price) || price <= 0) {
-      toast.error("Escribí el precio de revista de ese producto.");
-      return;
+    let price: number | null = null;
+    if (clean) {
+      price = Number(clean.includes(",") ? clean.replace(/\./g, "").replace(",", ".") : /^\d{1,3}(\.\d{3})+$/.test(clean) ? clean.replace(/\./g, "") : clean);
+      if (!Number.isFinite(price) || price <= 0) return { ok: false, error: "Revisá el precio de revista." };
     }
     patchDead(d.sku, { busy: true });
     const res = await createManualNaturaProduct(d.sku, d.nameInput, price);
-    if (res.ok && res.data) {
-      const id = res.data.id;
-      // Hasta 3 fotos opcionales, cada una con su dirección de imagen.
-      const links = d.photoLinks.map((l) => l.trim()).filter(Boolean);
-      const errors: string[] = [];
-      for (const link of links) {
-        try {
-          const r = await addProductImageFromUrl(id, link);
-          if (!r.ok) throw new Error(r.error);
-        } catch (e) {
-          errors.push((e as Error).message);
-        }
-      }
-      patchDead(d.sku, { busy: false, added: id });
-      if (errors.length) toast.warning(`Producto agregado, pero ${errors.length === 1 ? "una foto no" : `${errors.length} fotos no`}: ${errors[0]}`);
-      else toast.success(links.length ? (links.length > 1 ? "Producto agregado con sus fotos." : "Producto agregado con su foto.") : "Producto agregado.");
-      await finishNaturaPhotos();
-    } else {
+    if (!(res.ok && res.data)) {
       patchDead(d.sku, { busy: false });
-      toast.error(res.ok ? "No pudimos agregarlo." : res.error);
+      return { ok: false, error: res.ok ? "No pudimos agregarlo." : res.error };
     }
+    const id = res.data.id;
+    // Hasta 3 fotos opcionales, cada una con su dirección de imagen.
+    const links = d.photoLinks.map((l) => l.trim()).filter(Boolean);
+    const errors: string[] = [];
+    for (const link of links) {
+      try {
+        const r = await addProductImageFromUrl(id, link);
+        if (!r.ok) throw new Error(r.error);
+      } catch (e) {
+        errors.push((e as Error).message);
+      }
+    }
+    patchDead(d.sku, { busy: false, added: id });
+    return { ok: true, id, links: links.length, errors };
   };
+
+  const addDead = async (d: Dead) => {
+    const r = await createDead(d);
+    if (!r.ok) {
+      toast.error(r.error);
+      return;
+    }
+    const noPrice = !d.priceInput.trim();
+    if (r.errors.length) toast.warning(`Producto agregado, pero ${r.errors.length === 1 ? "una foto no" : `${r.errors.length} fotos no`}: ${r.errors[0]}`);
+    else toast.success(`${r.links > 1 ? "Producto agregado con sus fotos." : r.links ? "Producto agregado con su foto." : "Producto agregado."}${noPrice ? " Quedó como borrador hasta que le pongas el precio." : ""}`);
+    await finishNaturaPhotos();
+  };
+
+  /** Agrega de una vez todas las tildadas (con lo que tengan escrito en nombre, precio y fotos). */
+  const addSelected = async () => {
+    const todo = (dead ?? []).filter((d) => selected.has(d.sku) && !d.added);
+    if (todo.length === 0) return;
+    setBulkRunning(true);
+    let ok = 0;
+    let photoIssues = 0;
+    const failed: string[] = [];
+    for (const d of todo) {
+      const r = await createDead(d);
+      if (r.ok) {
+        ok++;
+        if (r.errors.length) photoIssues++;
+      } else failed.push(`${d.nameInput}: ${r.error}`);
+    }
+    setSelected(new Set());
+    setBulkRunning(false);
+    await finishNaturaPhotos();
+    if (ok) toast.success(`Se agregaron ${ok} productos${photoIssues ? ` (en ${photoIssues} no se pudo bajar alguna foto)` : ""}. Los que no tenían precio quedaron como borrador.`);
+    if (failed.length) toast.error(`No se pudieron agregar ${failed.length}: ${failed[0]}`);
+  };
+
+  const toggleSelected = (sku: string) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(sku)) next.delete(sku);
+      else next.add(sku);
+      return next;
+    });
+
+  const visibleDead = (dead ?? []).filter(
+    (d) => matchesDead(d, deadQuery) && (photoFilter === "todas" || (photoFilter === "con" ? photos[d.sku] === true : photos[d.sku] === false)),
+  );
+  const selectable = visibleDead.filter((d) => !d.added);
 
   const total = found?.pending.length ?? 0;
   const pct = total ? Math.round((done / total) * 100) : 0;
@@ -455,10 +530,56 @@ export function NoveltyFinder() {
                 placeholder="Buscar por nombre o código"
                 className={`${inputClasses} mt-2 h-10 w-full text-sm`}
               />
-              {deadQuery.trim() && !dead.some((d) => matchesDead(d, deadQuery)) ? <p className="mt-2 text-sm text-muted">No encontramos ninguno con eso.</p> : null}
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                {([
+                  ["todas", "Todas"],
+                  ["con", `Con foto${Object.keys(photos).length ? ` (${dead.filter((d) => photos[d.sku] === true).length})` : ""}`],
+                  ["sin", "Sin foto"],
+                ] as const).map(([key, label]) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setPhotoFilter(key)}
+                    aria-pressed={photoFilter === key}
+                    className={`h-9 rounded-full px-3.5 text-sm font-semibold ring-1 ${photoFilter === key ? "bg-coral-soft text-coral-deep ring-coral-deep/30" : "bg-warm-white text-muted ring-line hover:bg-cream"}`}
+                  >
+                    {label}
+                  </button>
+                ))}
+                {photoFilter !== "todas" && Object.keys(photos).length < dead.length ? <span className="text-xs text-muted">Mirando las fotos… {Object.keys(photos).length}/{dead.length}</span> : null}
+              </div>
+              {selectable.length > 0 ? (
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={bulkRunning}
+                    onClick={() => setSelected((prev) => (selectable.every((d) => prev.has(d.sku)) ? new Set() : new Set(selectable.map((d) => d.sku))))}
+                  >
+                    {selectable.every((d) => selected.has(d.sku)) ? "Sacar todas las tildes" : `Tildar las ${selectable.length} que se ven`}
+                  </Button>
+                  {selected.size > 0 ? (
+                    <Button size="sm" disabled={bulkRunning} onClick={addSelected}>
+                      {bulkRunning ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : <PackagePlus className="size-4" aria-hidden="true" />}
+                      {bulkRunning ? "Agregando…" : `Agregar las ${selected.size} tildadas`}
+                    </Button>
+                  ) : null}
+                </div>
+              ) : null}
+              {visibleDead.length === 0 ? <p className="mt-2 text-sm text-muted">No encontramos ninguno con eso.</p> : null}
               <ul className="mt-2 max-h-[34rem] divide-y divide-line/70 overflow-y-auto rounded-2xl bg-cream">
-                {dead.filter((d) => matchesDead(d, deadQuery)).map((d) => (
+                {visibleDead.map((d) => (
                   <li key={d.sku} className="flex gap-3 p-3">
+                    {d.added ? null : (
+                      <input
+                        type="checkbox"
+                        aria-label={`Tildar ${d.nameInput}`}
+                        checked={selected.has(d.sku)}
+                        disabled={bulkRunning}
+                        onChange={() => toggleSelected(d.sku)}
+                        className="mt-4 size-5 shrink-0 accent-[var(--color-botanical-deep,#1f7a52)]"
+                      />
+                    )}
                     <NaturaThumb sku={d.sku} />
                     <div className="flex min-w-0 flex-1 flex-col gap-2">
                       {d.added ? (
@@ -483,7 +604,7 @@ export function NoveltyFinder() {
                               value={d.priceInput}
                               onChange={(e) => patchDead(d.sku, { priceInput: e.target.value })}
                               inputMode="decimal"
-                              placeholder="Precio $"
+                              placeholder="Precio $ (después, al cargar stock)"
                               className={`${inputClasses} h-10 w-32 text-sm`}
                             />
                           </div>

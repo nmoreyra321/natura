@@ -57,6 +57,9 @@ function fail(error: unknown, fallback: string): ActionResult<never> {
   if (code === "23505") return { ok: false, error: "Ya hay otro producto o categoría con ese nombre de dirección.", fields: { slug: "Esta URL ya está en uso." } };
   if (code === "23514") return { ok: false, error: "Revisá los precios, el stock y la oferta: algún número no es válido." };
   if (code === "42501") return { ok: false, error: "No tenés permisos para esta acción." };
+  if (code === "P0001" && String((error as { message?: string }).message).startsWith("Primero poné el precio")) {
+    return { ok: false, error: "Primero poné el precio de revista de este producto (en Editar) y después cargale el stock." };
+  }
   console.error("[admin]", fallback, (error as Error)?.message ?? error);
   return { ok: false, error: fallback };
 }
@@ -1898,12 +1901,12 @@ export async function listDeadNaturaProducts(): Promise<ActionResult<DeadNaturaI
   }
 }
 
-/** Crea a mano un producto cuya ficha de Natura ya no existe: nombre y precio de revista los pone la administradora. */
-export async function createManualNaturaProduct(sku: string, name: string, price: number): Promise<ActionResult<{ id: string; name: string }>> {
+/** Crea a mano un producto cuya ficha de Natura ya no existe: nombre y precio de revista los pone la administradora. Sin precio queda como borrador. */
+export async function createManualNaturaProduct(sku: string, name: string, price: number | null): Promise<ActionResult<{ id: string; name: string }>> {
   try {
     const { supabase } = await assertAdmin();
     if (!/^NATARG-\d{1,12}$/.test(String(sku))) return { ok: false, error: "Código inválido." };
-    const { data, error } = await supabase.functions.invoke<NoveltyResult & { message?: string }>("novedades-natura", { body: { mode: "crear", sku, name, price } });
+    const { data, error } = await supabase.functions.invoke<NoveltyResult & { message?: string }>("novedades-natura", { body: { mode: "crear", sku, name, price: price ?? "" } });
     if (error || !data) return { ok: false, error: "No pudimos agregarlo. Probá de nuevo." };
     if (data.status === "agregado" && data.id) {
       refreshCatalog();

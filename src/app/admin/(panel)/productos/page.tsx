@@ -307,8 +307,12 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
                       </Link>
                       <p className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm text-muted">
                         <span className="tabular">
-                          <span className="font-bold text-forest">{formatARS(info.saleCents)}</span>
-                          {info.hasDiscount ? (
+                          {Number(p.magazine_price) <= 1 ? (
+                            <span className="font-bold text-coral-deep">Sin precio</span>
+                          ) : (
+                            <span className="font-bold text-forest">{formatARS(info.saleCents)}</span>
+                          )}
+                          {info.hasDiscount && Number(p.magazine_price) > 1 ? (
                             <>
                               <span className="ml-1 line-through">{formatARS(info.magazineCents)}</span>
                               <span className="ml-1 font-semibold text-coral-deep">−{info.discountPercent}%</span>
