@@ -452,6 +452,14 @@ export function NoveltyFinder() {
                           placeholder="Precio $"
                           className={`${inputClasses} h-10 w-full text-sm sm:w-32`}
                         />
+                        <a
+                          href={`https://www.google.com/search?tbm=isch&q=${encodeURIComponent(`Natura ${d.nameInput}`)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-sm font-semibold text-coral-deep hover:underline"
+                        >
+                          <ExternalLink className="size-4" aria-hidden="true" /> Ver fotos en Google
+                        </a>
                         <Button size="sm" variant="secondary" disabled={d.busy} onClick={() => addDead(d)}>
                           {d.busy ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : <PackagePlus className="size-4" aria-hidden="true" />}
                           Agregar
