@@ -26,6 +26,13 @@ import { toCents } from "@/lib/pricing";
 const PARALLEL = 3;
 
 type Added = { id: string; name: string; category: string | null };
+const plain = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+const matchesDead = (d: { name: string; nameInput: string; sku: string }, q: string) => {
+  const words = plain(q).split(/\s+/).filter(Boolean);
+  const hay = plain(`${d.name} ${d.nameInput} ${d.sku}`);
+  return words.every((w) => hay.includes(w));
+};
+
 type Dead = DeadNaturaItem & { nameInput: string; priceInput: string; photoLinks: string[]; busy?: boolean; added?: string };
 type Missing = { sku: string; name: string; category: string | null; price: number | null; added?: boolean; busy?: boolean };
 type Counts = { added: number; variant: number; noPrice: number; gone: number; already: number; failed: number };
@@ -82,6 +89,7 @@ export function NoveltyFinder() {
   const [scanDone, setScanDone] = useState(0);
   const [missing, setMissing] = useState<Missing[] | null>(null);
   const [dead, setDead] = useState<Dead[] | null>(null);
+  const [deadQuery, setDeadQuery] = useState("");
   const [loadingDead, setLoadingDead] = useState(false);
   const [lines, setLines] = useState<{ ok: boolean; text: string; id?: string }[]>([]);
 
@@ -439,8 +447,17 @@ export function NoveltyFinder() {
           ) : (
             <>
               <p className="mt-3 text-sm font-semibold">{dead.filter((d) => !d.added).length} para revisar</p>
+              <input
+                type="search"
+                aria-label="Buscar entre los productos que Natura ya no vende"
+                value={deadQuery}
+                onChange={(e) => setDeadQuery(e.target.value)}
+                placeholder="Buscar por nombre o código"
+                className={`${inputClasses} mt-2 h-10 w-full text-sm`}
+              />
+              {deadQuery.trim() && !dead.some((d) => matchesDead(d, deadQuery)) ? <p className="mt-2 text-sm text-muted">No encontramos ninguno con eso.</p> : null}
               <ul className="mt-2 max-h-[34rem] divide-y divide-line/70 overflow-y-auto rounded-2xl bg-cream">
-                {dead.map((d) => (
+                {dead.filter((d) => matchesDead(d, deadQuery)).map((d) => (
                   <li key={d.sku} className="flex gap-3 p-3">
                     <NaturaThumb sku={d.sku} />
                     <div className="flex min-w-0 flex-1 flex-col gap-2">
