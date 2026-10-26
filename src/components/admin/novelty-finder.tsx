@@ -15,6 +15,7 @@ import {
   type DeadNaturaItem,
   type NaturaNovelties,
 } from "@/app/admin/actions";
+import { ProductImageFallback } from "@/components/store/product-card";
 import { Button } from "@/components/ui/button";
 import { inputClasses } from "@/components/ui/fields";
 import { formatARS } from "@/lib/format";
@@ -41,6 +42,25 @@ const CATEGORY_NAMES: Record<string, string> = {
   infantiles: "Infantiles",
   accesorios: "Accesorios",
 };
+
+/**
+ * Foto chica del producto en Natura (por su código). El nombre de la carpeta con letras raras no hace falta.
+ * Si la foto ya no existe, se muestra el dibujo de siempre.
+ */
+function NaturaThumb({ sku }: { sku: string }) {
+  const [failed, setFailed] = useState(false);
+  const src = `https://production.na01.natura.com/dw/image/v2/BFKR_PRD/on/demandware.static/-/Sites-natura-ar-storefront-catalog/default/dw00000000/PRODUTOS/${sku}_1.jpg?sw=160`;
+  return (
+    <span className="relative size-14 shrink-0 overflow-hidden rounded-xl bg-white">
+      {failed ? (
+        <ProductImageFallback className="size-full" />
+      ) : (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={src} alt="" loading="lazy" referrerPolicy="no-referrer" onError={() => setFailed(true)} className="size-full object-contain" />
+      )}
+    </span>
+  );
+}
 
 /**
  * Busca productos que Natura tiene y la tienda todavía no, y los agrega (publicados, sin stock, con su
@@ -357,7 +377,8 @@ export function NoveltyFinder() {
           <ul className="mt-3 divide-y divide-line/70 overflow-hidden rounded-2xl bg-cream">
             {missing.map((m) => (
               <li key={m.sku} className="flex flex-wrap items-center gap-x-3 gap-y-1.5 px-3 py-2.5">
-                <span className="min-w-0 flex-1 basis-56">
+                <NaturaThumb sku={m.sku} />
+                <span className="min-w-0 flex-1 basis-44">
                   <span className="block text-sm font-bold">{m.name}</span>
                   <span className="text-xs text-muted">
                     {m.category ? (CATEGORY_NAMES[m.category] ?? m.category) : "Sin categoría"}
@@ -415,6 +436,7 @@ export function NoveltyFinder() {
                       </span>
                     ) : (
                       <>
+                        <NaturaThumb sku={d.sku} />
                         <input
                           aria-label={`Nombre de ${d.name}`}
                           value={d.nameInput}
