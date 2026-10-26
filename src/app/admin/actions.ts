@@ -1860,7 +1860,7 @@ export async function finishNaturaPhotos(): Promise<ActionResult> {
 
 export type NaturaNovelties = { total: number; have: number; pending: string[] };
 export type NoveltyStatus = "agregado" | "variante" | "sin_precio" | "no_disponible" | "ya_estaba" | "blocked" | "error";
-export type NoveltyResult = { status: NoveltyStatus; id?: string; name?: string; category?: string | null };
+export type NoveltyResult = { status: NoveltyStatus; id?: string; name?: string; category?: string | null; price?: number };
 
 /** Compara la lista pública de productos de Natura con la tienda y devuelve los códigos que faltan revisar. */
 export async function findNaturaNovelties(): Promise<ActionResult<NaturaNovelties>> {
@@ -1879,6 +1879,19 @@ export async function findNaturaNovelties(): Promise<ActionResult<NaturaNoveltie
     return { ok: true, data: { total: data.total ?? 0, have: data.have ?? 0, pending: data.pending ?? [] } };
   } catch (e) {
     return fail(e, "No pudimos buscar productos nuevos.");
+  }
+}
+
+/** Un paso de «Solo ver qué falta»: revisa un código de Natura y dice si falta en la tienda, sin crear nada. */
+export async function previewNaturaNoveltyStep(sku: string): Promise<NoveltyResult> {
+  try {
+    const { supabase } = await assertAdmin();
+    if (!/^NATARG-\d{1,12}$/.test(String(sku))) return { status: "error" };
+    const { data, error } = await supabase.functions.invoke<NoveltyResult & { preview?: { price?: number } }>("novedades-natura", { body: { mode: "simular", sku } });
+    if (error || !data) return { status: "error" };
+    return { status: data.status, id: data.id, name: data.name, category: data.category, price: data.preview?.price };
+  } catch {
+    return { status: "error" };
   }
 }
 

@@ -281,7 +281,8 @@ type Outcome = { status: "agregado" | "variante" | "sin_precio" | "no_disponible
 
 // deno-lint-ignore no-explicit-any
 async function remember(supabase: any, dry: boolean, sku: string, status: string, productId: string | null, name: string | null) {
-  if (dry) return;
+  // En el simulacro no se anota «agregado» (no se creó nada); lo demás sí, para no volver a mirar fichas muertas.
+  if (dry && status === "agregado") return;
   await supabase.from("natura_skus_vistos").upsert({ sku, status, product_id: productId, name: name?.slice(0, 200) ?? null, seen_at: new Date().toISOString() });
 }
 

@@ -1,18 +1,21 @@
 "use client";
 
-import { Check, Link2, Loader2, PackagePlus, Search, Square } from "lucide-react";
+import { Check, Copy, ExternalLink, Eye, Link2, Loader2, PackagePlus, Search, Square } from "lucide-react";
 import Link from "next/link";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 
-import { addNaturaNoveltyStep, findNaturaNovelties, finishNaturaPhotos, type NaturaNovelties } from "@/app/admin/actions";
+import { addNaturaNoveltyStep, findNaturaNovelties, finishNaturaPhotos, previewNaturaNoveltyStep, type NaturaNovelties } from "@/app/admin/actions";
 import { Button } from "@/components/ui/button";
 import { inputClasses } from "@/components/ui/fields";
+import { formatARS } from "@/lib/format";
+import { toCents } from "@/lib/pricing";
 
 /** De a cuántos códigos se consulta Natura al mismo tiempo. */
 const PARALLEL = 3;
 
 type Added = { id: string; name: string; category: string | null };
+type Missing = { sku: string; name: string; category: string | null; price: number | null; added?: boolean; busy?: boolean };
 type Counts = { added: number; variant: number; noPrice: number; gone: number; already: number; failed: number };
 const EMPTY: Counts = { added: 0, variant: 0, noPrice: 0, gone: 0, already: 0, failed: 0 };
 
@@ -44,6 +47,9 @@ export function NoveltyFinder() {
   const stopRef = useRef(false);
   const [ref, setRef] = useState("");
   const [adding, setAdding] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const [scanDone, setScanDone] = useState(0);
+  const [missing, setMissing] = useState<Missing[] | null>(null);
   const [lines, setLines] = useState<{ ok: boolean; text: string; id?: string }[]>([]);
 
   /** Agrega productos puntuales a partir de enlaces o códigos de Natura (uno o varios, uno por renglón). */
@@ -135,6 +141,60 @@ export function NoveltyFinder() {
     setFinished(true);
   };
 
+  /** Solo mira: arma la lista de lo que falta en la tienda, sin agregar nada. */
+  const scan = async () => {
+    if (!found) return;
+    stopRef.current = false;
+    setScanning(true);
+    setScanDone(0);
+    setMissing([]);
+    const queue = [...found.pending];
+    let checked = 0;
+    let blocked = 0;
+    const worker = async () => {
+      for (let sku = queue.shift(); sku && !stopRef.current; sku = queue.shift()) {
+        const r = await previewNaturaNoveltyStep(sku);
+        checked++;
+        if (r.status === "agregado" && r.name) {
+          const item: Missing = { sku, name: r.name, category: r.category ?? null, price: r.price ?? null };
+          // Varios tonos del mismo producto traen el mismo nombre: se muestra una sola vez.
+          setMissing((list) => ((list ?? []).some((m) => m.name === item.name) ? (list ?? []) : [...(list ?? []), item].sort((a, b) => a.name.localeCompare(b.name, "es"))));
+        } else if (r.status === "blocked") blocked++;
+        setScanDone((n) => n + 1);
+        if (checked >= 6 && blocked === checked) {
+          stopRef.current = true;
+          toast.error("Natura no nos deja entrar en este momento. Probá más tarde.");
+        }
+      }
+    };
+    await Promise.all(Array.from({ length: PARALLEL }, worker));
+    setScanning(false);
+  };
+
+  const addFromList = async (sku: string) => {
+    setMissing((list) => (list ?? []).map((m) => (m.sku === sku ? { ...m, busy: true } : m)));
+    const r = await addNaturaNoveltyStep(sku);
+    const ok = r.status === "agregado" || r.status === "ya_estaba" || r.status === "variante";
+    setMissing((list) => (list ?? []).map((m) => (m.sku === sku ? { ...m, busy: false, added: ok ? true : m.added } : m)));
+    if (r.status === "agregado") {
+      toast.success("Producto agregado.");
+      await finishNaturaPhotos();
+    } else if (!ok) toast.error("No pudimos agregarlo. Probá de nuevo.");
+  };
+
+  const copyList = async () => {
+    const text = (missing ?? [])
+      .filter((m) => !m.added)
+      .map((m) => `${m.name}${m.price ? ` - ${formatARS(toCents(m.price))}` : ""} - https://www.naturacosmeticos.com.ar/p/p/${m.sku}`)
+      .join("\n");
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success("Lista copiada.");
+    } catch {
+      toast.error("No pudimos copiar. Tocá y mantené para seleccionar.");
+    }
+  };
+
   const total = found?.pending.length ?? 0;
   const pct = total ? Math.round((done / total) * 100) : 0;
 
@@ -208,15 +268,25 @@ export function NoveltyFinder() {
                 {Math.max(1, Math.round((total * 3) / PARALLEL / 60))} minutos: no cierres esta página.
               </p>
               <div className="mt-3 flex flex-wrap items-center gap-3">
-                {running ? (
+                {running || scanning ? (
                   <Button variant="outline" onClick={() => (stopRef.current = true)}>
                     <Square className="size-4" aria-hidden="true" /> Frenar
                   </Button>
                 ) : (
-                  <Button onClick={start}>
-                    <PackagePlus className="size-4" aria-hidden="true" /> Agregar los nuevos
-                  </Button>
+                  <>
+                    <Button variant="secondary" onClick={scan}>
+                      <Eye className="size-4" aria-hidden="true" /> Solo ver qué falta
+                    </Button>
+                    <Button onClick={start}>
+                      <PackagePlus className="size-4" aria-hidden="true" /> Agregar los nuevos
+                    </Button>
+                  </>
                 )}
+                {scanning ? (
+                  <span className="inline-flex items-center gap-2 text-sm text-muted tabular">
+                    <Loader2 className="size-4 animate-spin" aria-hidden="true" /> Mirando {scanDone} de {total} · {missing?.length ?? 0} faltan
+                  </span>
+                ) : null}
                 {running ? (
                   <span className="inline-flex items-center gap-2 text-sm text-muted tabular">
                     <Loader2 className="size-4 animate-spin" aria-hidden="true" /> {done} de {total}
@@ -227,6 +297,48 @@ export function NoveltyFinder() {
           ) : (
             <p className="mt-1 text-sm text-muted">No hay nada nuevo para revisar. ¡Está todo al día!</p>
           )}
+        </div>
+      ) : null}
+
+      {missing && (missing.length > 0 || !scanning) && scanDone > 0 ? (
+        <div className="mt-4 rounded-2xl border border-line p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3 className="font-display text-lg font-bold">
+              {missing.filter((m) => !m.added).length > 0 ? `Te faltan ${missing.filter((m) => !m.added).length} productos` : "No te falta ninguno"}
+            </h3>
+            {missing.some((m) => !m.added) ? (
+              <Button variant="outline" size="sm" onClick={copyList}>
+                <Copy className="size-4" aria-hidden="true" /> Copiar la lista
+              </Button>
+            ) : null}
+          </div>
+          <p className="mt-1 text-sm text-muted">Tocá «Agregar» en los que quieras que se carguen solos, o abrí el enlace de Natura para cargarlos a mano.</p>
+          <ul className="mt-3 divide-y divide-line/70 overflow-hidden rounded-2xl bg-cream">
+            {missing.map((m) => (
+              <li key={m.sku} className="flex flex-wrap items-center gap-x-3 gap-y-1.5 px-3 py-2.5">
+                <span className="min-w-0 flex-1 basis-56">
+                  <span className="block text-sm font-bold">{m.name}</span>
+                  <span className="text-xs text-muted">
+                    {m.category ? (CATEGORY_NAMES[m.category] ?? m.category) : "Sin categoría"}
+                    {m.price ? ` · ${formatARS(toCents(m.price))}` : ""}
+                  </span>
+                </span>
+                <a href={`https://www.naturacosmeticos.com.ar/p/p/${m.sku}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-sm font-semibold text-coral-deep hover:underline">
+                  <ExternalLink className="size-4" aria-hidden="true" /> Ver en Natura
+                </a>
+                {m.added ? (
+                  <span className="inline-flex items-center gap-1 text-sm font-bold text-botanical-deep">
+                    <Check className="size-4" aria-hidden="true" /> Agregado
+                  </span>
+                ) : (
+                  <Button size="sm" variant="secondary" disabled={m.busy || scanning} onClick={() => addFromList(m.sku)}>
+                    {m.busy ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : <PackagePlus className="size-4" aria-hidden="true" />}
+                    Agregar
+                  </Button>
+                )}
+              </li>
+            ))}
+          </ul>
         </div>
       ) : null}
 
