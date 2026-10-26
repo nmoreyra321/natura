@@ -174,7 +174,11 @@ export async function downloadRemoteImage(link: string): Promise<RemoteImage> {
   if (first.type.startsWith("text/html") || first.type === "application/xhtml+xml") {
     const html = new TextDecoder().decode(first.bytes.subarray(0, MAX_HTML_BYTES));
     const imageUrl = pageImage(html, first.url);
-    if (!imageUrl) throw new RemoteImageError("En esa página no encontramos una foto. Probá con el enlace directo de la foto.");
+    if (!imageUrl) {
+      // Mercado Libre (y otras) devuelven una página de «tráfico sospechoso» a los programas.
+      if (/suspicious-traffic|captcha|robot/i.test(html)) throw new RemoteImageError(BLOCKED_MESSAGE, true);
+      throw new RemoteImageError("En esa página no encontramos una foto. Probá con el enlace directo de la foto: mantené apretada la foto, elegí «Copiar dirección de la imagen» y pegala acá.");
+    }
     found = await fetchLimited(imageUrl, MAX_IMAGE_BYTES + 1);
   }
   if (found.truncated || found.bytes.byteLength > MAX_IMAGE_BYTES) throw new RemoteImageError("La foto pesa más de 5 MB.");
