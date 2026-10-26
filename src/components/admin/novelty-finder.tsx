@@ -1,13 +1,12 @@
 "use client";
 
-import { Check, Copy, ExternalLink, Eye, ImagePlus, Link2, Loader2, PackagePlus, Search, Square } from "lucide-react";
+import { Check, Copy, ExternalLink, Eye, Link2, Loader2, PackagePlus, Search, Square } from "lucide-react";
 import Link from "next/link";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 
 import {
   addNaturaNoveltyStep,
-  addProductImage,
   addProductImageFromUrl,
   createManualNaturaProduct,
   findNaturaNovelties,
@@ -17,7 +16,6 @@ import {
   type DeadNaturaItem,
   type NaturaNovelties,
 } from "@/app/admin/actions";
-import { uploadProductPhoto } from "@/components/admin/image-manager";
 import { ProductImageFallback } from "@/components/store/product-card";
 import { Button } from "@/components/ui/button";
 import { inputClasses } from "@/components/ui/fields";
@@ -28,7 +26,7 @@ import { toCents } from "@/lib/pricing";
 const PARALLEL = 3;
 
 type Added = { id: string; name: string; category: string | null };
-type Dead = DeadNaturaItem & { nameInput: string; priceInput: string; photoLink: string; photoFile: File | null; busy?: boolean; added?: string };
+type Dead = DeadNaturaItem & { nameInput: string; priceInput: string; photoLink: string; busy?: boolean; added?: string };
 type Missing = { sku: string; name: string; category: string | null; price: number | null; added?: boolean; busy?: boolean };
 type Counts = { added: number; variant: number; noPrice: number; gone: number; already: number; failed: number };
 const EMPTY: Counts = { added: 0, variant: 0, noPrice: 0, gone: 0, already: 0, failed: 0 };
@@ -234,7 +232,7 @@ export function NoveltyFinder() {
     setLoadingDead(true);
     const res = await listDeadNaturaProducts();
     setLoadingDead(false);
-    if (res.ok && res.data) setDead(res.data.map((d) => ({ ...d, nameInput: d.name, priceInput: "", photoLink: "", photoFile: null })));
+    if (res.ok && res.data) setDead(res.data.map((d) => ({ ...d, nameInput: d.name, priceInput: "", photoLink: "" })));
     else toast.error(res.ok ? "No pudimos consultar Natura." : res.error);
   };
 
@@ -252,14 +250,10 @@ export function NoveltyFinder() {
     const res = await createManualNaturaProduct(d.sku, d.nameInput, price);
     if (res.ok && res.data) {
       const id = res.data.id;
-      // Foto opcional: la que elija del celular o la que baje del enlace.
+      // Foto opcional: la que baje del enlace de dirección de imagen.
       let photoError: string | null = null;
       try {
-        if (d.photoFile) {
-          const path = await uploadProductPhoto(id, d.photoFile);
-          const r = await addProductImage(id, path, d.nameInput);
-          if (!r.ok) throw new Error(r.error);
-        } else if (d.photoLink.trim()) {
+        if (d.photoLink.trim()) {
           const r = await addProductImageFromUrl(id, d.photoLink.trim());
           if (!r.ok) throw new Error(r.error);
         }
@@ -268,7 +262,7 @@ export function NoveltyFinder() {
       }
       patchDead(d.sku, { busy: false, added: id });
       if (photoError) toast.warning(`Producto agregado, pero la foto no: ${photoError}`);
-      else toast.success(d.photoFile || d.photoLink.trim() ? "Producto agregado con su foto." : "Producto agregado.");
+      else toast.success(d.photoLink.trim() ? "Producto agregado con su foto." : "Producto agregado.");
       await finishNaturaPhotos();
     } else {
       patchDead(d.sku, { busy: false });
@@ -477,24 +471,13 @@ export function NoveltyFinder() {
                             <input
                               aria-label={`Enlace de una foto de ${d.name}`}
                               value={d.photoLink}
-                              onChange={(e) => patchDead(d.sku, { photoLink: e.target.value, photoFile: null })}
+                              onChange={(e) => patchDead(d.sku, { photoLink: e.target.value })}
                               inputMode="url"
-                              placeholder="Enlace de la foto (opcional)"
+                              placeholder="Pegá la dirección de la imagen (opcional)"
                               className={`${inputClasses} h-10 min-w-0 flex-1 basis-44 text-sm`}
                             />
                           </div>
                           <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-                            <label className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-full bg-warm-white px-3.5 text-sm font-semibold shadow-soft ring-1 ring-line hover:bg-cream">
-                              <ImagePlus className="size-4" aria-hidden="true" />
-                              {d.photoFile ? "Cambiar foto" : "Elegir foto del celular"}
-                              <input
-                                type="file"
-                                accept="image/jpeg,image/png,image/webp,image/avif"
-                                className="sr-only"
-                                onChange={(e) => patchDead(d.sku, { photoFile: e.target.files?.[0] ?? null, photoLink: "" })}
-                              />
-                            </label>
-                            {d.photoFile ? <span className="max-w-40 truncate text-xs text-muted">{d.photoFile.name}</span> : null}
                             <a
                               href={`https://www.google.com/search?tbm=isch&q=${encodeURIComponent(`Natura ${d.nameInput}`)}`}
                               target="_blank"
