@@ -19,7 +19,17 @@ const TIMEOUT_MS = 15_000;
 
 export type RemoteImage = { bytes: Uint8Array; type: AllowedImageType; ext: string };
 
-export class RemoteImageError extends Error {}
+export class RemoteImageError extends Error {
+  /** La página no dejó que el servidor la lea (suele pasar con tiendas grandes). */
+  readonly blocked: boolean;
+  constructor(message: string, blocked = false) {
+    super(message);
+    this.blocked = blocked;
+  }
+}
+
+export const BLOCKED_MESSAGE =
+  "Esa página no deja bajar la foto. Probá con el enlace directo de la foto: mantené apretada la foto, elegí «Copiar dirección de la imagen» y pegala acá.";
 
 function isPrivateIPv4(ip: string): boolean {
   const [a, b] = ip.split(".").map(Number);
@@ -93,7 +103,8 @@ async function fetchLimited(raw: string, limit: number): Promise<{ url: URL; typ
       current = new URL(next, url).toString();
       continue;
     }
-    if (!res.ok) throw new RemoteImageError(res.status === 403 || res.status === 401 ? "Esa página no deja bajar la foto." : "No pudimos abrir ese enlace.");
+    if (res.status === 403 || res.status === 401 || res.status === 429) throw new RemoteImageError(BLOCKED_MESSAGE, true);
+    if (!res.ok) throw new RemoteImageError("No pudimos abrir ese enlace.");
     const type = (res.headers.get("content-type") ?? "").split(";")[0].trim().toLowerCase();
     const declared = Number(res.headers.get("content-length") ?? 0);
     if (declared > limit * 4) throw new RemoteImageError("El archivo es demasiado grande.");

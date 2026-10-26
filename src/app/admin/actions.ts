@@ -8,7 +8,7 @@ import { z } from "zod";
 import { assertAdmin, UnauthorizedError, type AdminContext } from "@/lib/auth";
 import { PRODUCT_IMAGES_BUCKET } from "@/lib/config";
 import { isValidProductImagePath, MAX_IMAGES_PER_PRODUCT } from "@/lib/images";
-import { downloadRemoteImage, RemoteImageError } from "@/lib/remote-image";
+import { BLOCKED_MESSAGE, downloadRemoteImage, RemoteImageError, type RemoteImage } from "@/lib/remote-image";
 import type { NaturaLookup } from "@/lib/natura";
 import { parseExpiry } from "@/lib/lots";
 import { toWhatsAppPhone } from "@/lib/debts";
@@ -260,7 +260,20 @@ export async function addProductImageFromUrl(productId: string, link: string): P
     const { count } = await supabase.from("product_images").select("id", { count: "exact", head: true }).eq("product_id", productId);
     if ((count ?? 0) >= MAX_IMAGES_PER_PRODUCT) return { ok: false, error: `Cada producto puede tener hasta ${MAX_IMAGES_PER_PRODUCT} fotos.` };
 
-    const image = await downloadRemoteImage(String(link ?? ""));
+    let image: RemoteImage;
+    try {
+      image = await downloadRemoteImage(String(link ?? ""));
+    } catch (e) {
+      if (!(e instanceof RemoteImageError) || !e.blocked) throw e;
+      // La página no deja que Vercel la lea: se prueba desde Supabase, que a veces sí puede.
+      const { data } = await supabase.functions.invoke<{ status: string; image?: string }>("imagen-de-pagina", { body: { url: String(link) } });
+      if (!data?.image) throw e;
+      try {
+        image = await downloadRemoteImage(data.image);
+      } catch {
+        throw new RemoteImageError(BLOCKED_MESSAGE, true);
+      }
+    }
     const path = `products/${productId}/${crypto.randomUUID()}.${image.ext}`;
     const { error } = await supabase.storage
       .from(PRODUCT_IMAGES_BUCKET)
