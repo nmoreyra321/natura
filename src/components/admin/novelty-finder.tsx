@@ -44,30 +44,42 @@ export function NoveltyFinder() {
   const stopRef = useRef(false);
   const [ref, setRef] = useState("");
   const [adding, setAdding] = useState(false);
-  const [lastAdded, setLastAdded] = useState<Added | null>(null);
+  const [lines, setLines] = useState<{ ok: boolean; text: string; id?: string }[]>([]);
 
-  /** Agrega un producto puntual a partir de su enlace o código de Natura. */
-  const addOne = async () => {
-    const sku = /NATARG-(\d{1,12})/i.exec(ref)?.[1] ?? (/^\s*\d{1,12}\s*$/.test(ref) ? ref.trim() : null);
-    if (!sku) {
+  /** Agrega productos puntuales a partir de enlaces o códigos de Natura (uno o varios, uno por renglón). */
+  const addMany = async () => {
+    const fromLinks = [...ref.matchAll(/NATARG-(\d{1,12})/gi)].map((m) => m[1]);
+    const bare = ref.split(/[\s,;]+/).filter((t) => /^\d{1,12}$/.test(t));
+    const codes = [...new Set([...fromLinks, ...bare])].slice(0, 60);
+    if (codes.length === 0) {
       toast.error("Pegá el enlace del producto de Natura o su código (solo números).");
       return;
     }
     setAdding(true);
-    setLastAdded(null);
-    const r = await addNaturaNoveltyStep(`NATARG-${sku}`);
+    setLines([]);
+    let created = 0;
+    for (const code of codes) {
+      const sku = `NATARG-${code}`;
+      const r = await addNaturaNoveltyStep(sku);
+      let line: { ok: boolean; text: string; id?: string };
+      if (r.status === "agregado" && r.id) {
+        created++;
+        line = { ok: true, text: `Agregado: ${r.name ?? sku}`, id: r.id };
+      } else if (r.status === "ya_estaba") line = { ok: false, text: `${code}: ya lo tenés${r.name ? ` (${r.name})` : ""}.`, id: r.id };
+      else if (r.status === "variante") line = { ok: false, text: `${code}: ya está cargado${r.name ? ` como «${r.name}»` : ""} (mismo producto u otro tono).`, id: r.id };
+      else if (r.status === "sin_precio") line = { ok: false, text: `${code}: no tiene precio en Natura, por eso no se agregó.` };
+      else if (r.status === "no_disponible") line = { ok: false, text: `${code}: Natura ya no tiene esa ficha.` };
+      else if (r.status === "blocked") line = { ok: false, text: `${code}: Natura no nos deja entrar en este momento. Probá más tarde.` };
+      else line = { ok: false, text: `${code}: no pudimos agregarlo. Probá de nuevo.` };
+      setLines((list) => [...list, line]);
+      if (r.status === "blocked") break;
+    }
     setAdding(false);
-    if (r.status === "agregado" && r.id) {
-      setLastAdded({ id: r.id, name: r.name ?? "Producto", category: r.category ?? null });
-      toast.success("Producto agregado.");
+    if (created > 0) {
+      toast.success(created === 1 ? "Producto agregado." : `${created} productos agregados.`);
       setRef("");
       await finishNaturaPhotos();
-    } else if (r.status === "ya_estaba") toast.info(`Ese ya lo tenés${r.name ? `: ${r.name}` : ""}.`);
-    else if (r.status === "variante") toast.info(`Ya está cargado${r.name ? ` como «${r.name}»` : ""} (mismo producto u otro tono).`);
-    else if (r.status === "sin_precio") toast.error("Ese producto no tiene precio en Natura, por eso no se agregó.");
-    else if (r.status === "no_disponible") toast.error("Natura ya no tiene la ficha de ese producto.");
-    else if (r.status === "blocked") toast.error("Natura no nos deja entrar en este momento. Probá más tarde.");
-    else toast.error("No pudimos agregarlo. Probá de nuevo.");
+    }
   };
 
   const search = async () => {
@@ -146,32 +158,40 @@ export function NoveltyFinder() {
         className="mt-5 border-t border-line pt-4"
         onSubmit={(e) => {
           e.preventDefault();
-          void addOne();
+          void addMany();
         }}
       >
-        <label htmlFor="nov-ref" className="font-semibold">¿Falta uno? Agregalo con su enlace</label>
-        <div className="mt-2 flex flex-col gap-2 sm:flex-row">
-          <input
-            id="nov-ref"
-            value={ref}
-            onChange={(e) => setRef(e.target.value)}
-            placeholder="Enlace del producto en Natura (o su código)"
-            autoComplete="off"
-            className={`${inputClasses} h-11 min-w-0 flex-1`}
-          />
+        <label htmlFor="nov-ref" className="font-semibold">¿Falta alguno? Agregalo con su enlace</label>
+        <p className="mt-0.5 text-sm text-muted">Pegá el enlace del producto en Natura (o su código). Podés pegar varios, uno por renglón.</p>
+        <textarea
+          id="nov-ref"
+          value={ref}
+          onChange={(e) => setRef(e.target.value)}
+          rows={3}
+          placeholder="https://www.naturacosmeticos.com.ar/p/…/NATARG-74896"
+          autoComplete="off"
+          className={`${inputClasses} mt-2 min-h-24 w-full py-2`}
+        />
+        <div className="mt-2">
           <Button type="submit" variant="secondary" disabled={adding || running || !ref.trim()}>
             {adding ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : <Link2 className="size-4" aria-hidden="true" />}
-            Agregar producto
+            Agregar {ref.trim().split(/\n+/).filter(Boolean).length > 1 ? "los productos" : "producto"}
           </Button>
         </div>
-        {lastAdded ? (
-          <p className="mt-2 text-sm">
-            <Check className="mr-1 inline size-4 text-botanical-deep" aria-hidden="true" />
-            Agregado:{" "}
-            <Link href={`/admin/productos/${lastAdded.id}`} className="font-semibold text-coral-deep hover:underline">
-              {lastAdded.name}
-            </Link>
-          </p>
+        {lines.length > 0 ? (
+          <ul className="mt-3 flex flex-col gap-1.5 text-sm">
+            {lines.map((l, i) => (
+              <li key={i} className={`rounded-xl px-3 py-2 ${l.ok ? "bg-sage font-semibold text-botanical-deep" : "bg-cream"}`}>
+                {l.id ? (
+                  <Link href={`/admin/productos/${l.id}`} className="hover:underline">
+                    {l.text}
+                  </Link>
+                ) : (
+                  l.text
+                )}
+              </li>
+            ))}
+          </ul>
         ) : null}
       </form>
 
