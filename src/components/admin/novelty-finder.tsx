@@ -1,12 +1,14 @@
 "use client";
 
-import { Check, Copy, ExternalLink, Eye, Link2, Loader2, PackagePlus, Search, Square } from "lucide-react";
+import { Check, Copy, ExternalLink, Eye, ImagePlus, Link2, Loader2, PackagePlus, Search, Square } from "lucide-react";
 import Link from "next/link";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 
 import {
   addNaturaNoveltyStep,
+  addProductImage,
+  addProductImageFromUrl,
   createManualNaturaProduct,
   findNaturaNovelties,
   finishNaturaPhotos,
@@ -15,6 +17,7 @@ import {
   type DeadNaturaItem,
   type NaturaNovelties,
 } from "@/app/admin/actions";
+import { uploadProductPhoto } from "@/components/admin/image-manager";
 import { ProductImageFallback } from "@/components/store/product-card";
 import { Button } from "@/components/ui/button";
 import { inputClasses } from "@/components/ui/fields";
@@ -25,7 +28,7 @@ import { toCents } from "@/lib/pricing";
 const PARALLEL = 3;
 
 type Added = { id: string; name: string; category: string | null };
-type Dead = DeadNaturaItem & { nameInput: string; priceInput: string; busy?: boolean; added?: string };
+type Dead = DeadNaturaItem & { nameInput: string; priceInput: string; photoLink: string; photoFile: File | null; busy?: boolean; added?: string };
 type Missing = { sku: string; name: string; category: string | null; price: number | null; added?: boolean; busy?: boolean };
 type Counts = { added: number; variant: number; noPrice: number; gone: number; already: number; failed: number };
 const EMPTY: Counts = { added: 0, variant: 0, noPrice: 0, gone: 0, already: 0, failed: 0 };
@@ -231,7 +234,7 @@ export function NoveltyFinder() {
     setLoadingDead(true);
     const res = await listDeadNaturaProducts();
     setLoadingDead(false);
-    if (res.ok && res.data) setDead(res.data.map((d) => ({ ...d, nameInput: d.name, priceInput: "" })));
+    if (res.ok && res.data) setDead(res.data.map((d) => ({ ...d, nameInput: d.name, priceInput: "", photoLink: "", photoFile: null })));
     else toast.error(res.ok ? "No pudimos consultar Natura." : res.error);
   };
 
@@ -248,8 +251,25 @@ export function NoveltyFinder() {
     patchDead(d.sku, { busy: true });
     const res = await createManualNaturaProduct(d.sku, d.nameInput, price);
     if (res.ok && res.data) {
-      patchDead(d.sku, { busy: false, added: res.data.id });
-      toast.success("Producto agregado.");
+      const id = res.data.id;
+      // Foto opcional: la que elija del celular o la que baje del enlace.
+      let photoError: string | null = null;
+      try {
+        if (d.photoFile) {
+          const path = await uploadProductPhoto(id, d.photoFile);
+          const r = await addProductImage(id, path, d.nameInput);
+          if (!r.ok) throw new Error(r.error);
+        } else if (d.photoLink.trim()) {
+          const r = await addProductImageFromUrl(id, d.photoLink.trim());
+          if (!r.ok) throw new Error(r.error);
+        }
+      } catch (e) {
+        photoError = (e as Error).message;
+      }
+      patchDead(d.sku, { busy: false, added: id });
+      if (photoError) toast.warning(`Producto agregado, pero la foto no: ${photoError}`);
+      else toast.success(d.photoFile || d.photoLink.trim() ? "Producto agregado con su foto." : "Producto agregado.");
+      await finishNaturaPhotos();
     } else {
       patchDead(d.sku, { busy: false });
       toast.error(res.ok ? "No pudimos agregarlo." : res.error);
@@ -426,46 +446,71 @@ export function NoveltyFinder() {
               <p className="mt-3 text-sm font-semibold">{dead.filter((d) => !d.added).length} para revisar</p>
               <ul className="mt-2 max-h-[34rem] divide-y divide-line/70 overflow-y-auto rounded-2xl bg-cream">
                 {dead.map((d) => (
-                  <li key={d.sku} className="flex flex-col gap-2 p-3 sm:flex-row sm:items-center">
-                    {d.added ? (
-                      <span className="flex flex-1 items-center gap-2 text-sm font-bold text-botanical-deep">
-                        <Check className="size-4" aria-hidden="true" />
-                        <Link href={`/admin/productos/${d.added}`} className="hover:underline">
-                          Agregado: {d.nameInput}
-                        </Link>
-                      </span>
-                    ) : (
-                      <>
-                        <NaturaThumb sku={d.sku} />
-                        <input
-                          aria-label={`Nombre de ${d.name}`}
-                          value={d.nameInput}
-                          onChange={(e) => patchDead(d.sku, { nameInput: e.target.value })}
-                          maxLength={120}
-                          className={`${inputClasses} h-10 min-w-0 flex-1 text-sm`}
-                        />
-                        <input
-                          aria-label={`Precio de revista de ${d.name}`}
-                          value={d.priceInput}
-                          onChange={(e) => patchDead(d.sku, { priceInput: e.target.value })}
-                          inputMode="decimal"
-                          placeholder="Precio $"
-                          className={`${inputClasses} h-10 w-full text-sm sm:w-32`}
-                        />
-                        <a
-                          href={`https://www.google.com/search?tbm=isch&q=${encodeURIComponent(`Natura ${d.nameInput}`)}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-sm font-semibold text-coral-deep hover:underline"
-                        >
-                          <ExternalLink className="size-4" aria-hidden="true" /> Ver fotos en Google
-                        </a>
-                        <Button size="sm" variant="secondary" disabled={d.busy} onClick={() => addDead(d)}>
-                          {d.busy ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : <PackagePlus className="size-4" aria-hidden="true" />}
-                          Agregar
-                        </Button>
-                      </>
-                    )}
+                  <li key={d.sku} className="flex gap-3 p-3">
+                    <NaturaThumb sku={d.sku} />
+                    <div className="flex min-w-0 flex-1 flex-col gap-2">
+                      {d.added ? (
+                        <span className="flex items-center gap-2 text-sm font-bold text-botanical-deep">
+                          <Check className="size-4 shrink-0" aria-hidden="true" />
+                          <Link href={`/admin/productos/${d.added}`} className="min-w-0 truncate hover:underline">
+                            Agregado: {d.nameInput}
+                          </Link>
+                        </span>
+                      ) : (
+                        <>
+                          <input
+                            aria-label={`Nombre de ${d.name}`}
+                            value={d.nameInput}
+                            onChange={(e) => patchDead(d.sku, { nameInput: e.target.value })}
+                            maxLength={120}
+                            className={`${inputClasses} h-10 w-full text-sm`}
+                          />
+                          <div className="flex flex-wrap gap-2">
+                            <input
+                              aria-label={`Precio de revista de ${d.name}`}
+                              value={d.priceInput}
+                              onChange={(e) => patchDead(d.sku, { priceInput: e.target.value })}
+                              inputMode="decimal"
+                              placeholder="Precio $"
+                              className={`${inputClasses} h-10 w-32 text-sm`}
+                            />
+                            <input
+                              aria-label={`Enlace de una foto de ${d.name}`}
+                              value={d.photoLink}
+                              onChange={(e) => patchDead(d.sku, { photoLink: e.target.value, photoFile: null })}
+                              inputMode="url"
+                              placeholder="Enlace de la foto (opcional)"
+                              className={`${inputClasses} h-10 min-w-0 flex-1 basis-44 text-sm`}
+                            />
+                          </div>
+                          <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                            <label className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-full bg-warm-white px-3.5 text-sm font-semibold shadow-soft ring-1 ring-line hover:bg-cream">
+                              <ImagePlus className="size-4" aria-hidden="true" />
+                              {d.photoFile ? "Cambiar foto" : "Elegir foto del celular"}
+                              <input
+                                type="file"
+                                accept="image/jpeg,image/png,image/webp,image/avif"
+                                className="sr-only"
+                                onChange={(e) => patchDead(d.sku, { photoFile: e.target.files?.[0] ?? null, photoLink: "" })}
+                              />
+                            </label>
+                            {d.photoFile ? <span className="max-w-40 truncate text-xs text-muted">{d.photoFile.name}</span> : null}
+                            <a
+                              href={`https://www.google.com/search?tbm=isch&q=${encodeURIComponent(`Natura ${d.nameInput}`)}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 text-sm font-semibold text-coral-deep hover:underline"
+                            >
+                              <ExternalLink className="size-4" aria-hidden="true" /> Ver fotos en Google
+                            </a>
+                            <Button size="sm" variant="secondary" disabled={d.busy} onClick={() => addDead(d)} className="ml-auto">
+                              {d.busy ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : <PackagePlus className="size-4" aria-hidden="true" />}
+                              Agregar
+                            </Button>
+                          </div>
+                        </>
+                      )}
+                    </div>
                   </li>
                 ))}
               </ul>
