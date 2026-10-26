@@ -1882,6 +1882,40 @@ export async function findNaturaNovelties(): Promise<ActionResult<NaturaNoveltie
   }
 }
 
+export type DeadNaturaItem = { sku: string; name: string };
+
+/** Productos de la lista de Natura cuya ficha ya no existe (el nombre sale del enlace) y que la tienda no tiene. */
+export async function listDeadNaturaProducts(): Promise<ActionResult<DeadNaturaItem[]>> {
+  try {
+    const { supabase } = await assertAdmin();
+    const { data, error } = await supabase.functions.invoke<{ status: string; items?: DeadNaturaItem[]; message?: string }>("novedades-natura", { body: { mode: "muertos" } });
+    if (error || !data) return { ok: false, error: "No pudimos consultar Natura. Probá de nuevo en un rato." };
+    if (data.status === "blocked") return { ok: false, error: "Natura no nos deja entrar en este momento. Probá más tarde." };
+    if (data.status !== "ok") return { ok: false, error: data.message ?? "No pudimos leer la lista de Natura." };
+    return { ok: true, data: data.items ?? [] };
+  } catch (e) {
+    return fail(e, "No pudimos buscar esos productos.");
+  }
+}
+
+/** Crea a mano un producto cuya ficha de Natura ya no existe: nombre y precio de revista los pone la administradora. */
+export async function createManualNaturaProduct(sku: string, name: string, price: number): Promise<ActionResult<{ id: string; name: string }>> {
+  try {
+    const { supabase } = await assertAdmin();
+    if (!/^NATARG-\d{1,12}$/.test(String(sku))) return { ok: false, error: "Código inválido." };
+    const { data, error } = await supabase.functions.invoke<NoveltyResult & { message?: string }>("novedades-natura", { body: { mode: "crear", sku, name, price } });
+    if (error || !data) return { ok: false, error: "No pudimos agregarlo. Probá de nuevo." };
+    if (data.status === "agregado" && data.id) {
+      refreshCatalog();
+      return { ok: true, data: { id: data.id, name: data.name ?? name }, message: "Producto agregado." };
+    }
+    if (data.status === "ya_estaba") return { ok: false, error: `Ese ya lo tenés${data.name ? `: ${data.name}` : ""}.` };
+    return { ok: false, error: data.message ?? "No pudimos agregarlo. Probá de nuevo." };
+  } catch (e) {
+    return fail(e, "No pudimos agregarlo.");
+  }
+}
+
 /** Un paso de «Solo ver qué falta»: revisa un código de Natura y dice si falta en la tienda, sin crear nada. */
 export async function previewNaturaNoveltyStep(sku: string): Promise<NoveltyResult> {
   try {

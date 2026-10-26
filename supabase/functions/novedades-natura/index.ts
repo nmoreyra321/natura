@@ -421,6 +421,105 @@ async function agregar(supabase: any, sku: string, dry = false): Promise<Outcome
   return { status: "agregado", id: created.id, name, category: slugOf };
 }
 
+/* ------------------------- Fichas que Natura ya no tiene ------------------------- */
+
+const SMALL = new Set(["de", "del", "la", "el", "los", "las", "y", "para", "con", "en", "a", "o", "al", "por", "sin", "un", "una"]);
+
+/** «kaiak-noite-eau-de-parfum-100-ml» → «Kaiak Noite Eau de Parfum 100 ml». */
+function nameFromSlug(slug: string): string {
+  let text = slug;
+  try {
+    text = decodeURIComponent(slug);
+  } catch {
+    // Se usa tal cual.
+  }
+  return text
+    .replace(/[-_]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .split(" ")
+    .map((w, i) => (/\d/.test(w) || (i > 0 && SMALL.has(w)) || w.length <= 2 ? w : w.charAt(0).toUpperCase() + w.slice(1)))
+    .join(" ")
+    .slice(0, 120);
+}
+
+/** Productos que figuran en la lista de Natura pero cuya ficha ya no existe, y que la tienda no tiene. */
+// deno-lint-ignore no-explicit-any
+async function muertos(supabase: any): Promise<Response> {
+  let xml: string;
+  try {
+    const res = await fetch(`${NATURA}/sitemap.xml`, { headers: HEADERS, signal: AbortSignal.timeout(30_000) });
+    if (res.status === 403) return json({ status: "blocked" });
+    if (!res.ok) return json({ status: "error", message: `Natura respondi\u00f3 ${res.status}` });
+    xml = await res.text();
+  } catch {
+    return json({ status: "error", message: "Natura no respondi\u00f3." });
+  }
+  const slugs = new Map<string, string>();
+  for (const m of xml.matchAll(/\/p\/([^<\s/]+)\/(NATARG-\d+)</g)) if (!slugs.has(m[2])) slugs.set(m[2], m[1]);
+  const [{ data: mine }, { data: seen }] = await Promise.all([
+    supabase.from("products").select("natura_sku, name").limit(10000),
+    supabase.from("natura_skus_vistos").select("sku").eq("status", "no_disponible").limit(20000),
+  ]);
+  const have = new Set((mine ?? []).map((p: { natura_sku: string | null }) => p.natura_sku).filter(Boolean));
+  const names = new Set((mine ?? []).map((p: { name: string }) => norm(p.name)));
+  const items: { sku: string; name: string }[] = [];
+  const seenNames = new Set<string>();
+  for (const { sku } of seen ?? []) {
+    const slug = slugs.get(sku);
+    if (!slug || have.has(sku)) continue;
+    const name = nameFromSlug(slug);
+    const key = norm(name);
+    if (name.length < 2 || names.has(key) || seenNames.has(key)) continue;
+    seenNames.add(key);
+    items.push({ sku, name });
+  }
+  items.sort((a, b) => a.name.localeCompare(b.name, "es"));
+  return json({ status: "ok", items });
+}
+
+/** Crea a mano un producto de una ficha que ya no existe: el nombre y el precio los pone la administradora. */
+// deno-lint-ignore no-explicit-any
+async function crearManual(supabase: any, sku: string, rawName: unknown, rawPrice: unknown): Promise<Outcome> {
+  const name = String(rawName ?? "").replace(/\s+/g, " ").trim().slice(0, 120);
+  const price = Number(rawPrice);
+  if (name.length < 2) return { status: "error", message: "Escrib\u00ed el nombre del producto." };
+  if (!Number.isFinite(price) || price <= 0 || price > 100_000_000) return { status: "error", message: "Escrib\u00ed el precio de revista." };
+
+  const { data: existing } = await supabase.from("products").select("id, name").eq("natura_sku", sku).maybeSingle();
+  if (existing) return { status: "ya_estaba", id: existing.id, name: existing.name };
+
+  const t = await training(supabase);
+  const line = lineFor({ sku, name, friendlyName: name, brand: null, productLine: null, magazinePrice: price, images: [], variations: [], description: "" }, name, t);
+  const categoryId = categoryFor(name, line, t);
+  let slug = slugify(name) || "producto";
+  const { data: clash } = await supabase.from("products").select("id").eq("slug", slug).maybeSingle();
+  if (clash) slug = `${slug}-${sku.replace(/\D/g, "").replace(/^0+/, "")}`.slice(0, 140);
+
+  const { data: created, error } = await supabase
+    .from("products")
+    .insert({
+      name,
+      slug,
+      description: "",
+      category_id: categoryId,
+      size: sizeOf(name),
+      magazine_price: price,
+      sale_price: price, // la categor\u00eda le pone su descuento guardado (si tiene)
+      stock: 0,
+      status: "published",
+      natura_sku: sku,
+      line,
+      gender: guessGender(name),
+    })
+    .select("id")
+    .single();
+  if (error || !created) return { status: "error", message: error?.message ?? "No se pudo crear." };
+  await remember(supabase, false, sku, "agregado", created.id, name);
+  const slugOf = [...t.bySlug.entries()].find(([, id]) => id === categoryId)?.[0] ?? null;
+  return { status: "agregado", id: created.id, name, category: slugOf };
+}
+
 Deno.serve(async (req) => {
   if (req.method !== "POST") return json({ error: "method" }, 405);
 
@@ -438,6 +537,12 @@ Deno.serve(async (req) => {
     const sku = String(body.sku ?? "");
     if (!SKU.test(sku)) return json({ status: "error", message: "Código inválido." });
     return json(await agregar(supabase, sku));
+  }
+  if (body.mode === "muertos") return await muertos(supabase);
+  if (body.mode === "crear") {
+    const sku = String(body.sku ?? "");
+    if (!SKU.test(sku)) return json({ status: "error", message: "C\u00f3digo inv\u00e1lido." });
+    return json(await crearManual(supabase, sku, body.name, body.price));
   }
   if (body.mode === "simular") {
     // Simulacro: hace todo menos escribir (sirve para probar sin crear nada).

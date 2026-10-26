@@ -5,7 +5,16 @@ import Link from "next/link";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 
-import { addNaturaNoveltyStep, findNaturaNovelties, finishNaturaPhotos, previewNaturaNoveltyStep, type NaturaNovelties } from "@/app/admin/actions";
+import {
+  addNaturaNoveltyStep,
+  createManualNaturaProduct,
+  findNaturaNovelties,
+  finishNaturaPhotos,
+  listDeadNaturaProducts,
+  previewNaturaNoveltyStep,
+  type DeadNaturaItem,
+  type NaturaNovelties,
+} from "@/app/admin/actions";
 import { Button } from "@/components/ui/button";
 import { inputClasses } from "@/components/ui/fields";
 import { formatARS } from "@/lib/format";
@@ -15,6 +24,7 @@ import { toCents } from "@/lib/pricing";
 const PARALLEL = 3;
 
 type Added = { id: string; name: string; category: string | null };
+type Dead = DeadNaturaItem & { nameInput: string; priceInput: string; busy?: boolean; added?: string };
 type Missing = { sku: string; name: string; category: string | null; price: number | null; added?: boolean; busy?: boolean };
 type Counts = { added: number; variant: number; noPrice: number; gone: number; already: number; failed: number };
 const EMPTY: Counts = { added: 0, variant: 0, noPrice: 0, gone: 0, already: 0, failed: 0 };
@@ -50,6 +60,8 @@ export function NoveltyFinder() {
   const [scanning, setScanning] = useState(false);
   const [scanDone, setScanDone] = useState(0);
   const [missing, setMissing] = useState<Missing[] | null>(null);
+  const [dead, setDead] = useState<Dead[] | null>(null);
+  const [loadingDead, setLoadingDead] = useState(false);
   const [lines, setLines] = useState<{ ok: boolean; text: string; id?: string }[]>([]);
 
   /** Agrega productos puntuales a partir de enlaces o códigos de Natura (uno o varios, uno por renglón). */
@@ -192,6 +204,35 @@ export function NoveltyFinder() {
       toast.success("Lista copiada.");
     } catch {
       toast.error("No pudimos copiar. Tocá y mantené para seleccionar.");
+    }
+  };
+
+  const loadDead = async () => {
+    setLoadingDead(true);
+    const res = await listDeadNaturaProducts();
+    setLoadingDead(false);
+    if (res.ok && res.data) setDead(res.data.map((d) => ({ ...d, nameInput: d.name, priceInput: "" })));
+    else toast.error(res.ok ? "No pudimos consultar Natura." : res.error);
+  };
+
+  const patchDead = (sku: string, patch: Partial<Dead>) => setDead((list) => (list ?? []).map((d) => (d.sku === sku ? { ...d, ...patch } : d)));
+
+  const addDead = async (d: Dead) => {
+    // «86.240» o «86240,50»: los puntos son de miles y la coma, de decimales.
+    const clean = d.priceInput.replace(/[^\d.,]/g, "");
+    const price = Number(clean.includes(",") ? clean.replace(/\./g, "").replace(",", ".") : /^\d{1,3}(\.\d{3})+$/.test(clean) ? clean.replace(/\./g, "") : clean);
+    if (!Number.isFinite(price) || price <= 0) {
+      toast.error("Escribí el precio de revista de ese producto.");
+      return;
+    }
+    patchDead(d.sku, { busy: true });
+    const res = await createManualNaturaProduct(d.sku, d.nameInput, price);
+    if (res.ok && res.data) {
+      patchDead(d.sku, { busy: false, added: res.data.id });
+      toast.success("Producto agregado.");
+    } else {
+      patchDead(d.sku, { busy: false });
+      toast.error(res.ok ? "No pudimos agregarlo." : res.error);
     }
   };
 
@@ -341,6 +382,67 @@ export function NoveltyFinder() {
           </ul>
         </div>
       ) : null}
+
+      <div className="mt-5 border-t border-line pt-4">
+        <h3 className="font-semibold">¿Tu mamá tiene productos que Natura ya no vende?</h3>
+        <p className="mt-0.5 text-sm text-muted">
+          Natura saca fichas de productos viejos, pero tu mamá puede tenerlos. Acá aparecen con el nombre que figura en su enlace. Corregí el nombre, poné el
+          precio de revista y tocá «Agregar»: queda en la tienda sin stock.
+        </p>
+        <div className="mt-2">
+          <Button variant="outline" onClick={loadDead} disabled={loadingDead || running || scanning}>
+            {loadingDead ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : <Eye className="size-4" aria-hidden="true" />}
+            {dead ? "Actualizar la lista" : "Ver los que Natura ya no vende"}
+          </Button>
+        </div>
+        {dead ? (
+          dead.length === 0 ? (
+            <p className="mt-3 text-sm text-muted">
+              No hay ninguno para mostrar. Primero tocá «Agregar los nuevos» o «Solo ver qué falta» para que se revisen las fichas.
+            </p>
+          ) : (
+            <>
+              <p className="mt-3 text-sm font-semibold">{dead.filter((d) => !d.added).length} para revisar</p>
+              <ul className="mt-2 max-h-[34rem] divide-y divide-line/70 overflow-y-auto rounded-2xl bg-cream">
+                {dead.map((d) => (
+                  <li key={d.sku} className="flex flex-col gap-2 p-3 sm:flex-row sm:items-center">
+                    {d.added ? (
+                      <span className="flex flex-1 items-center gap-2 text-sm font-bold text-botanical-deep">
+                        <Check className="size-4" aria-hidden="true" />
+                        <Link href={`/admin/productos/${d.added}`} className="hover:underline">
+                          Agregado: {d.nameInput}
+                        </Link>
+                      </span>
+                    ) : (
+                      <>
+                        <input
+                          aria-label={`Nombre de ${d.name}`}
+                          value={d.nameInput}
+                          onChange={(e) => patchDead(d.sku, { nameInput: e.target.value })}
+                          maxLength={120}
+                          className={`${inputClasses} h-10 min-w-0 flex-1 text-sm`}
+                        />
+                        <input
+                          aria-label={`Precio de revista de ${d.name}`}
+                          value={d.priceInput}
+                          onChange={(e) => patchDead(d.sku, { priceInput: e.target.value })}
+                          inputMode="decimal"
+                          placeholder="Precio $"
+                          className={`${inputClasses} h-10 w-full text-sm sm:w-32`}
+                        />
+                        <Button size="sm" variant="secondary" disabled={d.busy} onClick={() => addDead(d)}>
+                          {d.busy ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : <PackagePlus className="size-4" aria-hidden="true" />}
+                          Agregar
+                        </Button>
+                      </>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </>
+          )
+        ) : null}
+      </div>
 
       {running || finished ? (
         <>
