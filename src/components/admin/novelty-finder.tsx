@@ -26,7 +26,7 @@ import { toCents } from "@/lib/pricing";
 const PARALLEL = 3;
 
 type Added = { id: string; name: string; category: string | null };
-type Dead = DeadNaturaItem & { nameInput: string; priceInput: string; photoLink: string; busy?: boolean; added?: string };
+type Dead = DeadNaturaItem & { nameInput: string; priceInput: string; photoLinks: string[]; busy?: boolean; added?: string };
 type Missing = { sku: string; name: string; category: string | null; price: number | null; added?: boolean; busy?: boolean };
 type Counts = { added: number; variant: number; noPrice: number; gone: number; already: number; failed: number };
 const EMPTY: Counts = { added: 0, variant: 0, noPrice: 0, gone: 0, already: 0, failed: 0 };
@@ -232,7 +232,7 @@ export function NoveltyFinder() {
     setLoadingDead(true);
     const res = await listDeadNaturaProducts();
     setLoadingDead(false);
-    if (res.ok && res.data) setDead(res.data.map((d) => ({ ...d, nameInput: d.name, priceInput: "", photoLink: "" })));
+    if (res.ok && res.data) setDead(res.data.map((d) => ({ ...d, nameInput: d.name, priceInput: "", photoLinks: [""] })));
     else toast.error(res.ok ? "No pudimos consultar Natura." : res.error);
   };
 
@@ -250,19 +250,20 @@ export function NoveltyFinder() {
     const res = await createManualNaturaProduct(d.sku, d.nameInput, price);
     if (res.ok && res.data) {
       const id = res.data.id;
-      // Foto opcional: la que baje del enlace de dirección de imagen.
-      let photoError: string | null = null;
-      try {
-        if (d.photoLink.trim()) {
-          const r = await addProductImageFromUrl(id, d.photoLink.trim());
+      // Hasta 3 fotos opcionales, cada una con su dirección de imagen.
+      const links = d.photoLinks.map((l) => l.trim()).filter(Boolean);
+      const errors: string[] = [];
+      for (const link of links) {
+        try {
+          const r = await addProductImageFromUrl(id, link);
           if (!r.ok) throw new Error(r.error);
+        } catch (e) {
+          errors.push((e as Error).message);
         }
-      } catch (e) {
-        photoError = (e as Error).message;
       }
       patchDead(d.sku, { busy: false, added: id });
-      if (photoError) toast.warning(`Producto agregado, pero la foto no: ${photoError}`);
-      else toast.success(d.photoLink.trim() ? "Producto agregado con su foto." : "Producto agregado.");
+      if (errors.length) toast.warning(`Producto agregado, pero ${errors.length === 1 ? "una foto no" : `${errors.length} fotos no`}: ${errors[0]}`);
+      else toast.success(links.length ? (links.length > 1 ? "Producto agregado con sus fotos." : "Producto agregado con su foto.") : "Producto agregado.");
       await finishNaturaPhotos();
     } else {
       patchDead(d.sku, { busy: false });
@@ -468,16 +469,28 @@ export function NoveltyFinder() {
                               placeholder="Precio $"
                               className={`${inputClasses} h-10 w-32 text-sm`}
                             />
-                            <input
-                              aria-label={`Enlace de una foto de ${d.name}`}
-                              value={d.photoLink}
-                              onChange={(e) => patchDead(d.sku, { photoLink: e.target.value })}
-                              inputMode="url"
-                              placeholder="Pegá la dirección de la imagen (opcional)"
-                              className={`${inputClasses} h-10 min-w-0 flex-1 basis-44 text-sm`}
-                            />
                           </div>
+                          {d.photoLinks.map((link, i) => (
+                            <input
+                              key={i}
+                              aria-label={`Dirección de la imagen ${i + 1} de ${d.name}`}
+                              value={link}
+                              onChange={(e) => patchDead(d.sku, { photoLinks: d.photoLinks.map((l, j) => (j === i ? e.target.value : l)) })}
+                              inputMode="url"
+                              placeholder={i === 0 ? "Pegá la dirección de la imagen (opcional)" : `Dirección de la imagen ${i + 1}`}
+                              className={`${inputClasses} h-10 w-full text-sm`}
+                            />
+                          ))}
                           <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                            {d.photoLinks.length < 3 ? (
+                              <button
+                                type="button"
+                                onClick={() => patchDead(d.sku, { photoLinks: [...d.photoLinks, ""] })}
+                                className="text-sm font-semibold text-coral-deep hover:underline"
+                              >
+                                + Otra foto
+                              </button>
+                            ) : null}
                             <a
                               href={`https://www.google.com/search?tbm=isch&q=${encodeURIComponent(`Natura ${d.nameInput}`)}`}
                               target="_blank"
