@@ -62,6 +62,10 @@ function Kpi({ icon: Icon, label, value, hint, tone }: { icon: LucideIcon; label
   );
 }
 
+/** Colores de la flor: cada número tiene el suyo. */
+const NUM_TONES = ["bg-[#ffd9e8]", "bg-[#ffe8c9]", "bg-[#d6f0e0]", "bg-[#e6dbf5]"];
+const STEP_TONES = ["bg-coral-deep text-white", "bg-[#ff9a62] text-forest", "bg-botanical-deep text-white", "bg-grape text-white"];
+
 /** Inicio del panel: resumen del mes, lo que hay que hacer hoy, ventas recientes y catálogo. */
 export function DashboardView({ d, imageUrl }: { d: DashboardData; imageUrl: (path: string) => string | null }) {
   const up = (d.month.change ?? 0) >= 0;
@@ -84,6 +88,21 @@ export function DashboardView({ d, imageUrl }: { d: DashboardData; imageUrl: (pa
         </p>
       </section>
 
+      <section aria-label="Resumen" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {[
+          { label: "Vendiste hoy", value: formatARS(d.today.cents), hint: `${d.today.orders} ${d.today.orders === 1 ? "venta" : "ventas"}` },
+          { label: "Este mes", value: formatARS(d.month.cents), hint: `${d.month.orders} ${d.month.orders === 1 ? "venta" : "ventas"}` },
+          { label: "Por cobrar", value: formatARS(d.owed.cents), hint: d.owed.people ? `${d.owed.people} ${d.owed.people === 1 ? "clienta" : "clientas"}` : "nadie te debe" },
+          { label: "Para hacer hoy", value: String(d.tasks.length), hint: d.tasks.length === 0 ? "todo al día" : d.tasks.length === 1 ? "cosa" : "cosas" },
+        ].map((n, i) => (
+          <div key={n.label} className={`rounded-3xl p-4 ${NUM_TONES[i]}`}>
+            <p className="text-sm font-bold text-forest/75">{n.label}</p>
+            <p className="mt-1 font-display text-2xl leading-tight font-bold tabular text-forest">{n.value}</p>
+            <p className="text-xs font-semibold text-forest/70">{n.hint}</p>
+          </div>
+        ))}
+      </section>
+
       {d.warnings}
 
       {/* Plan del día */}
@@ -95,7 +114,7 @@ export function DashboardView({ d, imageUrl }: { d: DashboardData; imageUrl: (pa
         {d.tasks.length + d.doneToday > 0 ? (
           <>
             <div className="h-3 overflow-hidden rounded-full bg-line" role="progressbar" aria-valuemin={0} aria-valuemax={d.tasks.length + d.doneToday} aria-valuenow={d.doneToday} aria-label="Avance del día">
-              <div className="h-full rounded-full bg-botanical-deep transition-all duration-700" style={{ width: `${Math.round((d.doneToday / (d.tasks.length + d.doneToday)) * 100)}%` }} />
+              <div className="h-full rounded-full bg-coral-deep transition-all duration-700" style={{ width: `${Math.round((d.doneToday / (d.tasks.length + d.doneToday)) * 100)}%` }} />
             </div>
             <p className="text-sm font-semibold text-muted">
               {d.doneToday > 0 ? `Hiciste ${d.doneToday} y quedan ${d.tasks.length}. ¡Vas muy bien!` : `Quedan ${d.tasks.length}. ¡Empecemos!`}
@@ -103,7 +122,7 @@ export function DashboardView({ d, imageUrl }: { d: DashboardData; imageUrl: (pa
           </>
         ) : null}
         {d.doneToday > 0 ? (
-          <div className="flex items-center gap-3 rounded-2xl border-2 border-line bg-warm-white p-4">
+          <div className="flex items-center gap-3 rounded-2xl bg-warm-white p-4 shadow-soft">
             <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-botanical-deep font-extrabold text-white" aria-hidden="true">✓</span>
             <span className="text-lg font-extrabold text-muted line-through">Atendiste {d.doneToday} {d.doneToday === 1 ? "pedido" : "pedidos"} hoy</span>
           </div>
@@ -112,8 +131,8 @@ export function DashboardView({ d, imageUrl }: { d: DashboardData; imageUrl: (pa
           <ol className="flex flex-col gap-3">
             {d.tasks.map((t, n) => (
               <li key={t.href + t.text}>
-                <Link href={t.href} className="group flex items-center gap-3 rounded-2xl border-2 border-line bg-warm-white p-4">
-                  <span className="flex size-9 shrink-0 items-center justify-center rounded-full border-[3px] border-botanical-deep font-extrabold text-botanical-deep">{n + 1}</span>
+                <Link href={t.href} className="group flex items-center gap-3 rounded-2xl bg-warm-white p-4 shadow-soft">
+                  <span className={`flex size-9 shrink-0 items-center justify-center rounded-full font-extrabold ${STEP_TONES[n % STEP_TONES.length]}`}>{n + 1}</span>
                   <span className="min-w-0 flex-1 text-lg leading-snug font-extrabold">{t.text}</span>
                   <ArrowRight className="size-5 shrink-0 text-muted" aria-hidden="true" />
                 </Link>
@@ -132,10 +151,10 @@ export function DashboardView({ d, imageUrl }: { d: DashboardData; imageUrl: (pa
         </h2>
         <div className="grid grid-cols-2 gap-3">
           <Link href="/admin/vender" className="flex min-h-24 flex-col items-center justify-center gap-1 rounded-2xl bg-warm-white p-3 text-center text-lg font-extrabold shadow-soft">
-            <CirclePlus className="size-7 text-coral-deep" aria-hidden="true" /> Anotar una venta
+            <span className="flex size-12 items-center justify-center rounded-full bg-[#ffd9e8]"><CirclePlus className="size-7 text-coral-deep" aria-hidden="true" /></span> Anotar una venta
           </Link>
           <Link href="/admin/productos?vista=llego" className="flex min-h-24 flex-col items-center justify-center gap-1 rounded-2xl bg-warm-white p-3 text-center text-lg font-extrabold shadow-soft">
-            <PackagePlus className="size-7 text-coral-deep" aria-hidden="true" /> Cargar una caja de Natura
+            <span className="flex size-12 items-center justify-center rounded-full bg-[#ffe8c9]"><PackagePlus className="size-7 text-[#c2571a]" aria-hidden="true" /></span> Cargar una caja de Natura
           </Link>
           <Link href="/admin/productos/nuevo" className="flex min-h-16 items-center justify-center gap-2 rounded-2xl bg-warm-white p-3 text-center font-bold shadow-soft">
             <Plus className="size-5" aria-hidden="true" /> Nuevo producto

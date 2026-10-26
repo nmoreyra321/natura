@@ -61,7 +61,7 @@ function isActive(pathname: string, item: NavItem) {
 /** Lista vertical de secciones (la misma en la computadora y en el menú del celular). */
 function NavList({ pathname, onNavigate }: { pathname: string; onNavigate?: () => void }) {
   const link = (active: boolean) =>
-    `flex h-10 items-center gap-2.5 rounded-xl px-3 text-[15px] font-semibold whitespace-nowrap transition-colors ${active ? "bg-sage text-botanical-deep" : "text-forest/80 hover:bg-forest/5"}`;
+    `flex h-10 items-center gap-2.5 rounded-xl px-3 text-[15px] font-semibold whitespace-nowrap transition-colors ${active ? "bg-coral-soft text-coral-deep" : "text-forest/80 hover:bg-forest/5"}`;
   return (
     <div className="flex flex-col gap-3">
       {groups.map((g) => (
@@ -142,7 +142,7 @@ export function AdminNav({ email, pedidosCount = 0 }: { email: string | null; pe
       </header>
       <nav
         aria-label="Secciones"
-        className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-line bg-warm-white px-1 pt-1.5 pb-[max(0.5rem,env(safe-area-inset-bottom))] shadow-[0_-4px_14px_rgba(60,20,80,0.08)] lg:hidden"
+        className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 gap-1 rounded-t-[26px] bg-warm-white px-2 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] shadow-[0_-8px_22px_rgba(59,30,74,0.10)] lg:hidden"
       >
         {TABS.map((t) => {
           const active = tapped ? tapped === t.href : isActive(pathname, t);
@@ -154,13 +154,12 @@ export function AdminNav({ email, pedidosCount = 0 }: { email: string | null; pe
               prefetch
               onClick={() => setTapped(t.href)}
               aria-current={active ? "page" : undefined}
-              className={`relative flex min-h-14 flex-col items-center justify-center gap-0.5 text-[13px] font-extrabold ${active ? "text-coral-deep" : "text-muted"}`}
+              className={`relative flex min-h-14 flex-col items-center justify-center gap-0.5 rounded-2xl text-[13px] font-extrabold transition-colors ${active ? "bg-coral-deep text-white shadow-soft" : "text-muted"}`}
             >
-              {active ? <span aria-hidden="true" className="absolute -top-1.5 h-1 w-9 rounded-full bg-coral-deep" /> : null}
               <t.icon className="size-6" aria-hidden="true" />
               {t.label}
               {count > 0 ? (
-                <span className="absolute top-0.5 left-1/2 ml-2 inline-flex min-w-5 items-center justify-center rounded-full bg-coral-deep px-1.5 text-xs font-bold text-white">
+                <span className="absolute top-0.5 left-1/2 ml-2 inline-flex min-w-5 items-center justify-center rounded-full bg-sun px-1.5 text-xs font-extrabold text-forest ring-2 ring-warm-white">
                   {count}
                 </span>
               ) : null}
