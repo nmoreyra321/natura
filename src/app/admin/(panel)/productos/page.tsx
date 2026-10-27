@@ -169,7 +169,7 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
       <ClearAllStock withStock={withStockCount} />
 
       {inStock && inStock.length > 0 ? (
-        <details open className="mt-4 rounded-2xl bg-warm-white p-4 shadow-soft">
+        <details className="mt-4 rounded-2xl bg-warm-white p-4 shadow-soft">
           <summary className="cursor-pointer font-display text-lg font-bold">
             Lo que tenés ahora <span className="text-coral-deep">({withStockCount})</span>
           </summary>
@@ -181,7 +181,7 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
             {inStock.map((p) => (
               <li key={p.id}>
                 <Link href={`/admin/productos/${p.id}`} className="flex items-center justify-between gap-3 rounded-xl px-2 py-1.5 hover:bg-cream">
-                  <span className="min-w-0 truncate text-sm font-semibold">{p.name}</span>
+                  <span className="min-w-0 text-sm font-semibold">{p.name}</span>
                   <span className="tabular shrink-0 rounded-full bg-sun/60 px-2.5 py-0.5 text-sm font-extrabold">× {p.stock}</span>
                 </Link>
               </li>
