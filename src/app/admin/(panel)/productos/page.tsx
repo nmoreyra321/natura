@@ -45,7 +45,7 @@ const one = (v: string | string[] | undefined) =>
 /** Arma el enlace a otra página conservando los filtros actuales. */
 function pageHref(sp: Search, page: number) {
   const params = new URLSearchParams();
-  for (const key of ["q", "estado", "stock", "categoria", "oferta"]) {
+  for (const key of ["q", "estado", "stock", "categoria", "oferta", "precio"]) {
     const value = one(sp[key]);
     if (value) params.set(key, value);
   }
@@ -142,6 +142,7 @@ export default async function AdminProductsPage({
   const estado = one(sp.estado);
   const stock = one(sp.stock);
   const oferta = one(sp.oferta) === "1";
+  const sinPrecio = one(sp.precio) === "sin";
   const categoria = one(sp.categoria);
   const pageRaw = Number(one(sp.pagina) || "1");
   const page =
@@ -166,6 +167,8 @@ export default async function AdminProductsPage({
   if (stock === "bajo")
     query = query.gt("stock", 0).lte("stock", LOW_STOCK_THRESHOLD);
   if (oferta) query = query.eq("is_offer", true);
+  // Precio provisorio de $1: productos creados sin precio que todavía hay que completar.
+  if (sinPrecio) query = query.lte("magazine_price", 1);
   if (categoria === NO_CATEGORY) query = query.is("category_id", null);
   else if (/^[0-9a-f-]{36}$/.test(categoria))
     query = query.eq("category_id", categoria);
@@ -196,7 +199,7 @@ export default async function AdminProductsPage({
           .limit(2000)
       : { data: [] };
   const pageCount = Math.ceil(total / PAGE_SIZE);
-  const filtered = Boolean(q || estado || stock || oferta || categoria);
+  const filtered = Boolean(q || estado || stock || oferta || categoria || sinPrecio);
 
   return (
     <div className="mx-auto max-w-6xl">
@@ -265,7 +268,7 @@ export default async function AdminProductsPage({
       >
         <CatalogFiltersToggle
           activeCount={
-            [estado, stock, categoria, oferta].filter(Boolean).length
+            [estado, stock, categoria, oferta, sinPrecio].filter(Boolean).length
           }
           search={
             <>
@@ -339,6 +342,16 @@ export default async function AdminProductsPage({
                 className="size-5 accent-[var(--coral-deep)]"
               />
               Ofertas
+            </label>
+            <label className="flex items-center gap-2 text-sm font-semibold">
+              <input
+                type="checkbox"
+                name="precio"
+                value="sin"
+                defaultChecked={sinPrecio}
+                className="size-5 accent-[var(--coral-deep)]"
+              />
+              Sin precio
             </label>
             <button type="submit" className={buttonClasses("secondary", "sm")}>
               <Search className="size-4" aria-hidden="true" /> Filtrar
