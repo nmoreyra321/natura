@@ -591,12 +591,23 @@ export function NoveltyFinder() {
                         </span>
                       ) : (
                         <>
-                          <input
+                          <textarea
                             aria-label={`Nombre de ${d.name}`}
                             value={d.nameInput}
-                            onChange={(e) => patchDead(d.sku, { nameInput: e.target.value })}
+                            onChange={(e) => {
+                              e.currentTarget.style.height = "auto";
+                              e.currentTarget.style.height = `${e.currentTarget.scrollHeight}px`;
+                              patchDead(d.sku, { nameInput: e.target.value });
+                            }}
+                            ref={(el) => {
+                              if (el) {
+                                el.style.height = "auto";
+                                el.style.height = `${el.scrollHeight}px`;
+                              }
+                            }}
+                            rows={2}
                             maxLength={120}
-                            className={`${inputClasses} h-10 w-full text-sm`}
+                            className={`${inputClasses} min-h-12 w-full resize-none py-2 text-sm leading-snug`}
                           />
                           <div className="flex flex-wrap gap-2">
                             <input
