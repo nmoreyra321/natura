@@ -19,6 +19,7 @@ import { surchargeCents, toCents } from "@/lib/pricing";
 import { getOrderTotals, type OrderLine } from "@/lib/whatsapp";
 import type { TransferDetails } from "@/lib/store-settings";
 import { CartProgress } from "./cart-progress";
+import { CartSuggestions } from "./cart-suggestions";
 import { paysWithMpLink } from "@/lib/transfer-mode";
 import { QuantityInput } from "./add-to-cart";
 import { SavingsCelebration } from "./savings-celebration";
@@ -360,6 +361,7 @@ export function CartView({
             );
           })}
         </ul>
+        <CartSuggestions />
       </section>
 
       <aside ref={summaryRef} id="resumen" aria-labelledby="summary-title" className="h-fit rounded-3xl bg-warm-white p-5 shadow-lift lg:sticky lg:top-24">

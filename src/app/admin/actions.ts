@@ -2126,9 +2126,12 @@ export async function deleteReview(id: unknown): Promise<ActionResult> {
   try {
     const { supabase } = await assertAdmin();
     if (typeof id !== "string" || !UUID_RE.test(id)) return { ok: false, error: "Reseña inválida." };
-    const { data, error } = await supabase.from("reviews").delete().eq("id", id).select("id");
+    const { data, error } = await supabase.from("reviews").delete().eq("id", id).select("id, photo_path");
     if (error) return fail(error, "No pudimos sacarla.");
     if (!data?.length) return { ok: false, error: "Esa reseña ya no está." };
+    // La foto de la reseña (si tenía) también se borra.
+    const photo = data[0].photo_path;
+    if (photo) await supabase.storage.from("product-images").remove([photo]);
     revalidatePath("/admin/resenas");
     revalidatePath("/");
     return { ok: true, message: "Reseña sacada de la tienda." };
@@ -2335,5 +2338,62 @@ export async function applyCategoryDiscount(input: unknown): Promise<ActionResul
     };
   } catch (e) {
     return fail(e, "No pudimos aplicar el descuento.");
+  }
+}
+
+/* ----------------------- Reservas de 24 horas ----------------------- */
+
+/** Cancela una reserva: las unidades vuelven al stock. */
+export async function cancelReservation(id: unknown): Promise<ActionResult> {
+  try {
+    const { supabase } = await assertAdmin();
+    if (typeof id !== "string" || !UUID_RE.test(id)) return { ok: false, error: "Reserva inválida." };
+    const { error } = await supabase.rpc("close_reservation", { p_id: id, p_release: true });
+    if (error) return { ok: false, error: error.code === "P0002" ? "Esa reserva ya estaba cerrada." : "No pudimos cancelarla." };
+    refreshCatalog();
+    revalidatePath("/admin/reservas");
+    revalidatePath("/admin");
+    return { ok: true, message: "Reserva cancelada. El producto volvió al stock." };
+  } catch (e) {
+    return fail(e, "No pudimos cancelarla.");
+  }
+}
+
+/**
+ * La clienta retiró lo reservado: se cierra la reserva y se anota la venta (a tu precio, presencial).
+ * `paid`: si pagó en el momento; si no, queda en «Quién me debe».
+ */
+export async function completeReservation(id: unknown, paid: boolean): Promise<ActionResult<{ code: string }>> {
+  try {
+    const { supabase } = await assertAdmin();
+    if (typeof id !== "string" || !UUID_RE.test(id)) return { ok: false, error: "Reserva inválida." };
+    const { data: row } = await supabase
+      .from("reservations")
+      .select("id, product_id, quantity, name, phone, status, product:products(sale_price)")
+      .eq("id", id)
+      .maybeSingle();
+    if (!row || row.status !== "active") return { ok: false, error: "Esa reserva ya estaba cerrada." };
+    const unitPrice = Number(row.product?.sale_price ?? 0);
+    if (!(unitPrice > 0)) return { ok: false, error: "El producto no tiene precio de venta." };
+
+    // Primero vuelven las unidades al stock y enseguida la venta las descuenta de nuevo (queda una sola vez descontado).
+    const released = await supabase.rpc("close_reservation", { p_id: id, p_release: true });
+    if (released.error) return { ok: false, error: "No pudimos cerrar la reserva." };
+    const sale = await registerManualSale({
+      items: [{ productId: row.product_id, quantity: row.quantity, unitPrice }],
+      customerName: row.name,
+      customerPhone: row.phone,
+      channel: "presencial",
+      paymentMethod: "efectivo",
+      amountPaid: paid ? unitPrice * row.quantity : 0,
+      delivered: true,
+    });
+    revalidatePath("/admin/reservas");
+    if (!sale.ok) {
+      return { ok: false, error: `La reserva se cerró y el producto volvió al stock, pero no pudimos anotar la venta: ${sale.error} Anotala en «Anotar una venta».` };
+    }
+    return { ok: true, data: sale.data, message: `Venta ${sale.data?.code ?? ""} anotada.${paid ? "" : " Quedó en «Quién me debe»."}` };
+  } catch (e) {
+    return fail(e, "No pudimos cerrar la reserva.");
   }
 }

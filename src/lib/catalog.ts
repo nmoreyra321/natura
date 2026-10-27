@@ -518,7 +518,7 @@ export async function getProductsByIds(ids: string[]): Promise<PublicProduct[]> 
   return [...list.filter((p) => p.stock > 0), ...list.filter((p) => p.stock <= 0)];
 }
 
-export type PublicReview = { id: string; name: string; rating: number; comment: string | null; reply: string | null; createdAt: string };
+export type PublicReview = { id: string; name: string; rating: number; comment: string | null; reply: string | null; createdAt: string; photo: string | null };
 export type ReviewSummary = { count: number; average: number; latest: PublicReview[] };
 
 /** Reseñas de clientas: promedio de estrellas, cantidad y las últimas (primero las que tienen comentario). */
@@ -527,13 +527,13 @@ export async function getReviewSummary(limit = 12): Promise<ReviewSummary | null
   if (!supabase) return null;
   const { data, error } = await supabase
     .from("reviews")
-    .select("id, name, rating, comment, reply, created_at")
+    .select("id, name, rating, comment, reply, created_at, photo_path")
     .order("created_at", { ascending: false })
     .limit(2000);
   if (error || !data || data.length === 0) return null;
   const average = data.reduce((s, r) => s + r.rating, 0) / data.length;
   const latest = [...data.filter((r) => r.comment), ...data.filter((r) => !r.comment)]
     .slice(0, limit)
-    .map((r) => ({ id: r.id, name: r.name, rating: r.rating, comment: r.comment, reply: r.reply, createdAt: r.created_at }));
+    .map((r) => ({ id: r.id, name: r.name, rating: r.rating, comment: r.comment, reply: r.reply, createdAt: r.created_at, photo: r.photo_path }));
   return { count: data.length, average, latest };
 }

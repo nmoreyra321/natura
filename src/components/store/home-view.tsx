@@ -61,6 +61,11 @@ export function ReviewsSection({ r }: { r: ReviewSummary | null }) {
         <Stars value={rev.rating} />
       </div>
       {rev.comment ? <p className="mt-2 text-forest/90">“{rev.comment}”</p> : null}
+      {rev.photo && productImageUrl(rev.photo) ? (
+        <span className="relative mt-3 block aspect-[4/3] w-full overflow-hidden rounded-2xl bg-cream">
+          <Image src={productImageUrl(rev.photo)!} alt={`Foto de ${rev.name}`} fill sizes="(min-width: 1024px) 30vw, 80vw" className="object-cover" />
+        </span>
+      ) : null}
       {rev.reply ? (
         // Todas las tarjetas miden lo mismo: el recuadro de la respuesta ocupa el lugar que sobra.
         <div className="mt-3 flex-1 rounded-2xl bg-blush/60 p-3 text-sm">

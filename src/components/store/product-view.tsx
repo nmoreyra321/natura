@@ -12,6 +12,7 @@ import { Gallery } from "./gallery";
 import { Price } from "./price";
 import { DELIVERY_TEXT } from "@/lib/delivery";
 import { ProductRail } from "./product-card";
+import { ReserveForm } from "./reserve-form";
 import { RestockForm } from "./restock-form";
 import { ShareButton } from "./share-button";
 import { StockBadge } from "./stock-badge";
@@ -116,6 +117,14 @@ export function ProductView({
                 stock: product.stock,
               }}
             />
+            {product.stock > 0 ? (
+              <ReserveForm
+                productId={product.id}
+                productName={product.name}
+                stock={product.stock}
+                whatsappUrl={whatsapp ? buildWhatsAppUrl(whatsapp, `Hola Mariel, reservé "${product.name}" por 24 horas en la tienda.`) : null}
+              />
+            ) : null}
             {product.stock <= 0 ? <RestockForm productId={product.id} /> : null}
             <div className="grid gap-2 sm:grid-cols-2">
               {whatsapp ? (

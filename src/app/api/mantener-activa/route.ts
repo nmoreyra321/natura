@@ -1,5 +1,6 @@
 import type { NextRequest } from "next/server";
 
+import { releaseExpiredReservations } from "@/lib/reservations";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 /** Días que un pedido puede esperar sin pago ni aviso antes de darse de baja solo. */
@@ -46,8 +47,11 @@ export async function GET(request: NextRequest) {
     .lt("created_at", dayAgo);
   if (abandonedError) console.error("[vencer-pedidos-mp]", abandonedError.message);
 
+  // Reservas de 24 horas que nadie retiró: las unidades vuelven al stock.
+  const released = await releaseExpiredReservations();
+
   return Response.json(
-    { ok: !error, expired: expired?.length ?? 0 },
+    { ok: !error, expired: expired?.length ?? 0, released },
     { status: error ? 503 : 200, headers: { "Cache-Control": "no-store" } },
   );
 }

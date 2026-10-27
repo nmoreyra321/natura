@@ -245,14 +245,14 @@ isOneToOne: false
                   ]
                 },"reviews": {
                   Row: {
-                    "comment": string | null,"created_at": string,"id": string,"name": string,"order_id": string | null,"rating": number,"replied_at": string | null,"reply": string | null
+                    "comment": string | null,"created_at": string,"id": string,"name": string,"order_id": string | null,"photo_path": string | null,"rating": number,"replied_at": string | null,"reply": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "comment"?: string | null,"created_at"?: string,"id"?: string,"name": string,"order_id"?: string | null,"rating": number,"replied_at"?: string | null,"reply"?: string | null
+                    "comment"?: string | null,"created_at"?: string,"id"?: string,"name": string,"order_id"?: string | null,"photo_path"?: string | null,"rating": number,"replied_at"?: string | null,"reply"?: string | null
                   }
                   Update: {
-                    "comment"?: string | null,"created_at"?: string,"id"?: string,"name"?: string,"order_id"?: string | null,"rating"?: number,"replied_at"?: string | null,"reply"?: string | null
+                    "comment"?: string | null,"created_at"?: string,"id"?: string,"name"?: string,"order_id"?: string | null,"photo_path"?: string | null,"rating"?: number,"replied_at"?: string | null,"reply"?: string | null
                   }
                   Relationships: [
                     {
@@ -260,6 +260,26 @@ isOneToOne: false
       columns: ["order_id"]
 isOneToOne: true
       referencedRelation: "orders"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"reservations": {
+                  Row: {
+                    "closed_at": string | null,"created_at": string,"expires_at": string,"id": string,"name": string,"phone": string,"product_id": string,"quantity": number,"status": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "closed_at"?: string | null,"created_at"?: string,"expires_at"?: string,"id"?: string,"name": string,"phone": string,"product_id": string,"quantity": number,"status"?: string
+                  }
+                  Update: {
+                    "closed_at"?: string | null,"created_at"?: string,"expires_at"?: string,"id"?: string,"name"?: string,"phone"?: string,"product_id"?: string,"quantity"?: number,"status"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "reservations_product_id_fkey"
+      columns: ["product_id"]
+      isOneToOne: false
+      referencedRelation: "products"
       referencedColumns: ["id"]
     }
                   ]
@@ -363,6 +383,15 @@ isOneToOne: false
             [_ in never]: never
           }
           Functions: {
+            "close_reservation":
+{ Args: { "p_id": string; "p_release": boolean }; Returns: undefined
+                           },
+            "release_expired_reservations":
+{ Args: Record<PropertyKey, never>; Returns: number
+                           },
+            "reserve_product":
+{ Args: { "p_name": string; "p_phone": string; "p_product": string; "p_quantity": number }; Returns: string
+                           },
             "best_sellers":
 { Args: { "max_items"?: number }; Returns: { "product_id": string; "units": number }[]
                            },

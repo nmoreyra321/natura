@@ -3,6 +3,7 @@
 import { after } from "next/server";
 
 import { getProductsForCart } from "@/lib/catalog";
+import { releaseExpiredReservations } from "@/lib/reservations";
 import { formatARS } from "@/lib/format";
 import { notifyAdmins } from "@/lib/push";
 import { getSiteUrl } from "@/lib/config";
@@ -42,6 +43,8 @@ export async function validateCart(input: unknown): Promise<CartValidationResult
   if (!parsed.success) return { ok: false, error: "El carrito tiene datos inválidos." };
 
   const ids = [...new Set(parsed.data.map((i) => i.productId))];
+  // Las reservas vencidas vuelven al stock antes de mirarlo.
+  await releaseExpiredReservations();
   const rows = await getProductsForCart(ids);
   if (!rows) {
     return { ok: false, error: "No pudimos verificar precios y disponibilidad. Probá de nuevo en un rato." };
@@ -62,6 +65,80 @@ export async function validateCart(input: unknown): Promise<CartValidationResult
     })),
     missing: ids.filter((id) => !found.has(id)),
   };
+}
+
+export type CartSuggestion = {
+  productId: string;
+  name: string;
+  slug: string;
+  size: string | null;
+  image: string | null;
+  salePrice: number;
+  magazinePrice: number;
+  stock: number;
+  /** true si otras clientas lo compraron junto con lo del carrito. */
+  together: boolean;
+};
+
+const SUGGESTION_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * «Otras clientas también llevan»: productos con stock que se compraron en los mismos pedidos que lo
+ * del carrito (pedidos confirmados o entregados); si no alcanzan, los más vendidos. Nunca repite lo que ya está en el carrito.
+ */
+export async function getCartSuggestions(ids: unknown): Promise<CartSuggestion[]> {
+  const list = (Array.isArray(ids) ? ids : []).filter((i): i is string => typeof i === "string" && SUGGESTION_UUID.test(i)).slice(0, 20);
+  if (list.length === 0) return [];
+  const admin = createAdminClient();
+  if (!admin) return [];
+  try {
+    const inCart = new Set(list);
+    const { data: orderRows } = await admin
+      .from("order_items")
+      .select("order_id, order:orders!inner(status)")
+      .in("product_id", list)
+      .in("order.status", ["confirmed", "delivered"])
+      .limit(500);
+    const orderIds = [...new Set((orderRows ?? []).map((r) => r.order_id))].slice(0, 200);
+    const counts = new Map<string, number>();
+    if (orderIds.length > 0) {
+      const { data: others } = await admin.from("order_items").select("product_id").in("order_id", orderIds).limit(3000);
+      for (const o of others ?? []) {
+        if (o.product_id && !inCart.has(o.product_id)) counts.set(o.product_id, (counts.get(o.product_id) ?? 0) + 1);
+      }
+    }
+    const together = [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 12).map(([id]) => id);
+
+    const { data: best } = await admin.rpc("best_sellers", { max_items: 12 });
+    const popular = (best ?? []).map((b) => b.product_id).filter((id) => !inCart.has(id) && !together.includes(id));
+
+    const wanted = [...together, ...popular];
+    if (wanted.length === 0) return [];
+    const { data: rows } = await admin
+      .from("products")
+      .select("id, name, slug, size, magazine_price, sale_price, stock, images:product_images(storage_path, position)")
+      .eq("status", "published")
+      .gt("stock", 0)
+      .in("id", wanted);
+    const byId = new Map((rows ?? []).map((r) => [r.id, r]));
+    return wanted
+      .map((id) => byId.get(id))
+      .filter((r): r is NonNullable<typeof r> => !!r)
+      .slice(0, 4)
+      .map((r) => ({
+        productId: r.id,
+        name: r.name,
+        slug: r.slug,
+        size: r.size,
+        image: [...(r.images ?? [])].sort((a, b) => a.position - b.position)[0]?.storage_path ?? null,
+        salePrice: toCents(r.sale_price) / 100,
+        magazinePrice: toCents(r.magazine_price) / 100,
+        stock: r.stock,
+        together: together.includes(r.id),
+      }));
+  } catch {
+    return [];
+  }
 }
 
 /** Mensaje claro para la clienta cuando el pedido no se pudo crear. */
@@ -197,6 +274,7 @@ export async function registerOrder(input: unknown): Promise<RegisterOrderResult
   if (!resolved.ok) return resolved;
   const zoneName = resolved.delivery.zone?.name ?? null;
 
+  await releaseExpiredReservations();
   const { data, error } = await admin.rpc("create_order", {
     items: parsed.data.items,
     customer_name: parsed.data.customerName,
@@ -263,6 +341,7 @@ export async function payWithMercadoPago(input: unknown): Promise<MercadoPagoChe
   if (!resolved.ok) return resolved;
   const zoneName = resolved.delivery.zone?.name ?? null;
 
+  await releaseExpiredReservations();
   const { data, error } = await admin.rpc("create_order", {
     items: parsed.data.items,
     customer_name: parsed.data.customerName,

@@ -1,10 +1,11 @@
 "use client";
 
-import { Heart, Loader2, Star } from "lucide-react";
+import { Camera, Heart, Loader2, Star, X } from "lucide-react";
 import { useState, useTransition } from "react";
 
 import { submitReview } from "@/app/(tienda)/pedido/actions";
 import { buttonClasses } from "@/components/ui/button";
+import { shrinkPhoto } from "@/lib/shrink-photo";
 import { Required, RequiredNote } from "./required";
 
 const LABELS = ["", "Mala", "Regular", "Buena", "Muy buena", "¡Excelente!"];
@@ -26,10 +27,17 @@ export function ReviewForm({
   const [rating, setRating] = useState(0);
   const [hover, setHover] = useState(0);
   const [comment, setComment] = useState("");
+  const [photo, setPhoto] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
   const [pending, start] = useTransition();
   const shown = hover || rating;
+  const pickPhoto = (file: File | null) => {
+    if (preview) URL.revokeObjectURL(preview);
+    setPhoto(file);
+    setPreview(file ? URL.createObjectURL(file) : null);
+  };
 
   if (done) {
     return (
@@ -64,12 +72,20 @@ export function ReviewForm({
           return setError("Tocá las estrellas para elegir tu puntaje.");
         if (comment.trim().length < 3) return setError("Escribí tu reseña.");
         start(async () => {
-          const res = await submitReview({
-            orderId: orderId ?? null,
-            name,
-            rating,
-            comment,
-          }).catch(() => null);
+          const data = new FormData();
+          if (orderId) data.set("orderId", orderId);
+          data.set("name", name);
+          data.set("rating", String(rating));
+          data.set("comment", comment);
+          if (photo) {
+            const small = await shrinkPhoto(photo);
+            if (!small)
+              return setError(
+                "No pudimos preparar la foto. Probá con otra o publicá la reseña sin foto.",
+              );
+            data.set("photo", small);
+          }
+          const res = await submitReview(data).catch(() => null);
           if (res?.ok) setDone(true);
           else
             setError(
@@ -135,7 +151,9 @@ export function ReviewForm({
           required
           className="mt-1 h-11 w-full rounded-full border border-line bg-white px-4 text-base font-normal"
         />
-        <span className="mt-1 block px-1 text-xs font-normal text-muted">Así se publica en la tienda, por ejemplo «Laura Gómez».</span>
+        <span className="mt-1 block px-1 text-xs font-normal text-muted">
+          Así se publica en la tienda, por ejemplo «Laura Gómez».
+        </span>
       </label>
       <label className="mt-3 block text-sm font-semibold">
         Tu reseña
@@ -150,6 +168,36 @@ export function ReviewForm({
           className="mt-1 w-full rounded-2xl border border-line bg-white px-4 py-2.5 text-base font-normal"
         />
       </label>
+      <div className="mt-3">
+        {preview ? (
+          <div className="flex items-center gap-3">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={preview}
+              alt="Tu foto"
+              className="size-16 rounded-2xl object-cover"
+            />
+            <button
+              type="button"
+              onClick={() => pickPhoto(null)}
+              className="inline-flex items-center gap-1 text-sm font-semibold text-coral-deep"
+            >
+              <X className="size-4" aria-hidden="true" /> Sacar la foto
+            </button>
+          </div>
+        ) : (
+          <label className="inline-flex h-11 cursor-pointer items-center gap-2 rounded-full border border-line bg-white px-4 text-sm font-semibold hover:bg-cream">
+            <Camera className="size-4" aria-hidden="true" /> Agregar una foto
+            (opcional)
+            <input
+              type="file"
+              accept="image/*"
+              className="sr-only"
+              onChange={(e) => pickPhoto(e.target.files?.[0] ?? null)}
+            />
+          </label>
+        )}
+      </div>
       {error ? (
         <p className="mt-2 text-sm font-semibold text-coral-deep" role="alert">
           {error}

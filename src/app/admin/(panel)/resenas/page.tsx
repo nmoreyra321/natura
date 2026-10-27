@@ -1,10 +1,12 @@
 import { MessageSquareHeart } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 
 import { ReviewDelete } from "@/components/admin/review-delete";
 import { ReviewReply } from "@/components/admin/review-reply";
 import { Stars } from "@/components/store/stars";
 import { requireAdmin } from "@/lib/auth";
+import { productImageUrl } from "@/lib/images";
 
 export const metadata = { title: "Reseñas" };
 
@@ -19,7 +21,7 @@ export default async function ReviewsPage() {
   const { supabase } = await requireAdmin();
   const { data: reviews, error } = await supabase
     .from("reviews")
-    .select("id, name, rating, comment, reply, created_at, order:orders(code)")
+    .select("id, name, rating, comment, reply, created_at, photo_path, order:orders(code)")
     .order("created_at", { ascending: false })
     .limit(500);
   const list = reviews ?? [];
@@ -57,6 +59,11 @@ export default async function ReviewsPage() {
                 <div className="min-w-0 flex-1">
                   <Stars value={r.rating} />
                   {r.comment ? <p className="mt-1.5 break-words">“{r.comment}”</p> : null}
+                  {r.photo_path && productImageUrl(r.photo_path) ? (
+                    <a href={productImageUrl(r.photo_path)!} target="_blank" rel="noopener noreferrer" className="relative mt-2 block size-28 overflow-hidden rounded-2xl bg-cream">
+                      <Image src={productImageUrl(r.photo_path)!} alt={`Foto de ${r.name}`} fill sizes="112px" className="object-cover" />
+                    </a>
+                  ) : null}
                   <p className="mt-1.5 text-sm text-muted">
                     <b className="text-forest">{r.name}</b> · {dateFmt.format(new Date(r.created_at))}
                     {r.order ? (

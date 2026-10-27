@@ -23,6 +23,7 @@ const PROOF_TYPES: Record<string, string> = {
   "application/pdf": "pdf",
 };
 const MAX_PROOF_BYTES = 3_800_000;
+const REVIEW_PHOTO_MAX_BYTES = 3_000_000;
 
 /** Revisa los primeros bytes: que el archivo sea de verdad una foto o un PDF (no solo que lo diga). */
 function looksLike(type: string, bytes: Uint8Array): boolean {
@@ -243,7 +244,16 @@ export type ReviewResult = { ok: true } | { ok: false; error: string };
  * queda unida a ese pedido (una por pedido, no en los cancelados); desde el inicio, sin pedido.
  * No se exige compra: si alguien no compró, Natu Mariel lo aclara en la respuesta o la saca.
  */
-export async function submitReview(input: { orderId?: string | null; name: string; rating: number; comment: string }): Promise<ReviewResult> {
+export async function submitReview(formData: FormData): Promise<ReviewResult> {
+  const rawOrder = String(formData.get("orderId") ?? "");
+  const input = {
+    orderId: rawOrder || null,
+    name: String(formData.get("name") ?? ""),
+    rating: Number(formData.get("rating")),
+    comment: String(formData.get("comment") ?? ""),
+  };
+  const file = formData.get("photo");
+  const photo = file instanceof File && file.size > 0 ? file : null;
   const name = input.name.trim().replace(/\s+/g, " ");
   const comment = input.comment.trim();
   const rating = Math.round(Number(input.rating));
@@ -264,8 +274,24 @@ export async function submitReview(input: { orderId?: string | null; name: strin
     orderId = order.id;
   }
 
-  const { error } = await admin.from("reviews").insert({ order_id: orderId, name, rating, comment });
+  // Foto opcional (ya achicada en el teléfono): se guarda en la carpeta reviews/ de las fotos de la tienda.
+  let photoPath: string | null = null;
+  if (photo) {
+    if (photo.size > REVIEW_PHOTO_MAX_BYTES) return { ok: false, error: "La foto pesa demasiado. Probá con otra." };
+    const bytes = new Uint8Array(await photo.arrayBuffer());
+    const type = (["image/jpeg", "image/png", "image/webp"] as const).find((t) => looksLike(t, bytes));
+    if (!type) return { ok: false, error: "La foto tiene que ser JPG, PNG o WebP." };
+    photoPath = `reviews/${crypto.randomUUID()}.${PROOF_TYPES[type]}`;
+    const up = await admin.storage.from("product-images").upload(photoPath, bytes, { contentType: type, upsert: false });
+    if (up.error) {
+      console.error("[reseña] No se pudo guardar la foto:", up.error.message);
+      return { ok: false, error: "No pudimos guardar la foto. Probá de nuevo o publicá la reseña sin foto." };
+    }
+  }
+
+  const { error } = await admin.from("reviews").insert({ order_id: orderId, name, rating, comment, photo_path: photoPath });
   if (error) {
+    if (photoPath) await admin.storage.from("product-images").remove([photoPath]);
     if (error.code === "23505") return { ok: false, error: "Ya dejaste tu reseña para este pedido. ¡Gracias!" };
     console.error("[reseña] No se pudo guardar:", error.message);
     return { ok: false, error: "No pudimos guardar tu reseña. Probá de nuevo." };
