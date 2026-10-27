@@ -2,7 +2,7 @@ import "server-only";
 
 import { cache } from "react";
 
-import { nameSearchPatterns } from "@/lib/search";
+import { meaningfulWords, nameSearchPatterns } from "@/lib/search";
 import { slugify } from "@/lib/slug";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createPublicClient } from "@/lib/supabase/server";
@@ -138,7 +138,7 @@ export async function getCatalog(filters: CatalogFilters): Promise<CatalogResult
     .select(PRODUCT_SELECT, { count: "exact" })
     .eq("status", "published");
 
-  for (const pattern of nameSearchPatterns(filters.q ?? "")) query = query.filter("name", "imatch", pattern);
+  for (const pattern of nameSearchPatterns(meaningfulWords(filters.q ?? "").join(" "))) query = query.filter("name", "imatch", pattern);
   if (categoryId) query = query.eq("category_id", categoryId);
   if (lineName) query = query.eq("line", lineName);
   if (filters.refills) query = query.eq("is_refill", true);
@@ -211,33 +211,72 @@ export type SearchSuggestion = {
   image: string | null;
 };
 
-/** Sugerencias para el buscador instantáneo (productos publicados, los más relevantes primero). */
+type SuggestionRow = {
+  name: string;
+  slug: string;
+  size: string | null;
+  sale_price: number;
+  magazine_price: number;
+  stock: number;
+  is_featured: boolean;
+  images: { storage_path: string; position: number }[] | null;
+};
+
+const SUGGESTION_COLUMNS = "name, slug, size, sale_price, magazine_price, stock, is_featured, images:product_images(storage_path, position)";
+
+/** Sin tildes ni mayúsculas, para comparar palabras. */
+const plain = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
+/**
+ * Sugerencias para el buscador instantáneo (productos publicados). Primero los que tienen todas las palabras;
+ * si son pocos, se suman los que tienen las palabras importantes (sin «eau de parfum», «para»…) y, al final,
+ * los que tienen alguna de ellas. Así «kaiak eau de parfum» encuentra «Kaiak Femenino» aunque no diga «parfum».
+ */
 export async function searchSuggestions(q: string, limit = 6): Promise<SearchSuggestion[] | null> {
   const patterns = nameSearchPatterns(q);
   if (patterns.length === 0) return [];
   const supabase = createPublicClient();
   if (!supabase) return null;
-  let query = supabase
-    .from("products")
-    .select("name, slug, size, sale_price, magazine_price, stock, images:product_images(storage_path, position)")
-    .eq("status", "published");
-  for (const pattern of patterns) query = query.filter("name", "imatch", pattern);
-  const { data, error } = await query
-    .order("in_stock", { ascending: false })
-    .order("is_featured", { ascending: false })
-    .order("name")
-    .limit(limit);
-  if (error) {
-    console.error("[catalog] Error en sugerencias de búsqueda:", error.message);
-    return null;
+
+  const run = async (pats: string[], max: number): Promise<SuggestionRow[] | null> => {
+    let query = supabase.from("products").select(SUGGESTION_COLUMNS).eq("status", "published");
+    for (const pattern of pats) query = query.filter("name", "imatch", pattern);
+    const { data, error } = await query.order("in_stock", { ascending: false }).order("is_featured", { ascending: false }).order("name").limit(max);
+    if (error) {
+      console.error("[catalog] Error en sugerencias de búsqueda:", error.message);
+      return null;
+    }
+    return (data ?? []) as SuggestionRow[];
+  };
+
+  const strict = await run(patterns, limit);
+  if (!strict) return null;
+  const found = new Map<string, SuggestionRow>(strict.map((r) => [r.slug, r]));
+
+  const words = meaningfulWords(q);
+  if (found.size < limit) {
+    const relaxedPatterns = nameSearchPatterns(words.join(" "));
+    if (relaxedPatterns.join("|") !== patterns.join("|")) {
+      for (const r of (await run(relaxedPatterns, limit)) ?? []) if (!found.has(r.slug)) found.set(r.slug, r);
+    }
   }
-  return (data ?? []).map((row) => ({
+  // Todavía pocas: los que tengan alguna de las palabras (de más a menos palabras en común).
+  const loose = new Map<string, SuggestionRow>();
+  if (found.size < Math.min(limit, 12) && words.length > 1) {
+    for (const word of words.filter((w) => w.length >= 3).slice(0, 3)) {
+      for (const r of (await run(nameSearchPatterns(word), limit)) ?? []) if (!found.has(r.slug)) loose.set(r.slug, r);
+    }
+  }
+  const score = (r: SuggestionRow) => words.filter((w) => plain(r.name).includes(plain(w))).length;
+  const extra = [...loose.values()].sort((a, b) => score(b) - score(a) || Number(b.stock > 0) - Number(a.stock > 0));
+
+  return [...found.values(), ...extra].slice(0, limit).map((row) => ({
     slug: row.slug,
     name: row.name,
     size: row.size,
     salePrice: Number(row.sale_price),
     magazinePrice: Number(row.magazine_price),
-    image: [...(row.images ?? [])].sort((a, b) => a.position - b.position)[0]?.storage_path ?? null,
+    image: [...(row.images ?? [])].sort((x, y) => x.position - y.position)[0]?.storage_path ?? null,
   }));
 }
 

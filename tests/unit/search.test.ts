@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { nameSearchPatterns } from "@/lib/search";
+import { meaningfulWords, nameSearchPatterns } from "@/lib/search";
 
 /** Simula el operador imatch (~*) de la base. */
 const matches = (name: string, q: string) =>
@@ -32,5 +32,16 @@ describe("nameSearchPatterns", () => {
 
   it("devuelve una lista vacía si no hay texto", () => {
     expect(nameSearchPatterns("   ")).toEqual([]);
+  });
+});
+
+describe("meaningfulWords", () => {
+  it("ignora el relleno si hay palabras que identifican el producto", () => {
+    expect(meaningfulWords("Kaiak eau de parfum")).toEqual(["kaiak"]);
+    expect(meaningfulWords("humor para ella")).toEqual(["humor", "ella"]);
+  });
+  it("si todo es relleno, deja las palabras como estaban", () => {
+    expect(meaningfulWords("eau de parfum")).toEqual(["eau", "de", "parfum"]);
+    expect(meaningfulWords("perfumes")).toEqual(["perfumes"]);
   });
 });

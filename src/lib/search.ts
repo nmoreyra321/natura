@@ -45,3 +45,13 @@ export function nameSearchPatterns(q: string): string[] {
         .join(""),
     );
 }
+
+/** Palabras de relleno: no hace falta que figuren en el nombre para encontrar el producto («kaiak eau de parfum» → «Kaiak»). */
+const FILLER = new Set(["de", "del", "la", "el", "las", "los", "para", "y", "con", "eau", "parfum", "perfume", "perfumes", "toilette", "cologne", "deo", "colonia", "fragancia", "fragancias"]);
+
+/** Las palabras que sí identifican el producto (sin relleno). Si todo era relleno, devuelve todas las palabras. */
+export function meaningfulWords(q: string): string[] {
+  const words = q.toLowerCase().split(/\s+/).filter(Boolean).slice(0, 6);
+  const keep = words.filter((w) => !FILLER.has(w));
+  return keep.length > 0 ? keep : words;
+}

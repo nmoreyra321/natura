@@ -135,7 +135,7 @@ function SuggestionsPanel({
       {results.length > 0 ? (
         <>
         <p className="border-b border-line px-4 py-2 text-xs font-bold text-muted">
-          {results.length === 1 ? "1 producto" : `${results.length >= 30 ? "Más de 30" : results.length} productos`}
+          {results.length === 1 ? "1 producto" : `${results.length >= 60 ? "Más de 60" : results.length} productos`}
           {results.length > 4 ? " · deslizá para ver más" : ""}
         </p>
         <ul

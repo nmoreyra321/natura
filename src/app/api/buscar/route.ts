@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
   const q = (request.nextUrl.searchParams.get("q") ?? "").trim().slice(0, 80);
   if (q.length < 2) return Response.json({ results: [] });
 
-  const results = await searchSuggestions(q, 30);
+  const results = await searchSuggestions(q, 60);
   if (!results) return Response.json({ results: [], error: "unavailable" }, { status: 503 });
 
   return Response.json(
