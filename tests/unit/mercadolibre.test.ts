@@ -19,11 +19,13 @@ describe("mlTitle", () => {
 });
 
 describe("mlPrice", () => {
-  it("suma el recargo y redondea hacia arriba a múltiplos de 10", () => {
+  it("calcula el precio para que, descontada la comisión, te quede tu precio", () => {
     expect(mlPrice(10000, 0)).toBe(10000);
-    expect(mlPrice(10000, 15)).toBe(11500);
-    expect(mlPrice(9990, 15)).toBe(11490);
-    expect(mlPrice(8333, 13)).toBe(9420);
+    expect(mlPrice(10000, 15)).toBe(11770);
+    expect(mlPrice(9990, 15)).toBe(11760);
+    expect(mlPrice(8333, 13)).toBe(9580);
+    // Descontando el 15% al precio nuevo, queda al menos el precio original.
+    expect(mlPrice(10000, 15) * 0.85).toBeGreaterThanOrEqual(10000);
   });
 });
 

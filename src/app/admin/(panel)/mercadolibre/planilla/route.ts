@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
   const { supabase } = ctx;
 
   const params = request.nextUrl.searchParams;
-  const surcharge = Math.min(Math.max(Number(params.get("recargo")) || 0, 0), 60);
+  const commission = Math.min(Math.max(Number(params.get("comision")) || 0, 0), 60);
   const onlyStock = params.get("stock") !== "0";
 
   let query = supabase
@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
       p.category?.name ?? "",
       "Nuevo",
       "Clásica",
-      mlPrice(Number(p.sale_price), surcharge),
+      mlPrice(Number(p.sale_price), commission),
       Number(p.sale_price),
       p.stock,
       description,
@@ -79,7 +79,7 @@ export async function GET(request: NextRequest) {
         ["2. Copiá de esta planilla: Título, Precio para Mercado Libre, Stock, Descripción y las fotos (los enlaces de Foto 1, 2 y 3)."],
         ["3. Revisá la columna «Para revisar»: títulos acortados, productos sin fotos o sin descripción."],
         ["4. Muchos productos de perfumería y cuidado personal se publican asociados al catálogo de Mercado Libre. Fijate que el producto coincida con la ficha del catálogo (marca, tamaño, versión). Para encontrarlo, usá el Código Natura."],
-        [`5. El precio ya incluye un recargo del ${surcharge}% para cubrir la comisión de Mercado Libre (redondeado hacia arriba a $10). Si te parece poco o mucho, podés generarla de nuevo con otro porcentaje.`],
+        [`5. El precio está calculado para que, si Mercado Libre te descuenta ${commission}% de comisión, te quede tu precio de la tienda (redondeado hacia arriba a $10). Aparte, Mercado Libre puede cobrar un costo fijo por venta y el envío: mirá lo que te dice al publicar. Si no coincide, generá la planilla de nuevo con otro porcentaje.`],
         ["6. Antes de empezar, confirmá con Natura que podés vender en Mercado Libre."],
         ["7. Si vendés en los dos lados, acordate de bajar el stock en la tienda y en Mercado Libre cuando se venda algo."],
         [`Productos incluidos: ${rows.length}${onlyStock ? " (solo con stock)" : ""}. Con algo para revisar: ${withIssues}.`],

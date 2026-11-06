@@ -12,24 +12,24 @@ export default async function MercadoLibrePage() {
     <div className="mx-auto max-w-xl">
       <h1 className="font-display text-3xl font-bold">Planilla para Mercado Libre</h1>
       <p className="mt-1 text-muted">
-        Baja un Excel con tus productos ya armados para Mercado Libre: título de hasta 60 letras, precio con la comisión sumada, stock, descripción y fotos.
+        Baja un Excel con tus productos ya armados para Mercado Libre: título de hasta 60 letras, precio ya ajustado a la comisión, stock, descripción y fotos.
         Después copiás los datos en la planilla de carga masiva de Mercado Libre.
       </p>
 
       <form method="get" action="/admin/mercadolibre/planilla" className="mt-5 flex flex-col gap-4 rounded-3xl bg-warm-white p-5 shadow-soft">
         <label className="text-sm font-semibold">
-          Recargo para la comisión de Mercado Libre
-          <select name="recargo" defaultValue="15" className={`${inputClasses} mt-1 h-11`}>
-            <option value="0">Sin recargo (mismo precio que la tienda)</option>
-            <option value="10">10%</option>
-            <option value="13">13%</option>
-            <option value="15">15% (recomendado)</option>
+          Comisión que te cobra Mercado Libre
+          <select name="comision" defaultValue="16" className={`${inputClasses} mt-1 h-11`}>
+            <option value="0">0% (mismo precio que la tienda)</option>
+            <option value="12">12%</option>
+            <option value="14">14%</option>
+            <option value="16">16% (recomendado para empezar)</option>
             <option value="18">18%</option>
             <option value="20">20%</option>
             <option value="25">25%</option>
           </select>
           <span className="mt-1 block text-xs font-normal text-muted">
-            Mercado Libre cobra una comisión por cada venta. Con este recargo el precio de ahí sube para no perder plata.
+            El precio sube lo justo para que, después de que te descuenten esa comisión, te quede lo mismo que en la tienda. La comisión exacta la ves en Mercado Libre al publicar el primer producto.
           </span>
         </label>
         <label className="flex items-center gap-2 text-sm font-semibold">

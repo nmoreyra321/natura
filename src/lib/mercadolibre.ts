@@ -16,10 +16,13 @@ export function mlTitle(name: string, brand = "Natura"): { title: string; shorte
   return { title: hasBrand ? base : `${base} ${brand}`, shortened: true };
 }
 
-/** Precio para Mercado Libre: tu precio más el recargo por comisión, redondeado hacia arriba a múltiplos de $10. */
-export function mlPrice(salePrice: number, surchargePercent: number): number {
-  const withFee = salePrice * (1 + Math.max(0, surchargePercent) / 100);
-  return Math.ceil(withFee / 10 - 1e-9) * 10;
+/**
+ * Precio para Mercado Libre: el que hace falta para que, después de descontar la comisión, te quede tu precio.
+ * Se divide por (1 − comisión): con 15% de comisión no alcanza con sumarle 15% (queda por debajo). Redondea hacia arriba a $10.
+ */
+export function mlPrice(salePrice: number, commissionPercent: number): number {
+  const fee = Math.min(Math.max(commissionPercent, 0), 60) / 100;
+  return Math.ceil(salePrice / (1 - fee) / 10 - 1e-9) * 10;
 }
 
 /** Descripción en texto simple (Mercado Libre no admite formato ni enlaces ni datos de contacto). */
