@@ -13,6 +13,7 @@ import {
   PackagePlus,
   Settings,
   ShoppingBasket,
+  Store,
   Tags,
 } from "lucide-react";
 import Link from "next/link";
@@ -78,6 +79,12 @@ const GROUPS = [
         label: "Precios y fotos de Natura",
         hint: "Actualizar desde Natura",
         icon: ImageIcon,
+      },
+      {
+        href: "/admin/mercadolibre",
+        label: "Planilla para Mercado Libre",
+        hint: "Tus productos listos para publicar ahí",
+        icon: Store,
       },
       {
         href: "/admin/reponer",
