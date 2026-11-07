@@ -33,7 +33,11 @@ export default async function MercadoLibrePage() {
             El precio sube lo justo para que, después de la comisión, el costo fijo y el envío, te quede al menos lo mismo que en la tienda. La comisión exacta la ves en Mercado Libre al publicar el primer producto.
           </span>
         </label>
-        <fieldset className="rounded-2xl bg-cream p-3">
+        <details className="rounded-2xl bg-cream p-3">
+          <summary className="cursor-pointer text-sm font-semibold">
+            Cambiar los costos de Mercado Libre (no hace falta tocarlo)
+          </summary>
+          <div className="mt-3 flex flex-col gap-4">
           <input type="hidden" name="fijo" value="0" />
           <label className="flex items-center gap-2 text-sm font-semibold">
             <input type="checkbox" name="fijo" value="1" defaultChecked className="size-5 accent-[var(--coral-deep)]" />
@@ -54,7 +58,6 @@ export default async function MercadoLibrePage() {
             ))}
             <p className="text-xs text-muted">Más caro que el último: sin costo fijo.</p>
           </div>
-        </fieldset>
         <label className="text-sm font-semibold">
           Envío que pagás vos por cada venta ($)
           <input name="envio" defaultValue="0" inputMode="numeric" className={`${inputClasses} mt-1 h-11`} />
@@ -62,6 +65,8 @@ export default async function MercadoLibrePage() {
             Si ofrecés envío gratis (en los productos caros Mercado Libre lo exige), poné cuánto te descuentan por envío. Si lo paga la clienta, dejá 0.
           </span>
         </label>
+          </div>
+        </details>
         <input type="hidden" name="stock" value="0" />
         <label className="flex items-center gap-2 text-sm font-semibold">
           <input type="checkbox" name="stock" value="1" defaultChecked className="size-5 accent-[var(--coral-deep)]" />
