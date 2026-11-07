@@ -72,8 +72,11 @@ type Counts = {
   gone: number;
   already: number;
   failed: number;
+  /** Sin precio o que Natura ya no vende: igual se agregan, como borrador. */
+  drafts: number;
 };
 const EMPTY: Counts = {
+  drafts: 0,
   added: 0,
   variant: 0,
   noPrice: 0,
@@ -377,6 +380,9 @@ export function NoveltyFinder() {
     const queue = [...found.pending];
     let blocked = 0;
     let checked = 0;
+    /** Los que Natura tiene sin precio: se agregan igual al final, como borrador. */
+    const noPriceItems: { sku: string; name: string }[] = [];
+    let goneSeen = 0;
     const bump = (key: keyof Counts) =>
       setCounts((c) => ({ ...c, [key]: c[key] + 1 }));
     const worker = async () => {
@@ -396,9 +402,13 @@ export function NoveltyFinder() {
           };
           setAdded((list) => [...list, item]);
         } else if (r.status === "variante") bump("variant");
-        else if (r.status === "sin_precio") bump("noPrice");
-        else if (r.status === "no_disponible") bump("gone");
-        else if (r.status === "ya_estaba") bump("already");
+        else if (r.status === "sin_precio") {
+          bump("noPrice");
+          if (r.name) noPriceItems.push({ sku, name: r.name });
+        } else if (r.status === "no_disponible") {
+          bump("gone");
+          goneSeen++;
+        } else if (r.status === "ya_estaba") bump("already");
         else {
           bump("failed");
           if (r.status === "blocked") blocked++;
@@ -414,6 +424,36 @@ export function NoveltyFinder() {
       }
     };
     await Promise.all(Array.from({ length: PARALLEL }, worker));
+
+    // Los que Natura no vende más o no tienen precio también se agregan (la tienda puede tenerlos igual).
+    // Quedan como borrador hasta que se les ponga el precio de revista.
+    if (!stopRef.current) {
+      const drafts = [...noPriceItems];
+      // Todos los que Natura ya no vende y la tienda todavía no tiene (de esta vez y de búsquedas anteriores).
+      const res = await listDeadNaturaProducts();
+      if (res.ok && res.data) drafts.push(...res.data);
+      else if (goneSeen > 0)
+        toast.error(
+          "No pudimos traer los productos que Natura ya no vende. Podés agregarlos desde «Productos que Natura ya no vende».",
+        );
+      const pendingDrafts = [...drafts];
+      const draftWorker = async () => {
+        for (
+          let d = pendingDrafts.shift();
+          d && !stopRef.current;
+          d = pendingDrafts.shift()
+        ) {
+          const r = await createManualNaturaProduct(d.sku, d.name, null);
+          if (r.ok && r.data) {
+            bump("drafts");
+            const item = { id: r.data.id, name: r.data.name, category: null };
+            setAdded((list) => [...list, item]);
+          }
+        }
+      };
+      await Promise.all(Array.from({ length: PARALLEL }, draftWorker));
+    }
+
     await finishNaturaPhotos();
     setRunning(false);
     setFinished(true);
@@ -699,7 +739,9 @@ export function NoveltyFinder() {
         la tienda y los agrega. Quedan{" "}
         <strong className="text-forest">publicados y sin stock</strong>, con su
         precio de revista, su categoría y sus fotos (y el descuento de la
-        categoría, si guardaste uno). Los que ya tenés no se tocan.
+        categoría, si guardaste uno). Los que Natura ya no vende o tiene sin
+        precio también se agregan, como borrador hasta que les pongas el precio.
+        Los que ya tenés no se tocan.
       </p>
 
       <div className="mt-4 flex flex-wrap items-center gap-3">
@@ -1086,11 +1128,17 @@ export function NoveltyFinder() {
               {counts.variant + counts.already}
             </li>
             <li className="rounded-2xl bg-cream p-3 font-semibold">
-              Sin precio en Natura (no se agregaron): {counts.noPrice}
+              Sin precio en Natura: {counts.noPrice}
             </li>
             <li className="rounded-2xl bg-cream p-3 font-semibold">
               Ya no están en Natura: {counts.gone}
             </li>
+            {counts.drafts > 0 ? (
+              <li className="rounded-2xl bg-sun/40 p-3 font-semibold sm:col-span-2">
+                Agregados igual, como borrador (ponéles el precio para que se
+                vean en la tienda): {counts.drafts}
+              </li>
+            ) : null}
             {counts.failed > 0 ? (
               <li className="rounded-2xl bg-coral-soft p-3 font-semibold">
                 No se pudieron revisar: {counts.failed}
@@ -1103,7 +1151,7 @@ export function NoveltyFinder() {
               {counts.failed > 0 || done < total
                 ? "Podés volver a buscar y agregar: sigue donde quedó. "
                 : ""}
-              {counts.added > 0
+              {counts.added + counts.drafts > 0
                 ? "Revisá los nuevos y poneles el stock cuando lleguen."
                 : ""}
             </p>
