@@ -6,7 +6,6 @@ import { inputClasses } from "@/components/ui/fields";
 import { requireAdmin } from "@/lib/auth";
 import { formatARS } from "@/lib/format";
 import { parseMlSettings } from "@/lib/mercadolibre";
-import { createSessionClient } from "@/lib/supabase/server";
 
 export const metadata = { title: "Planilla para Mercado Libre" };
 
@@ -14,8 +13,7 @@ const pesos = (n: number) => formatARS(Math.round(n * 100));
 const dateFmt = new Intl.DateTimeFormat("es-AR", { dateStyle: "long", timeZone: "America/Argentina/Buenos_Aires" });
 
 export default async function MercadoLibrePage() {
-  await requireAdmin();
-  const supabase = await createSessionClient();
+  const { supabase } = await requireAdmin();
   const { data } = await supabase.from("store_settings").select("ml_costs").eq("id", 1).maybeSingle();
   const ml = parseMlSettings(data?.ml_costs);
   const t = ml.fixedTiers;
