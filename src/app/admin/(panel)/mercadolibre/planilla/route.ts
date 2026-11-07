@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server";
 import { getAdminContext } from "@/lib/auth";
 import { getSiteUrl } from "@/lib/config";
 import { productImageUrl } from "@/lib/images";
-import { mlDescription, mlIssues, mlPrice, mlTitle } from "@/lib/mercadolibre";
+import { ML_FIXED_TIERS_DEFAULT, mlDescription, mlFixedFee, mlIssues, mlNet, mlPrice, mlTitle, type MlCosts } from "@/lib/mercadolibre";
 import { buildXlsx, type Sheet } from "@/lib/xlsx";
 
 /** Planilla para cargar productos en Mercado Libre. Solo para administradoras. */
@@ -16,7 +16,20 @@ export async function GET(request: NextRequest) {
 
   const params = request.nextUrl.searchParams;
   const commission = Math.min(Math.max(Number(params.get("comision")) || 0, 0), 60);
-  const onlyStock = params.get("stock") !== "0";
+  // Las casillas mandan "0" (campo oculto) y, si están tildadas, también "1".
+  const checked = (name: string) => (params.has(name) ? params.getAll(name).includes("1") : true);
+  const onlyStock = checked("stock");
+  const money = (v: string | null, fallback: number) => {
+    const n = Number(String(v ?? "").replace(/[^\d]/g, ""));
+    return v !== null && String(v).trim() !== "" && Number.isFinite(n) ? Math.min(n, 10_000_000) : fallback;
+  };
+  // Costo fijo por unidad (tramos editables en la página) y envío que paga la vendedora.
+  const withFixed = checked("fijo");
+  const fixedTiers = withFixed
+    ? ML_FIXED_TIERS_DEFAULT.map((t, i) => ({ upTo: money(params.get(`hasta${i + 1}`), t.upTo), fee: money(params.get(`fijo${i + 1}`), t.fee) })).filter((t) => t.upTo > 0)
+    : [];
+  const shipping = money(params.get("envio"), 0);
+  const costs: MlCosts = { fixedTiers, shipping };
 
   let query = supabase
     .from("products")
@@ -41,14 +54,17 @@ export async function GET(request: NextRequest) {
     const description = mlDescription(p.description);
     const issues = mlIssues({ shortened, photos, description, naturaSku: p.natura_sku });
     if (issues) withIssues++;
+    const price = mlPrice(Number(p.sale_price), commission, costs);
     return [
       title,
       "Natura",
       p.category?.name ?? "",
       "Nuevo",
       "Clásica",
-      mlPrice(Number(p.sale_price), commission),
+      price,
       Number(p.sale_price),
+      mlFixedFee(price, fixedTiers),
+      mlNet(price, commission, costs),
       p.stock,
       description,
       photos[0] ?? "",
@@ -66,7 +82,7 @@ export async function GET(request: NextRequest) {
     {
       name: "Productos",
       rows: [
-        ["Título (hasta 60 letras)", "Marca", "Tu categoría", "Condición", "Tipo de publicación", "Precio para Mercado Libre", "Tu precio en la tienda", "Stock", "Descripción", "Foto 1", "Foto 2", "Foto 3", "Tamaño", "Línea", "Código Natura", "Enlace en tu tienda", "Para revisar"],
+        ["Título (hasta 60 letras)", "Marca", "Tu categoría", "Condición", "Tipo de publicación", "Precio para Mercado Libre", "Tu precio en la tienda", "Costo fijo de Mercado Libre", "Te queda por venta", "Stock", "Descripción", "Foto 1", "Foto 2", "Foto 3", "Tamaño", "Línea", "Código Natura", "Enlace en tu tienda", "Para revisar"],
         ...rows,
       ],
     },
@@ -79,7 +95,15 @@ export async function GET(request: NextRequest) {
         ["2. Copiá de esta planilla: Título, Precio para Mercado Libre, Stock, Descripción y las fotos (los enlaces de Foto 1, 2 y 3)."],
         ["3. Revisá la columna «Para revisar»: títulos acortados, productos sin fotos o sin descripción."],
         ["4. Muchos productos de perfumería y cuidado personal se publican asociados al catálogo de Mercado Libre. Fijate que el producto coincida con la ficha del catálogo (marca, tamaño, versión). Para encontrarlo, usá el Código Natura."],
-        [`5. El precio está calculado para que, si Mercado Libre te descuenta ${commission}% de comisión, te quede tu precio de la tienda (redondeado hacia arriba a $10). Aparte, Mercado Libre puede cobrar un costo fijo por venta y el envío: mirá lo que te dice al publicar. Si no coincide, generá la planilla de nuevo con otro porcentaje.`],
+        [
+          `5. El precio está calculado para que, después de que Mercado Libre te descuente ${commission}% de comisión${fixedTiers.length ? ", el costo fijo por unidad" : ""}${shipping ? ` y $${shipping} de envío` : ""}, te quede al menos tu precio de la tienda (redondeado hacia arriba a $10). La columna «Te queda por venta» muestra cuánto te queda en cada uno.`,
+        ],
+        [
+          fixedTiers.length
+            ? `Costo fijo usado: ${fixedTiers.map((t, i) => `${i === 0 ? "hasta" : `de $${fixedTiers[i - 1].upTo} a`} $${t.upTo}: $${t.fee}`).join(" · ")} · más caro: sin costo fijo. Mercado Libre lo cambia seguido: si al publicar te muestra otro, generá la planilla de nuevo con esos valores.`
+            : "No se sumó el costo fijo por unidad: si Mercado Libre te lo cobra, generá la planilla de nuevo con esa opción tildada.",
+        ],
+        ["Si al publicar Mercado Libre te muestra una comisión o un envío distintos, generá la planilla de nuevo con esos valores. Además pueden descontarte impuestos (Ingresos Brutos), que dependen de tu situación."],
         ["6. Antes de empezar, confirmá con Natura que podés vender en Mercado Libre."],
         ["7. Si vendés en los dos lados, acordate de bajar el stock en la tienda y en Mercado Libre cuando se venda algo."],
         [`Productos incluidos: ${rows.length}${onlyStock ? " (solo con stock)" : ""}. Con algo para revisar: ${withIssues}.`],
