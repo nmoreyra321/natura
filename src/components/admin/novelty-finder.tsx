@@ -1129,9 +1129,11 @@ export function NoveltyFinder() {
             </li>
             <li className="rounded-2xl bg-cream p-3 font-semibold">
               Sin precio en Natura: {counts.noPrice}
+              {running ? " (se agregan igual al terminar)" : ""}
             </li>
             <li className="rounded-2xl bg-cream p-3 font-semibold">
               Ya no están en Natura: {counts.gone}
+              {running ? " (se agregan igual al terminar)" : ""}
             </li>
             {counts.drafts > 0 ? (
               <li className="rounded-2xl bg-sun/40 p-3 font-semibold sm:col-span-2">
