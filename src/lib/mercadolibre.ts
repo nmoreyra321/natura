@@ -20,21 +20,33 @@ export function mlTitle(name: string, brand = "Natura"): { title: string; shorte
 export type MlFixedTier = { upTo: number; fee: number };
 
 /**
- * Valores de referencia de Argentina (agosto 2026). Mercado Libre los cambia varias veces al año:
- * en la página de la planilla se pueden corregir.
+ * Valores de referencia de Argentina (septiembre 2026, paquetes chicos). Mercado Libre los cambia varias
+ * veces al año: en la página de la planilla se pueden corregir.
  */
 export const ML_FIXED_TIERS_DEFAULT: MlFixedTier[] = [
-  { upTo: 15000, fee: 1115 },
-  { upTo: 25000, fee: 2300 },
-  { upTo: 33000, fee: 2810 },
+  { upTo: 15000, fee: 1330 },
+  { upTo: 24000, fee: 2740 },
+  { upTo: 33000, fee: 3320 },
 ];
+
+/** Desde este precio el envío gratis es obligatorio y una parte la paga la vendedora (septiembre 2026). */
+export const ML_FREE_SHIPPING_DEFAULT = { from: 33000, cost: 7790 };
 
 export type MlCosts = {
   /** Costo fijo por unidad según el precio (por encima del último tramo, no se cobra). */
   fixedTiers?: MlFixedTier[];
-  /** Lo que pagás vos de envío por cada venta (si ofrecés envío gratis). */
+  /** Lo que pagás vos de envío en cada venta, siempre (si ofrecés envío gratis en todo). */
   shipping?: number;
+  /** Envío gratis obligatorio: desde `from` pesos, te descuentan `cost` por venta. */
+  freeShipping?: { from: number; cost: number };
 };
+
+/** Lo que te descuentan de envío según el precio. */
+export function mlShippingCost(price: number, costs: MlCosts = {}): number {
+  const always = Math.max(costs.shipping ?? 0, 0);
+  const fs = costs.freeShipping;
+  return always + (fs && fs.cost > 0 && price >= fs.from ? fs.cost : 0);
+}
 
 /** Costo fijo que corresponde a un precio de Mercado Libre. */
 export function mlFixedFee(price: number, tiers: MlFixedTier[] = []): number {
@@ -53,21 +65,25 @@ export function mlPrice(salePrice: number, commissionPercent: number, costs: MlC
   const fee = Math.min(Math.max(commissionPercent, 0), 60) / 100;
   const shipping = Math.max(costs.shipping ?? 0, 0);
   const tiers = costs.fixedTiers ?? [];
-  const net = (p: number) => p * (1 - fee) - mlFixedFee(p, tiers) - shipping;
+  const fsCost = costs.freeShipping && costs.freeShipping.cost > 0 ? costs.freeShipping.cost : 0;
+  const net = (p: number) => p * (1 - fee) - mlFixedFee(p, tiers) - mlShippingCost(p, costs);
   // Dentro de cada tramo lo que te queda sube con el precio: el mínimo que alcanza está al principio de un
   // tramo (justo donde baja el costo fijo) o en el precio que cubre ese costo fijo. Se prueban todos.
+  const fixedFees = [0, ...tiers.map((t) => Math.max(t.fee, 0))];
+  const extras = fixedFees.flatMap((f) => [f, f + fsCost]);
   const candidates = [
-    ...[0, ...tiers.map((t) => Math.max(t.fee, 0))].map((f) => up10((salePrice + shipping + f) / (1 - fee))),
+    ...extras.map((x) => up10((salePrice + shipping + x) / (1 - fee))),
     ...tiers.map((t) => up10(t.upTo)),
+    ...(costs.freeShipping ? [up10(costs.freeShipping.from)] : []),
   ];
   const ok = candidates.filter((p) => net(p) >= salePrice - 1e-6);
-  return ok.length ? Math.min(...ok) : up10((salePrice + shipping + Math.max(0, ...tiers.map((t) => t.fee))) / (1 - fee));
+  return ok.length ? Math.min(...ok) : up10((salePrice + shipping + Math.max(...extras)) / (1 - fee));
 }
 
 /** Lo que te queda de una venta en Mercado Libre, después de comisión, costo fijo y envío. */
 export function mlNet(price: number, commissionPercent: number, costs: MlCosts = {}): number {
   const fee = Math.min(Math.max(commissionPercent, 0), 60) / 100;
-  return Math.round(price * (1 - fee) - mlFixedFee(price, costs.fixedTiers ?? []) - Math.max(costs.shipping ?? 0, 0));
+  return Math.round(price * (1 - fee) - mlFixedFee(price, costs.fixedTiers ?? []) - mlShippingCost(price, costs));
 }
 
 /** Descripción en texto simple (Mercado Libre no admite formato ni enlaces ni datos de contacto). */

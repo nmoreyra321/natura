@@ -69,3 +69,28 @@ describe("mlPrice con costo fijo y envío", () => {
     expect(p).toBe(33000);
   });
 });
+
+describe("mlPrice con envío gratis obligatorio", () => {
+  const costs = {
+    fixedTiers: [
+      { upTo: 15000, fee: 1330 },
+      { upTo: 24000, fee: 2740 },
+      { upTo: 33000, fee: 3320 },
+    ],
+    freeShipping: { from: 33000, cost: 7790 },
+  };
+  it("si el precio pasa los $33.000, suma lo que te cobran de envío", () => {
+    const p = mlPrice(30000, 16, costs);
+    expect(p).toBeGreaterThanOrEqual(33000);
+    expect(mlNet(p, 16, costs)).toBeGreaterThanOrEqual(30000);
+  });
+  it("es el precio más bajo que alcanza", () => {
+    for (const sale of [5000, 10000, 20000, 26000, 30000, 45000]) {
+      const p = mlPrice(sale, 16, costs);
+      const q = p - 10;
+      expect(mlNet(p, 16, costs)).toBeGreaterThanOrEqual(sale);
+      const exactQ = q * 0.84 - mlFixedFee(q, costs.fixedTiers) - (q >= 33000 ? 7790 : 0);
+      expect(exactQ).toBeLessThan(sale);
+    }
+  });
+});

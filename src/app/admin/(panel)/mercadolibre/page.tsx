@@ -3,7 +3,7 @@ import { Download } from "lucide-react";
 import { buttonClasses } from "@/components/ui/button";
 import { inputClasses } from "@/components/ui/fields";
 import { requireAdmin } from "@/lib/auth";
-import { ML_FIXED_TIERS_DEFAULT } from "@/lib/mercadolibre";
+import { ML_FIXED_TIERS_DEFAULT, ML_FREE_SHIPPING_DEFAULT } from "@/lib/mercadolibre";
 
 export const metadata = { title: "Planilla para Mercado Libre" };
 
@@ -45,7 +45,7 @@ export default async function MercadoLibrePage() {
           </label>
           <p className="mt-1 text-xs text-muted">
             Aparte de la comisión, Mercado Libre cobra un monto fijo por cada producto barato. Sin esto, en los productos baratos perdés plata.
-            Son valores de referencia (agosto 2026): si al publicar te muestra otros, cambialos acá.
+            Son valores de referencia (septiembre 2026): si al publicar te muestra otros, cambialos acá.
           </p>
           <div className="mt-2 grid gap-2">
             {ML_FIXED_TIERS_DEFAULT.map((t, i) => (
@@ -58,13 +58,18 @@ export default async function MercadoLibrePage() {
             ))}
             <p className="text-xs text-muted">Más caro que el último: sin costo fijo.</p>
           </div>
-        <label className="text-sm font-semibold">
-          Envío que pagás vos por cada venta ($)
-          <input name="envio" defaultValue="0" inputMode="numeric" className={`${inputClasses} mt-1 h-11`} />
+        <div className="text-sm font-semibold">
+          Envío gratis
+          <div className="mt-1 flex flex-wrap items-center gap-1.5 font-normal">
+            <span>Desde $</span>
+            <input name="gratisdesde" defaultValue={ML_FREE_SHIPPING_DEFAULT.from} inputMode="numeric" aria-label="Envío gratis desde" className={`${inputClasses} h-9 w-24`} />
+            <span>te cobran $</span>
+            <input name="envio" defaultValue={ML_FREE_SHIPPING_DEFAULT.cost} inputMode="numeric" aria-label="Lo que te cobran de envío" className={`${inputClasses} h-9 w-24`} />
+          </div>
           <span className="mt-1 block text-xs font-normal text-muted">
-            Si ofrecés envío gratis (en los productos caros Mercado Libre lo exige), poné cuánto te descuentan por envío. Si lo paga la clienta, dejá 0.
+            Desde ese precio Mercado Libre obliga a ofrecer envío gratis y te cobra una parte. El monto depende de tu reputación y del peso: mirá cuánto te dice al publicar.
           </span>
-        </label>
+        </div>
           </div>
         </details>
         <input type="hidden" name="stock" value="0" />
