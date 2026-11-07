@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server";
 import { getAdminContext } from "@/lib/auth";
 import { getSiteUrl } from "@/lib/config";
 import { productImageUrl } from "@/lib/images";
-import { ML_FIXED_TIERS_DEFAULT, ML_FREE_SHIPPING_DEFAULT, mlDescription, mlFixedFee, mlIssues, mlNet, mlPrice, mlShippingCost, mlTitle, type MlCosts } from "@/lib/mercadolibre";
+import { mlDescription, mlFixedFee, mlIssues, mlNet, mlPrice, mlShippingCost, mlTitle, parseMlSettings, type MlCosts } from "@/lib/mercadolibre";
 import { buildXlsx, type Sheet } from "@/lib/xlsx";
 
 /** Planilla para cargar productos en Mercado Libre. Solo para administradoras. */
@@ -15,23 +15,15 @@ export async function GET(request: NextRequest) {
   const { supabase } = ctx;
 
   const params = request.nextUrl.searchParams;
-  const commission = Math.min(Math.max(Number(params.get("comision")) || 0, 0), 60);
   // Las casillas mandan "0" (campo oculto) y, si están tildadas, también "1".
   const checked = (name: string) => (params.has(name) ? params.getAll(name).includes("1") : true);
   const onlyStock = checked("stock");
-  const money = (v: string | null, fallback: number) => {
-    const n = Number(String(v ?? "").replace(/[^\d]/g, ""));
-    return v !== null && String(v).trim() !== "" && Number.isFinite(n) ? Math.min(n, 10_000_000) : fallback;
-  };
-  // Costo fijo por unidad (tramos editables en la página) y envío que paga la vendedora.
-  const withFixed = checked("fijo");
-  const fixedTiers = withFixed
-    ? ML_FIXED_TIERS_DEFAULT.map((t, i) => ({ upTo: money(params.get(`hasta${i + 1}`), t.upTo), fee: money(params.get(`fijo${i + 1}`), t.fee) })).filter((t) => t.upTo > 0)
-    : [];
-  const freeShipping = {
-    from: money(params.get("gratisdesde"), ML_FREE_SHIPPING_DEFAULT.from),
-    cost: money(params.get("envio"), ML_FREE_SHIPPING_DEFAULT.cost),
-  };
+  // Los costos de Mercado Libre guardados en la página «Planilla para Mercado Libre».
+  const { data: settings } = await supabase.from("store_settings").select("ml_costs").eq("id", 1).maybeSingle();
+  const ml = parseMlSettings(settings?.ml_costs);
+  const commission = ml.commission;
+  const fixedTiers = ml.fixedTiers;
+  const freeShipping = ml.freeShipping;
   const costs: MlCosts = { fixedTiers, freeShipping };
 
   let query = supabase
@@ -104,10 +96,10 @@ export async function GET(request: NextRequest) {
         ],
         [
           fixedTiers.length
-            ? `Costo fijo usado: ${fixedTiers.map((t, i) => `${i === 0 ? "hasta" : `de $${fixedTiers[i - 1].upTo} a`} $${t.upTo}: $${t.fee}`).join(" · ")} · más caro: sin costo fijo. Mercado Libre lo cambia seguido: si al publicar te muestra otro, generá la planilla de nuevo con esos valores.`
-            : "No se sumó el costo fijo por unidad: si Mercado Libre te lo cobra, generá la planilla de nuevo con esa opción tildada.",
+            ? `Costo fijo usado: ${fixedTiers.map((t, i) => `${i === 0 ? "hasta" : `de $${fixedTiers[i - 1].upTo} a`} $${t.upTo}: $${t.fee}`).join(" · ")} · más caro: sin costo fijo. Mercado Libre lo cambia seguido: si al publicar te muestra otro, cambialo en la página «Planilla para Mercado Libre» y bajá la planilla de nuevo.`
+            : "No se sumó costo fijo por unidad.",
         ],
-        ["Si al publicar Mercado Libre te muestra una comisión o un envío distintos, generá la planilla de nuevo con esos valores. Además pueden descontarte impuestos (Ingresos Brutos), que dependen de tu situación."],
+        ["Si al publicar Mercado Libre te muestra una comisión o un envío distintos, cambialos en la página «Planilla para Mercado Libre» y bajá la planilla de nuevo. Además pueden descontarte impuestos (Ingresos Brutos), que dependen de tu situación."],
         ["6. Antes de empezar, confirmá con Natura que podés vender en Mercado Libre."],
         ["7. Si vendés en los dos lados, acordate de bajar el stock en la tienda y en Mercado Libre cuando se venda algo."],
         [`Productos incluidos: ${rows.length}${onlyStock ? " (solo con stock)" : ""}. Con algo para revisar: ${withIssues}.`],

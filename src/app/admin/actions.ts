@@ -17,6 +17,7 @@ import { guessGender } from "@/lib/gender";
 import { getLoyaltyMinTotal } from "@/lib/store-settings";
 import { notifyAdmins } from "@/lib/push";
 import { formatARS } from "@/lib/format";
+import { parseMlSettings } from "@/lib/mercadolibre";
 import { loyaltyStatus, PURCHASE_STATUSES } from "@/lib/loyalty";
 import { recommendedPercent, summarizeMpFees } from "@/lib/mp-fees";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -1061,6 +1062,31 @@ export async function saveMercadoPagoSurcharge(percent: unknown): Promise<Action
   } catch (e) {
     return fail(e, "No pudimos guardar el recargo.");
   }
+}
+
+/** Guarda los costos de Mercado Libre que usa la planilla (desde el formulario de la página). */
+export async function saveMlCosts(form: FormData): Promise<void> {
+  const { supabase } = await assertAdmin();
+  const n = (key: string) => {
+    const raw = String(form.get(key) ?? "").replace(/[^\d,]/g, "").replace(",", ".");
+    return raw === "" ? NaN : Number(raw);
+  };
+  const tiers = [1, 2, 3]
+    .map((i) => ({ upTo: n(`hasta${i}`), fee: n(`fijo${i}`) }))
+    .filter((t) => Number.isFinite(t.upTo) && t.upTo > 0 && Number.isFinite(t.fee));
+  // parseMlSettings descarta lo inválido y completa con los valores de referencia.
+  const clean = parseMlSettings({
+    commission: n("comision"),
+    fixedTiers: tiers,
+    freeShipping: { from: n("gratisdesde"), cost: n("envio") },
+    updatedAt: new Date().toISOString(),
+  });
+  const { error } = await supabase
+    .from("store_settings")
+    .update({ ml_costs: clean, updated_at: new Date().toISOString() })
+    .eq("id", 1);
+  if (error) console.error("[admin] ml_costs:", error.message);
+  revalidatePath("/admin/mercadolibre");
 }
 
 /** Meta de ventas del mes que se muestra en el Inicio (0 = sin meta). */

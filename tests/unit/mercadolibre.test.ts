@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { mlDescription, mlFixedFee, mlIssues, mlNet, mlPrice, mlTitle } from "@/lib/mercadolibre";
+import { ML_FIXED_TIERS_DEFAULT, mlDescription, mlFixedFee, mlIssues, mlNet, mlPrice, mlTitle, parseMlSettings } from "@/lib/mercadolibre";
 
 describe("mlTitle", () => {
   it("agrega la marca si falta", () => {
@@ -92,5 +92,20 @@ describe("mlPrice con envío gratis obligatorio", () => {
       const exactQ = q * 0.84 - mlFixedFee(q, costs.fixedTiers) - (q >= 33000 ? 7790 : 0);
       expect(exactQ).toBeLessThan(sale);
     }
+  });
+});
+
+describe("parseMlSettings", () => {
+  it("sin nada guardado usa los valores de referencia", () => {
+    const s = parseMlSettings({});
+    expect(s.commission).toBe(16);
+    expect(s.fixedTiers).toEqual(ML_FIXED_TIERS_DEFAULT);
+    expect(s.freeShipping).toEqual({ from: 33000, cost: 7790 });
+  });
+  it("respeta lo guardado y descarta lo inválido", () => {
+    const s = parseMlSettings({ commission: 14, fixedTiers: [{ upTo: 20000, fee: 1500 }, { upTo: "x", fee: 1 }], freeShipping: { from: 40000, cost: -5 } });
+    expect(s.commission).toBe(14);
+    expect(s.fixedTiers).toEqual([{ upTo: 20000, fee: 1500 }]);
+    expect(s.freeShipping).toEqual({ from: 40000, cost: 7790 });
   });
 });

@@ -48,6 +48,47 @@ export function mlShippingCost(price: number, costs: MlCosts = {}): number {
   return always + (fs && fs.cost > 0 && price >= fs.from ? fs.cost : 0);
 }
 
+/** Costos de Mercado Libre guardados en la tienda (lo que se usa para la planilla). */
+export type MlSettings = {
+  commission: number;
+  fixedTiers: MlFixedTier[];
+  freeShipping: { from: number; cost: number };
+  updatedAt: string | null;
+};
+
+export const ML_COMMISSION_DEFAULT = 16;
+
+const num = (v: unknown, min: number, max: number): number | null => {
+  if (v === null || v === undefined || v === "") return null;
+  const n = typeof v === "number" ? v : Number(v);
+  return Number.isFinite(n) && n >= min && n <= max ? n : null;
+};
+
+/** Lee lo guardado (o los valores de referencia si no hay nada o algo está mal). */
+export function parseMlSettings(raw: unknown): MlSettings {
+  const o = raw && typeof raw === "object" && !Array.isArray(raw) ? (raw as Record<string, unknown>) : {};
+  const tiersRaw = Array.isArray(o.fixedTiers) ? o.fixedTiers : null;
+  const tiers = tiersRaw
+    ?.map((t) => {
+      const r = (t ?? {}) as Record<string, unknown>;
+      const upTo = num(r.upTo, 1, 100_000_000);
+      const fee = num(r.fee, 0, 10_000_000);
+      return upTo === null || fee === null ? null : { upTo, fee };
+    })
+    .filter((t): t is MlFixedTier => !!t)
+    .sort((a, b) => a.upTo - b.upTo);
+  const fs = (o.freeShipping ?? {}) as Record<string, unknown>;
+  return {
+    commission: num(o.commission, 0, 60) ?? ML_COMMISSION_DEFAULT,
+    fixedTiers: tiers && tiers.length ? tiers : ML_FIXED_TIERS_DEFAULT,
+    freeShipping: {
+      from: num(fs.from, 0, 100_000_000) ?? ML_FREE_SHIPPING_DEFAULT.from,
+      cost: num(fs.cost, 0, 10_000_000) ?? ML_FREE_SHIPPING_DEFAULT.cost,
+    },
+    updatedAt: typeof o.updatedAt === "string" ? o.updatedAt : null,
+  };
+}
+
 /** Costo fijo que corresponde a un precio de Mercado Libre. */
 export function mlFixedFee(price: number, tiers: MlFixedTier[] = []): number {
   const sorted = [...tiers].filter((t) => t.upTo > 0 && t.fee >= 0).sort((a, b) => a.upTo - b.upTo);
