@@ -10,7 +10,7 @@ export default async function NaturaPricesPage() {
   const { supabase } = await requireAdmin();
   const { data, error } = await supabase
     .from("products")
-    .select("id, name, images:product_images(id)")
+    .select("id, name, stock, status, images:product_images(id)")
     .not("natura_sku", "is", null)
     .order("status", { ascending: false }) // primero los publicados
     .order("name")
@@ -40,7 +40,11 @@ export default async function NaturaPricesPage() {
         <div className="mt-8">
           <PhotoUpdater
             all={(data ?? []).map((p) => ({ id: p.id, name: p.name }))}
-            withoutPhoto={(data ?? []).filter((p) => (p.images ?? []).length === 0).map((p) => ({ id: p.id, name: p.name }))}
+            withoutPhoto={(data ?? [])
+              .filter((p) => (p.images ?? []).length === 0)
+              // Primero los que tienen stock y los que se ven en la tienda.
+              .sort((a, b) => Number(b.stock > 0) - Number(a.stock > 0) || Number(b.status === "published") - Number(a.status === "published"))
+              .map((p) => ({ id: p.id, name: p.name }))}
           />
         </div>
       ) : null}

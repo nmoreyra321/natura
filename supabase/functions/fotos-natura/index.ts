@@ -1,4 +1,6 @@
 // Trae las fotos de un producto desde su ficha en naturacosmeticos.com.ar y las guarda en la tienda.
+// Si la ficha ya no existe o no tiene fotos (productos que Natura dejó de vender), busca la foto que
+// Natura sigue teniendo guardada con ese código, primero en Argentina y después en otros países.
 // Reemplaza solo las fotos que vinieron de Natura (product_images.source_url no nulo); las que
 // subió la administradora (source_url nulo) nunca se tocan. Si las fotos de Natura no cambiaron,
 // no hace nada.
@@ -22,6 +24,81 @@ const HEADERS = {
   "Upgrade-Insecure-Requests": "1",
 };
 const IMAGE_TYPES: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" };
+
+/* ------------------------- Fotos guardadas de Natura (sin ficha) ------------------------- */
+
+const CDN = "https://production.na01.natura.com/dw/image/v2/BFKR_PRD/on/demandware.static/-";
+/** Argentina primero; después otros países de Natura (mismo número de producto). */
+const COUNTRIES: { cc: string; prefix: string }[] = [
+  { cc: "ar", prefix: "NATARG" },
+  { cc: "cl", prefix: "NATCHL" },
+  { cc: "pe", prefix: "NATPER" },
+  { cc: "co", prefix: "NATCOL" },
+  { cc: "mx", prefix: "NATMEX" },
+  { cc: "br", prefix: "NATBRA" },
+];
+const cdnUrl = (cc: string, code: string, n: number) =>
+  `${CDN}/Sites-natura-${cc}-storefront-catalog/default/dw00000000/PRODUTOS/${code}_${n}.jpg?sw=1000`;
+
+type Fetched = { bytes: Uint8Array<ArrayBuffer>; type: string; ext: string };
+
+async function fetchImage(url: string): Promise<Fetched | null> {
+  try {
+    const img = await fetch(url, { headers: { "User-Agent": HEADERS["User-Agent"] }, signal: AbortSignal.timeout(15_000) });
+    const type = (img.headers.get("content-type") ?? "").split(";")[0].trim();
+    const ext = IMAGE_TYPES[type];
+    const bytes = new Uint8Array(await img.arrayBuffer());
+    if (!img.ok || !ext || bytes.byteLength > 5_000_000) return null;
+    return { bytes, type, ext };
+  } catch {
+    return null;
+  }
+}
+
+const hashOf = async (b: Uint8Array<ArrayBuffer>) =>
+  Array.from(new Uint8Array(await crypto.subtle.digest("SHA-1", b)), (x) => x.toString(16).padStart(2, "0")).join("");
+
+/** Lo que devuelve Natura para un código que no existe (por si en vez de error manda una foto genérica). */
+const placeholderCache = new Map<string, Promise<string | null>>();
+function placeholderHash(cc: string, prefix: string): Promise<string | null> {
+  if (!placeholderCache.has(cc)) {
+    placeholderCache.set(
+      cc,
+      fetchImage(cdnUrl(cc, `${prefix}-999999990`, 1)).then((f) => (f ? hashOf(f.bytes) : null)),
+    );
+  }
+  return placeholderCache.get(cc)!;
+}
+
+/** Una foto real (no la genérica de «sin foto» ni una casi vacía). */
+async function realImage(url: string, cc: string, prefix: string): Promise<Fetched | null> {
+  const f = await fetchImage(url);
+  if (!f || f.bytes.byteLength < 3000) return null;
+  const ph = await placeholderHash(cc, prefix);
+  if (ph && ph === (await hashOf(f.bytes))) return null;
+  return f;
+}
+
+/** Busca hasta `max` fotos guardadas para el código, país por país. */
+async function storedPhotos(sku: string, max: number): Promise<{ from: string; photos: { url: string; f: Fetched }[] } | null> {
+  const digits = sku.replace(/\D/g, "");
+  if (!digits || max <= 0) return null;
+  for (const { cc, prefix } of COUNTRIES) {
+    const code = `${prefix}-${digits}`;
+    const firstUrl = cdnUrl(cc, code, 1);
+    const first = await realImage(firstUrl, cc, prefix);
+    if (!first) continue;
+    const photos = [{ url: firstUrl, f: first }];
+    for (let n = 2; n <= max; n++) {
+      const url = cdnUrl(cc, code, n);
+      const f = await realImage(url, cc, prefix);
+      if (!f) break;
+      photos.push({ url, f });
+    }
+    return { from: cc, photos };
+  }
+  return null;
+}
 
 function flightText(html: string): string {
   const re = /self\.__next_f\.push\(\[1,"((?:[^"\\]|\\.)*)"\]\)<\/script>/g;
@@ -123,46 +200,72 @@ Deno.serve(async (req) => {
   const fromNatura = (existing ?? []).filter((i) => i.source_url);
   if (skipOwn && own.length > 0 && fromNatura.length === 0) return json({ status: "own_photos" });
 
-  let res: Response;
+  const room = Math.max(Math.min(MAX_NEW, MAX_IMAGES_PER_PRODUCT - own.length), 0);
+
+  // 1) La ficha de Natura Argentina.
+  let ficha: Ficha | null = null;
+  let fichaStatus: "ok" | "not_found" | "blocked" | "error" = "ok";
+  let fichaMessage = "";
   try {
-    res = await fetch(`${NATURA}/p/p/${sku}`, { headers: HEADERS, signal: AbortSignal.timeout(20_000) });
+    const res = await fetch(`${NATURA}/p/p/${sku}`, { headers: HEADERS, signal: AbortSignal.timeout(20_000) });
+    if (res.status === 404) fichaStatus = "not_found";
+    else if (res.status === 403) fichaStatus = "blocked";
+    else if (!res.ok) {
+      fichaStatus = "error";
+      fichaMessage = `Natura respondió ${res.status}`;
+    } else {
+      ficha = parseFicha(await res.text());
+      if (!ficha) fichaStatus = "not_found";
+    }
   } catch {
-    return json({ status: "error", message: "Natura no respondió." });
+    fichaStatus = "error";
+    fichaMessage = "Natura no respondió.";
   }
-  if (res.status === 404) return json({ status: "not_found", sku });
-  if (res.status === 403) return json({ status: "blocked" });
-  if (!res.ok) return json({ status: "error", message: `Natura respondió ${res.status}` });
-  const ficha = parseFicha(await res.text());
-  if (!ficha) return json({ status: "not_found", sku });
 
-  const room = Math.min(MAX_NEW, MAX_IMAGES_PER_PRODUCT - own.length);
-  const wanted = ficha.images.slice(0, Math.max(room, 0));
-  if (wanted.length === 0) return json({ status: ficha.images.length === 0 ? "no_images" : "full", sku });
+  let from = "ficha";
+  let downloads: { url: string; f: Fetched | null }[] = [];
+  if (ficha && ficha.images.length > 0) {
+    const wanted = ficha.images.slice(0, room);
+    if (wanted.length === 0) return json({ status: "full", sku });
+    // Mismas fotos que ya tiene: no se hace nada.
+    if (fromNatura.map((i) => i.source_url).join("\n") === wanted.join("\n")) return json({ status: "same", sku });
+    downloads = wanted.map((url) => ({ url, f: null }));
+  } else {
+    // 2) Sin ficha o sin fotos: la foto guardada de Natura con ese código. Solo si el producto no tiene
+    //    fotos de Natura (no se cambia una foto buena por una adivinada).
+    if (fromNatura.length > 0) {
+      // Si la pidió a mano con un código, se avisa que no está (puede haberse equivocado de código).
+      if (ref) return json({ status: ficha ? "no_images" : "not_found", sku });
+      return json({ status: "same", sku });
+    }
+    if (room === 0) return json({ status: "full", sku });
+    const stored = await storedPhotos(sku, room);
+    if (!stored) {
+      if (fichaStatus === "blocked") return json({ status: "blocked" });
+      if (fichaStatus === "error") return json({ status: "error", message: fichaMessage });
+      return json({ status: ficha ? "no_images" : "not_found", sku });
+    }
+    from = stored.from;
+    downloads = stored.photos;
+  }
 
-  // Mismas fotos que ya tiene: no se hace nada.
-  const current = fromNatura.map((i) => i.source_url).join("\n");
-  if (current === wanted.join("\n")) return json({ status: "same", sku });
-
-  // 1) Se bajan y guardan las fotos nuevas.
+  // 3) Se bajan y guardan las fotos nuevas.
   const added: { id: string; path: string }[] = [];
-  for (const [n, url] of wanted.entries()) {
+  for (const [n, d] of downloads.entries()) {
     try {
-      const img = await fetch(url, { headers: { "User-Agent": HEADERS["User-Agent"] }, signal: AbortSignal.timeout(20_000) });
-      const type = (img.headers.get("content-type") ?? "").split(";")[0].trim();
-      const ext = IMAGE_TYPES[type];
-      const bytes = new Uint8Array(await img.arrayBuffer());
-      if (!img.ok || !ext || bytes.byteLength > 5_000_000) continue;
-      const path = `products/${productId}/${crypto.randomUUID()}.${ext}`;
-      const up = await supabase.storage.from(BUCKET).upload(path, bytes, { contentType: type, upsert: false });
+      const f = d.f ?? (await fetchImage(d.url));
+      if (!f) continue;
+      const path = `products/${productId}/${crypto.randomUUID()}.${f.ext}`;
+      const up = await supabase.storage.from(BUCKET).upload(path, f.bytes, { contentType: f.type, upsert: false });
       if (up.error) continue;
       const { data: row, error } = await supabase
         .from("product_images")
         .insert({
           product_id: productId,
           storage_path: path,
-          alt: (ficha.name ?? product.name).slice(0, 200),
+          alt: (ficha?.name ?? product.name).slice(0, 200),
           position: 60 + n,
-          source_url: url,
+          source_url: d.url,
         })
         .select("id")
         .single();
@@ -177,13 +280,13 @@ Deno.serve(async (req) => {
   }
   if (added.length === 0) return json({ status: "error", message: "No pudimos bajar las fotos de Natura." });
 
-  // 2) Se borran las fotos de Natura anteriores (las propias quedan).
+  // 4) Se borran las fotos de Natura anteriores (las propias quedan).
   if (fromNatura.length > 0) {
     await supabase.from("product_images").delete().in("id", fromNatura.map((i) => i.id));
     await supabase.storage.from(BUCKET).remove(fromNatura.map((i) => i.storage_path));
   }
 
-  // 3) Orden: primero las de Natura, después las propias.
+  // 5) Orden: primero las de Natura, después las propias.
   const order = [...added.map((a) => a.id), ...own.map((i) => i.id)];
   for (const [position, id] of order.entries()) {
     await supabase.from("product_images").update({ position }).eq("id", id);
@@ -192,5 +295,15 @@ Deno.serve(async (req) => {
   // Si el producto no tenía código de Natura, se le guarda (sirve para actualizar precios).
   if (!product.natura_sku) await supabase.from("products").update({ natura_sku: sku }).eq("id", productId);
 
-  return json({ status: "ok", added: added.length, replaced: fromNatura.length, sku, name: ficha.name, magazinePrice: ficha.magazinePrice });
+  return json({
+    status: "ok",
+    added: added.length,
+    replaced: fromNatura.length,
+    sku,
+    name: ficha?.name ?? null,
+    magazinePrice: ficha?.magazinePrice ?? null,
+    // De dónde salió: «ficha» (ficha actual), «ar» (foto guardada de Argentina) u otro país («cl», «br»…).
+    from,
+    images: added,
+  });
 });

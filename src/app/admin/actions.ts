@@ -1808,7 +1808,18 @@ async function recordReceipt(
 /* ------------------------- Fotos desde Natura ------------------------- */
 
 export type NaturaPhotoStatus = "ok" | "same" | "not_found" | "no_images" | "full" | "blocked" | "bad_ref" | "no_code" | "own_photos" | "error";
-type NaturaPhotoResponse = { status: NaturaPhotoStatus; added?: number; replaced?: number; name?: string | null; message?: string };
+type NaturaPhotoResponse = {
+  status: NaturaPhotoStatus;
+  added?: number;
+  replaced?: number;
+  name?: string | null;
+  message?: string;
+  /** «ficha» (ficha actual de Natura), «ar» (foto guardada de Argentina) u otro país («cl», «br»…). */
+  from?: string;
+  images?: { id: string; path: string }[];
+};
+
+export type NaturaPhotoStep = { status: NaturaPhotoStatus; from?: string; images?: { id: string; path: string }[] };
 
 const NATURA_PHOTO_MESSAGES: Record<Exclude<NaturaPhotoStatus, "ok" | "same">, string> = {
   not_found: "No encontramos ese producto en Natura. Revisá el código o pegá el enlace de la ficha.",
@@ -1864,13 +1875,17 @@ export async function importNaturaPhotos(
  * Un paso de la actualización general de fotos: usa el código guardado del producto y no toca los
  * productos que solo tienen fotos propias. No refresca la tienda (se hace una vez al final).
  */
-export async function updateNaturaPhotosStep(productId: string): Promise<NaturaPhotoStatus> {
+export async function updateNaturaPhotosStep(productId: string): Promise<NaturaPhotoStep> {
   try {
     const { supabase } = await assertAdmin();
-    if (!UUID_RE.test(productId)) return "error";
-    return (await callNaturaPhotos(supabase, { productId, skipOwn: true })).status;
+    if (!UUID_RE.test(productId)) return { status: "error" };
+    const r = await callNaturaPhotos(supabase, { productId, skipOwn: true });
+    const images = Array.isArray(r.images)
+      ? r.images.filter((i) => i && typeof i.id === "string" && typeof i.path === "string").slice(0, 8)
+      : undefined;
+    return { status: r.status, from: typeof r.from === "string" ? r.from.slice(0, 10) : undefined, images };
   } catch {
-    return "error";
+    return { status: "error" };
   }
 }
 
